@@ -1,0 +1,19 @@
+{
+  "customRoutes": {
+    "/vendor/bootstrap.css": "./node_modules/bootstrap/dist/css/bootstrap.min.css",
+    "/vendor/bootstrap.js": "./node_modules/bootstrap/dist/js/bootstrap.min.js",
+    "/vendor/jquery.js": "./node_modules/jquery/dist/jquery.min.js"
+  },
+  "allowedMimes": {
+    "woff": "font/woff",
+    "woff2": "font/woff2"
+  },
+  "disallowedRegex": [
+    "private/",
+    "\\.env$"
+  ],
+  "noRescanPaths": [
+    "/vendor/"
+  ],
+  "maxRescanAttempts": 3
+}

@@ -1,0 +1,343 @@
+<html lang="en" theme="auto">
+<head>
+  <meta charset='utf-8'>
+  <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+  <title>Kempo Server - Documentation</title>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <link rel="stylesheet" href="/essential.css" />
+</head>
+<body>
+  <main>
+    <h1 class="ta-center">Kempo Server</h1>
+    <p>A lightweight, zero-dependency, file based routing server.</p>
+
+    <details class="b r mb">
+      <summary class="p">Table of Contents</summary>
+      <hr class="m0 mb" />
+      <ul class="mt ml pl">
+        <li><a href="#gettingStarted">Getting Started</a></li>
+        <li>
+          <a href="#routes">Routes</a>
+          <ul>
+            <li><a href="#htmlRoutes">HTML Routes</a></li>
+            <li><a href="#dynamicRoutes">Dynamic Routes</a></li>
+            <li><a href="#request">Request Object</a></li>
+            <li><a href="#response">Response Object</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="#config">Configuration</a>
+          <ul>
+            <li><a href="#allowedMimes">allowedMimes</a></li>
+            <li><a href="#disallowedRegex">disallowedRegex</a></li>
+            <li><a href="#routeFiles">routeFiles</a></li>
+            <li><a href="#noRescanPaths">noRescanPaths</a></li>
+            <li><a href="#customRoutes">customRoutes</a></li>
+            <li><a href="#maxRescanAttempts">maxRescanAttempts</a></li>
+          </ul>
+        </li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#examples">Examples</a></li>
+        <li><a href="#cli">Command Line Options</a></li>
+        <li><a href="#demos">Live Demos</a></li>
+      </ul>
+    </details>
+
+    <h3 id="gettingStarted">Getting Started</h3>
+    <p>1. Install the npm package.</p>
+    <pre><code>npm install kempo-server</code></pre>
+    <p>2. Add it to your <code>package.json</code> scripts, use the <code>--root</code> flag to tell it where the root of your site is.</p>
+    <pre><code class="hljs json">{<br />  ...<br />  <span class="hljs-attr">"scripts"</span>: {<br />    <span class="hljs-attr">"start"</span>: <span class="hljs-string">"kempo-server --root public"</span><br />  }<br />  ...<br />}</code></pre>
+    <p>3. Run it in your terminal.</p>
+    <pre><code>npm run start</code></pre>
+
+    <h3 id="routes">Routes</h3>
+    <p>A route is a request to a directory that will be handled by a file. To define routes, create the directory structure to the route and create a file with the name of the method that this file will handle. For example <code>GET.js</code> will handle the <code>GET</code> requests, <code>POST.js</code> will handle the <code>POST</code> requests and so on. Use <code>index.js</code> to handle all request types.</p>
+    <p>The Javascript file must have a <b>default</b> export that is the function that will handle the request. It will be passed a <code>request</code> object and a <code>response</code> object (See <a href="#request">Request Object</a> below).</p>
+    <p>For example this directory structure:</p>
+    <pre><code class="hljs markdown">my/<br />├─ route/<br />│  ├─ GET.js<br />│  ├─ POST.js<br />├─ other/<br />│  ├─ route/<br />│  │  ├─ GET.js<br /></code></pre>
+    <p>Would be used to handle <code>GET my/route/</code>, <code>POST my/route/</code> and <code>GET my/other/route/</code></p>
+    
+    <h5 id="htmlRoutes">HTML Routes</h5>
+    <p>Just like JS files, HTML files can be used to define a route. Use <code>GET.html</code>, <code>POST.html</code>, ect... to define files that will be served when that route is requested.</p>
+    <pre><code class="hljs markdown">my/<br />├─ route/<br />│  ├─ GET.js<br />│  ├─ POST.js<br />├─ other/<br />│  ├─ route/<br />│  │  ├─ GET.js<br />│  ├─ POST.html<br />│  ├─ GET.html<br /></code></pre>
+    <h5><code>index</code> fallbacks</h5>
+    <p><code>index.js</code> or <code>index.html</code> will be used as a fallback for all routes if a <i>method</i> file is not defined. In the above examples we do not have any routes defined for <code>DELETE</code>, <code>PUT</code> <code>PATCH</code>, ect... so lets use an <code>index.js</code> and <code>index.html</code> to be a "catch-all" for all the methods we have not created handlers for.</p>
+    <pre><code class="hljs markdown">my/<br />├─ route/<br />│  ├─ GET.js<br />│  ├─ POST.js<br />│  ├─ index.js<br />├─ other/<br />│  ├─ route/<br />│  │  ├─ GET.js<br />│  │  ├─ index.js<br />│  ├─ POST.html<br />│  ├─ GET.html<br />│  ├─ index.html<br />├─ index.hml<br /></code></pre>
+
+    <h3 id="dynamicRoutes">Dynamic Routes</h3>
+    <p>A dynamic route is a route with a "param" in its path. To define the dynamic parts of the route just wrap the directory name in square brackets. For example if you wanted to get a users profile, or perform CRUD operations on a user you might create the following directory structure.</p>
+    <pre><code class="hljs markdown">api/<br />├─ user/<br />│  ├─ [id]/<br />│  │  ├─ [info]/<br />│  │  │  ├─ GET.js<br />│  │  │  ├─ DELETE.js<br />│  │  │  ├─ PUT.js<br />│  │  │  ├─ POST.js<br />│  │  ├─ GET.js<br /></code></pre>
+    <p>When a request is made to <code>/api/user/123/info</code>, the route file <code>api/user/[id]/[info]/GET.js</code> would be executed and receive an request object with <code>request.params</code> containing <code>{ id: "123", info: "info" }</code>.</p>
+
+    <h3 id="request">Request Object</h3>
+    <p>Kempo Server provides a request object that makes working with HTTP requests easier:</p>
+    
+    <h4>Properties</h4>
+    <ul>
+      <li><code>request.params</code> - Route parameters from dynamic routes (e.g., <code>{ id: "123", info: "info" }</code>)</li>
+      <li><code>request.query</code> - Query string parameters as an object (e.g., <code>{ page: "1", limit: "10" }</code>)</li>
+      <li><code>request.path</code> - The pathname of the request URL</li>
+      <li><code>request.method</code> - HTTP method (GET, POST, etc.)</li>
+      <li><code>request.headers</code> - Request headers object</li>
+      <li><code>request.url</code> - Full request URL</li>
+    </ul>
+    
+    <h4>Methods</h4>
+    <ul>
+      <li><code>await request.json()</code> - Parse request body as JSON</li>
+      <li><code>await request.text()</code> - Get request body as text</li>
+      <li><code>await request.body()</code> - Get raw request body as string</li>
+      <li><code>await request.buffer()</code> - Get request body as Buffer</li>
+      <li><code>request.get(headerName)</code> - Get specific header value</li>
+      <li><code>request.is(type)</code> - Check if content-type contains specified type</li>
+    </ul>
+
+    <h3 id="response">Response Object</h3>
+    <p>Kempo Server also provides a response object that makes sending responses easier:</p>
+    
+    <h4>Methods</h4>
+    <ul>
+      <li><code>response.json(object)</code> - Send JSON response with automatic content-type</li>
+      <li><code>response.send(data)</code> - Send response (auto-detects content type)</liI >
+      <li><code>response.html(htmlString)</code> - Send HTML response</li>
+      <li><code>response.text(textString)</code> - Send plain text response</li>
+      <li><code>response.status(code)</code> - Set status code (chainable)</li>
+      <li><code>response.set(field, value)</code> - Set header (chainable)</li>
+      <li><code>response.type(contentType)</code> - Set content type (chainable)</li>
+      <li><code>response.redirect(url, statusCode)</code> - Redirect to URL</li>
+      <li><code>response.cookie(name, value, options)</code> - Set cookie</li>
+      <li><code>response.clearCookie(name, options)</code> - Clear cookie</li>
+    </ul>
+
+    <h4>Example Route File</h4>
+    <p>Here's an example of what a route file might look like:</p>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// api/user/[id]/GET.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">const</span> { id } = request.params;<br />  <span class="hljs-keyword">const</span> { includeDetails } = request.query;<br />  <br />  <span class="hljs-comment">// Fetch user data from database</span><br />  <span class="hljs-keyword">const</span> userData = <span class="hljs-keyword">await</span> getUserById(id);<br />  <br />  <span class="hljs-keyword">if</span> (!userData) {<br />    <span class="hljs-keyword">return</span> response.status(<span class="hljs-number">404</span>).json({ error: <span class="hljs-string">'User not found'</span> });<br />  }<br />  <br />  response.json(userData);<br />}</code></pre>
+
+    <h4>POST Request Example</h4>
+    <p>Here's an example of handling JSON data in a POST request:</p>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// api/user/[id]/POST.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">const</span> { id } = request.params;<br />  <br />  <span class="hljs-keyword">try</span> {<br />    <span class="hljs-keyword">const</span> updateData = <span class="hljs-keyword">await</span> request.json();<br />    <br />    <span class="hljs-comment">// Update user in database</span><br />    <span class="hljs-keyword">const</span> updatedUser = <span class="hljs-keyword">await</span> updateUser(id, updateData);<br />    <br />    response.json(updatedUser);<br />  } <span class="hljs-keyword">catch</span> (error) {<br />    response.status(<span class="hljs-number">400</span>).json({ error: <span class="hljs-string">'Invalid JSON'</span> });<br />  }<br />}</code></pre>
+
+    <h4>Response Methods Examples</h4>
+    <p>The response object supports multiple ways to send responses:</p>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// Different response types</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-comment">// JSON response</span><br />  response.json({ message: <span class="hljs-string">'Hello World'</span> });<br />  <br />  <span class="hljs-comment">// HTML response</span><br />  response.html(<span class="hljs-string">'&lt;h1&gt;Hello World&lt;/h1&gt;'</span>);<br />  <br />  <span class="hljs-comment">// Text response</span><br />  response.text(<span class="hljs-string">'Hello World'</span>);<br />  <br />  <span class="hljs-comment">// Status code chaining</span><br />  response.status(<span class="hljs-number">201</span>).json({ created: <span class="hljs-literal">true</span> });<br />  <br />  <span class="hljs-comment">// Custom headers</span><br />  response.set(<span class="hljs-string">'X-Custom-Header'</span>, <span class="hljs-string">'value'</span>).json({ data: <span class="hljs-string">'test'</span> });<br />  <br />  <span class="hljs-comment">// Redirect</span><br />  response.redirect(<span class="hljs-string">'/login'</span>);<br />  <br />  <span class="hljs-comment">// Set cookies</span><br />  response.cookie(<span class="hljs-string">'session'</span>, <span class="hljs-string">'abc123'</span>, { httpOnly: <span class="hljs-literal">true</span> }).json({ success: <span class="hljs-literal">true</span> });<br />}</code></pre>
+
+    <h3 id="config">Configuration</h3>
+    <p>To configure the server create a <code>.config.json</code> within the root directory of your server (<code>public</code> in the start example <a href="#gettingStarted">above</a>).</p>
+    <p>This json file can have any of the following 6 properties, any property not defined will use the "Default Config".</p>
+    <ul>
+      <li><a href="#allowedMimes">allowedMimes</a></li>
+      <li><a href="#disallowedRegex">disallowedRegex</a></li>
+      <li><a href="#customRoutes">customRoutes</a></li>
+      <li><a href="#routeFiles">routeFiles</a></li>
+      <li><a href="#noRescanPaths">noRescanPaths</a></li>
+      <li><a href="#maxRescanAttempts">maxRescanAttempts</a></li>
+    </ul>
+
+    <h4 id="allowedMimes">allowedMimes</h4>
+    <p>An object mapping file extensions to their MIME types. Files with extensions not in this list will not be served.</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"allowedMimes"</span>: {<br />    <span class="hljs-attr">"html"</span>: <span class="hljs-string">"text/html"</span>,<br />    <span class="hljs-attr">"css"</span>: <span class="hljs-string">"text/css"</span>,<br />    <span class="hljs-attr">"js"</span>: <span class="hljs-string">"application/javascript"</span>,<br />    <span class="hljs-attr">"json"</span>: <span class="hljs-string">"application/json"</span>,<br />    <span class="hljs-attr">"png"</span>: <span class="hljs-string">"image/png"</span>,<br />    <span class="hljs-attr">"jpg"</span>: <span class="hljs-string">"image/jpeg"</span><br />  }<br />}</code></pre>
+
+    <h4 id="disallowedRegex">disallowedRegex</h4>
+    <p>An array of regular expressions that match paths that should never be served. This provides security by preventing access to sensitive files.</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"disallowedRegex"</span>: [<br />    <span class="hljs-string">"^/\\..*"</span>,<br />    <span class="hljs-string">"\\.env$"</span>,<br />    <span class="hljs-string">"\\.config$"</span>,<br />    <span class="hljs-string">"password"</span><br />  ]<br />}</code></pre>
+
+    <h4 id="routeFiles">routeFiles</h4>
+    <p>An array of filenames that should be treated as route handlers and executed as JavaScript modules.</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"routeFiles"</span>: [<br />    <span class="hljs-string">"GET.js"</span>,<br />    <span class="hljs-string">"POST.js"</span>,<br />    <span class="hljs-string">"PUT.js"</span>,<br />    <span class="hljs-string">"DELETE.js"</span>,<br />    <span class="hljs-string">"index.js"</span><br />  ]<br />}</code></pre>
+
+    <h4 id="noRescanPaths">noRescanPaths</h4>
+    <p>An array of regex patterns for paths that should not trigger a file system rescan. This improves performance for common static assets.</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"noRescanPaths"</span>: [<br />    <span class="hljs-string">"/favicon\\.ico$"</span>,<br />    <span class="hljs-string">"/robots\\.txt$"</span>,<br />    <span class="hljs-string">"\\.map$"</span><br />  ]<br />}</code></pre>
+
+    <h4 id="customRoutes">customRoutes</h4>
+    <p>An object mapping custom route paths to file paths. Useful for aliasing or serving files from outside the document root.</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"customRoutes"</span>: {<br />    <span class="hljs-attr">"/vendor/bootstrap.css"</span>: <span class="hljs-string">"./node_modules/bootstrap/dist/css/bootstrap.min.css"</span>,<br />    <span class="hljs-attr">"/api/status"</span>: <span class="hljs-string">"./status.js"</span><br />  }<br />}</code></pre>
+
+    <h4 id="maxRescanAttempts">maxRescanAttempts</h4>
+    <p>The maximum number of times to attempt rescanning the file system when a file is not found. Defaults to 3.</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"maxRescanAttempts"</span>: <span class="hljs-number">3</span><br />}</code></pre>
+
+    <h3 id="features">Features</h3>
+    <ul>
+      <li><strong>Zero Dependencies</strong> - No external dependencies required</li>
+      <li><strong>File-based Routing</strong> - Routes are defined by your directory structure</li>
+      <li><strong>Dynamic Routes</strong> - Support for parameterized routes with square bracket syntax</li>
+      <li><strong>Multiple HTTP Methods</strong> - Support for GET, POST, PUT, DELETE, and more</li>
+      <li><strong>Static File Serving</strong> - Automatically serves static files with proper MIME types</li>
+      <li><strong>HTML Routes</strong> - Support for both JavaScript and HTML route handlers</li>
+      <li><strong>Configurable</strong> - Customize behavior with a simple JSON config file</li>
+      <li><strong>Security</strong> - Built-in protection against serving sensitive files</li>
+      <li><strong>Performance</strong> - Smart file system caching and rescan optimization</li>
+    </ul>
+
+    <h3 id="examples">Examples</h3>
+    
+    <h4>Simple API Route</h4>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// api/hello/GET.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">const</span> { name } = request.query;<br />  <span class="hljs-keyword">const</span> message = name ? <span class="hljs-string">`Hello ${name}!`</span> : <span class="hljs-string">'Hello World!'</span>;<br />  <br />  response.json({ message });<br />}</code></pre>
+
+    <h4>Dynamic User Profile Route</h4>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// api/users/[id]/GET.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">const</span> { id } = request.params;<br />  <span class="hljs-keyword">const</span> { includeProfile } = request.query;<br />  <br />  <span class="hljs-comment">// Simulate database lookup</span><br />  <span class="hljs-keyword">const</span> user = {<br />    id: id,<br />    name: <span class="hljs-string">`User ${id}`</span>,<br />    email: <span class="hljs-string">`user${id}@example.com`</span><br />  };<br />  <br />  <span class="hljs-keyword">if</span> (includeProfile === <span class="hljs-string">'true'</span>) {<br />    user.profile = {<br />      bio: <span class="hljs-string">`Bio for user ${id}`</span>,<br />      joinDate: <span class="hljs-string">'2024-01-01'</span><br />    };<br />  }<br />  <br />  response.json(user);<br />}</code></pre>
+
+    <h4>Form Handling Route</h4>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// contact/POST.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">try</span> {<br />    <span class="hljs-keyword">const</span> body = <span class="hljs-keyword">await</span> request.text();<br />    <span class="hljs-keyword">const</span> formData = <span class="hljs-keyword">new</span> URLSearchParams(body);<br />    <span class="hljs-keyword">const</span> name = formData.get(<span class="hljs-string">'name'</span>);<br />    <span class="hljs-keyword">const</span> email = formData.get(<span class="hljs-string">'email'</span>);<br />    <br />    <span class="hljs-comment">// Process form data...</span><br />    <br />    response.html(<span class="hljs-string">'&lt;h1&gt;Thank you for your message!&lt;/h1&gt;'</span>);<br />  } <span class="hljs-keyword">catch</span> (error) {<br />    response.status(<span class="hljs-number">400</span>).html(<span class="hljs-string">'&lt;h1&gt;Error processing form&lt;/h1&gt;'</span>);<br />  }<br />}</code></pre>
+
+    <h3 id="cli">Command Line Options</h3>
+    <p>Kempo Server supports several command line options to customize its behavior:</p>
+    <ul>
+      <li><code>--root &lt;path&gt;</code> - Set the document root directory (required)</li>
+      <li><code>--port &lt;number&gt;</code> - Set the port number (default: 3000)</li>
+      <li><code>--host &lt;address&gt;</code> - Set the host address (default: localhost)</li>
+      <li><code>--verbose</code> - Enable verbose logging</li>
+    </ul>
+    
+    <pre><code>kempo-server --root public --port 8080 --host 0.0.0.0 --verbose</code></pre>
+
+    <h3 id="demos">Live Demos</h3>
+    <p>Try out the example API endpoints below. These demonstrations show the actual routes working in this documentation site.</p>
+
+    <div class="mb">
+      <h4 class="mt0">Get User Profile</h4>
+      <p><code>GET /api/user/[id]</code></p>
+      <div class="row -mx">
+        <div class="col m-span-12 d-span-6 px">
+          <pre><code class="hljs javascript"><span class="hljs-comment">// api/user/[id]/GET.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">const</span> { id } = request.params;<br />  <br />  <span class="hljs-keyword">const</span> userData = {<br />    id: id,<br />    profile: {<br />      name: <span class="hljs-string">`${id.charAt(0).toUpperCase()}${id.slice(1)}`</span>,<br />      joinDate: <span class="hljs-string">'2024-01-15'</span>,<br />      posts: <span class="hljs-number">42</span><br />    }<br />  };<br />  <br />  response.json(userData);<br />}</code></pre>
+          <div class="mb">
+            <input type="text" id="userId" placeholder="Enter user ID (e.g., john)" value="john" class="mb mr">
+            <button onclick="fetchUser()" class="primary">GET User</button>
+          </div>
+        </div>
+        <div class="col m-span-12 d-span-6 px">
+          <h5>Response:</h5>
+          <pre><output id="userOutput" class="pb">Click "GET User" to see the response</output></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="mb">
+      <h4 class="mt0">Get User Info</h4>
+      <p><code>GET /api/user/[id]/[info]</code></p>
+      <div class="row -mx">
+        <div class="col m-span-12 d-span-6 px">
+          <pre><code class="hljs javascript"><span class="hljs-comment">// api/user/[id]/[info]/GET.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">const</span> { id, info } = request.params;<br />  <br />  <span class="hljs-keyword">const</span> userInfo = {<br />    id: id,<br />    details: {<br />      bio: <span class="hljs-string">`This is ${id}'s bio`</span>,<br />      location: <span class="hljs-string">'Earth'</span>,<br />      website: <span class="hljs-string">`https://${id}.dev`</span>,<br />      followers: <span class="hljs-number">123</span>,<br />      following: <span class="hljs-number">456</span><br />    }<br />  };<br />  <br />  response.json(userInfo);<br />}</code></pre>
+          <div class="mb">
+            <input type="text" id="userInfoId" placeholder="Enter user ID" value="alice" class="mb mr">
+            <button onclick="fetchUserInfo()" class="primary">GET User Info</button>
+          </div>
+        </div>
+        <div class="col m-span-12 d-span-6 px">
+          <h5>Response:</h5>
+          <pre><output id="userInfoOutput" class="pb">Click "GET User Info" to see the response</output></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="mb">
+      <h4 class="mt0">Update User Info</h4>
+      <p><code>POST /api/user/[id]/[info]</code></p>
+      <div class="row -mx">
+        <div class="col m-span-12 d-span-6 px">
+          <pre><code class="hljs javascript"><span class="hljs-comment">// api/user/[id]/[info]/POST.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">const</span> { id, info } = request.params;<br />  <br />  <span class="hljs-keyword">try</span> {<br />    <span class="hljs-keyword">const</span> updateData = <span class="hljs-keyword">await</span> request.json();<br />    <br />    <span class="hljs-keyword">const</span> updatedUser = {<br />      id: id,<br />      message: <span class="hljs-string">'User info updated successfully'</span>,<br />      updatedFields: updateData<br />    };<br />    <br />    response.json(updatedUser);<br />  } <span class="hljs-keyword">catch</span> (error) {<br />    response.status(<span class="hljs-number">400</span>).json({ error: <span class="hljs-string">'Invalid JSON'</span> });<br />  }<br />}</code></pre>
+          <div class="mb">
+            <input type="text" id="postUserId" placeholder="Enter user ID" value="bob" class="mb">
+            <textarea id="postData" placeholder="Enter JSON data to update" class="mb">{
+  "bio": "Updated bio text",
+  "location": "New York"
+}</textarea>
+            <button onclick="updateUserInfo()" class="primary">POST Update</button>
+          </div>
+        </div>
+        <div class="col m-span-12 d-span-6 px">
+          <h5>Response:</h5>
+          <pre><output id="postOutput" class="pb">Click "POST Update" to see the response</output></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="mb">
+      <h4 class="mt0">Delete User Info</h4>
+      <p><code>DELETE /api/user/[id]/[info]</code></p>
+      <div class="row -mx">
+        <div class="col m-span-12 d-span-6 px">
+          <pre><code class="hljs javascript"><span class="hljs-comment">// api/user/[id]/[info]/DELETE.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">const</span> { id, info } = request.params;<br />  <br />  <span class="hljs-keyword">const</span> result = {<br />    id: id,<br />    message: <span class="hljs-string">'User info deleted successfully'</span>,<br />    deletedAt: <span class="hljs-keyword">new</span> <span class="hljs-built_in">Date</span>().toISOString()<br />  };<br />  <br />  response.json(result);<br />}</code></pre>
+          <div class="mb">
+            <input type="text" id="deleteUserId" placeholder="Enter user ID" value="charlie" class="mr">
+            <button onclick="deleteUserInfo()" class="primary">DELETE Info</button>
+          </div>
+        </div>
+        <div class="col m-span-12 d-span-6 px">
+          <h5>Response:</h5>
+          <pre><output id="deleteOutput" class="pb">Click "DELETE Info" to see the response</output></pre>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      async function fetchUser() {
+        const userId = document.getElementById('userId').value || 'john';
+        const output = document.getElementById('userOutput');
+        
+        try {
+          output.textContent = 'Loading...';
+          const response = await fetch(`/api/user/${userId}`);
+          const data = await response.json();
+          output.textContent = JSON.stringify(data, null, 2);
+        } catch (error) {
+          output.textContent = `Error: ${error.message}`;
+        }
+      }
+
+      async function fetchUserInfo() {
+        const userId = document.getElementById('userInfoId').value || 'alice';
+        const output = document.getElementById('userInfoOutput');
+        
+        try {
+          output.textContent = 'Loading...';
+          const response = await fetch(`/api/user/${userId}/info`);
+          const data = await response.json();
+          output.textContent = JSON.stringify(data, null, 2);
+        } catch (error) {
+          output.textContent = `Error: ${error.message}`;
+        }
+      }
+
+      async function updateUserInfo() {
+        const userId = document.getElementById('postUserId').value || 'bob';
+        const postData = document.getElementById('postData').value;
+        const output = document.getElementById('postOutput');
+        
+        try {
+          output.textContent = 'Loading...';
+          const response = await fetch(`/api/user/${userId}/info`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: postData
+          });
+          const data = await response.json();
+          output.textContent = JSON.stringify(data, null, 2);
+        } catch (error) {
+          output.textContent = `Error: ${error.message}`;
+        }
+      }
+
+      async function deleteUserInfo() {
+        const userId = document.getElementById('deleteUserId').value || 'charlie';
+        const output = document.getElementById('deleteOutput');
+        
+        try {
+          output.textContent = 'Loading...';
+          const response = await fetch(`/api/user/${userId}/info`, {
+            method: 'DELETE'
+          });
+          const data = await response.json();
+          output.textContent = JSON.stringify(data, null, 2);
+        } catch (error) {
+          output.textContent = `Error: ${error.message}`;
+        }
+      }
+    </script>
+  </main>
+</body>
+</html>

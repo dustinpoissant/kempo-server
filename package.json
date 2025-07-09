@@ -1,0 +1,15 @@
+{
+  "name": "kempo-server",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "A lightweight, zero-dependency, file based routing server.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js -r docs"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "essentialcss": "^2.0.1"
+  }
+}
