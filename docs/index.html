@@ -152,7 +152,21 @@
 
     <h4 id="customRoutes">customRoutes</h4>
     <p>An object mapping custom route paths to file paths. Useful for aliasing or serving files from outside the document root.</p>
+    
+    <p><strong>Basic Routes:</strong></p>
     <pre><code class="hljs json">{<br />  <span class="hljs-attr">"customRoutes"</span>: {<br />    <span class="hljs-attr">"/vendor/bootstrap.css"</span>: <span class="hljs-string">"./node_modules/bootstrap/dist/css/bootstrap.min.css"</span>,<br />    <span class="hljs-attr">"/api/status"</span>: <span class="hljs-string">"./status.js"</span><br />  }<br />}</code></pre>
+
+    <p><strong>Wildcard Routes:</strong></p>
+    <p>Wildcard routes allow you to map entire directory structures using the <code>*</code> wildcard:</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"customRoutes"</span>: {<br />    <span class="hljs-attr">"kempo/*"</span>: <span class="hljs-string">"./node_modules/kempo/dust/*"</span>,<br />    <span class="hljs-attr">"assets/*"</span>: <span class="hljs-string">"./static-files/*"</span>,<br />    <span class="hljs-attr">"docs/*"</span>: <span class="hljs-string">"./documentation/*"</span><br />  }<br />}</code></pre>
+
+    <p>With wildcard routes:</p>
+    <ul>
+      <li><code>kempo/styles.css</code> would serve <code>./node_modules/kempo/dust/styles.css</code></li>
+      <li><code>assets/logo.png</code> would serve <code>./static-files/logo.png</code></li>
+      <li><code>docs/readme.md</code> would serve <code>./documentation/readme.md</code></li>
+    </ul>
+    <p>The <code>*</code> wildcard matches any single path segment (anything between <code>/</code> characters). Multiple wildcards can be used in a single route pattern.</p>
 
     <h4 id="maxRescanAttempts">maxRescanAttempts</h4>
     <p>The maximum number of times to attempt rescanning the file system when a file is not found. Defaults to 3.</p>
@@ -163,6 +177,7 @@
       <li><strong>Zero Dependencies</strong> - No external dependencies required</li>
       <li><strong>File-based Routing</strong> - Routes are defined by your directory structure</li>
       <li><strong>Dynamic Routes</strong> - Support for parameterized routes with square bracket syntax</li>
+      <li><strong>Wildcard Routes</strong> - Map entire directory structures with wildcard patterns</li>
       <li><strong>Multiple HTTP Methods</strong> - Support for GET, POST, PUT, DELETE, and more</li>
       <li><strong>Static File Serving</strong> - Automatically serves static files with proper MIME types</li>
       <li><strong>HTML Routes</strong> - Support for both JavaScript and HTML route handlers</li>

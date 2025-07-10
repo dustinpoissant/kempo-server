@@ -89,5 +89,6 @@ export default {
   maxRescanAttempts: 3,
   customRoutes: {
     // Example: "/vendor/bootstrap.css": "./node_modules/bootstrap/dist/css/bootstrap.min.css"
+    // Wildcard example: "kempo/*": "./node_modules/kempo/dust/*"
   }
 }

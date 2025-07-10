@@ -41,26 +41,69 @@ export default async (flags, log) => {
   
   // Process custom routes - resolve paths and validate files exist
   const customRoutes = new Map();
+  const wildcardRoutes = new Map();
+  
   if (config.customRoutes && Object.keys(config.customRoutes).length > 0) {
     log(`Processing ${Object.keys(config.customRoutes).length} custom routes`, 2);
     
     for (const [urlPath, filePath] of Object.entries(config.customRoutes)) {
       try {
-        // Resolve the file path relative to the current working directory
-        const resolvedPath = path.resolve(filePath);
-        
-        // Check if the file exists (we'll do this async)
-        const { stat } = await import('fs/promises');
-        await stat(resolvedPath);
-        
-        customRoutes.set(urlPath, resolvedPath);
-        log(`Custom route mapped: ${urlPath} -> ${resolvedPath}`, 2);
+        // Check if this is a wildcard route
+        if (urlPath.includes('*')) {
+          // Store wildcard routes separately for pattern matching
+          wildcardRoutes.set(urlPath, filePath);
+          log(`Wildcard route mapped: ${urlPath} -> ${filePath}`, 2);
+        } else {
+          // Resolve the file path relative to the current working directory
+          const resolvedPath = path.resolve(filePath);
+          
+          // Check if the file exists (we'll do this async)
+          const { stat } = await import('fs/promises');
+          await stat(resolvedPath);
+          
+          customRoutes.set(urlPath, resolvedPath);
+          log(`Custom route mapped: ${urlPath} -> ${resolvedPath}`, 2);
+        }
       } catch (error) {
         log(`Custom route error for ${urlPath} -> ${filePath}: ${error.message}`, 1);
       }
     }
   }
   
+  // Helper function to match wildcard patterns
+  const matchWildcardRoute = (requestPath, pattern) => {
+    // Convert wildcard pattern to regex
+    const regexPattern = pattern
+      .replace(/\*/g, '([^/]+)')  // Replace * with capture group for single segment
+      .replace(/\*\*/g, '(.+)');  // Replace ** with capture group for multiple segments
+    
+    const regex = new RegExp(`^${regexPattern}$`);
+    return regex.exec(requestPath);
+  };
+  
+  // Helper function to resolve wildcard file paths
+  const resolveWildcardPath = (filePath, matches) => {
+    let resolvedPath = filePath;
+    
+    // Replace wildcards with captured values
+    for (let i = 1; i < matches.length; i++) {
+      resolvedPath = resolvedPath.replace('*', matches[i]);
+    }
+    
+    return path.resolve(resolvedPath);
+  };
+  
+  // Helper function to find matching wildcard route
+  const findWildcardRoute = (requestPath) => {
+    for (const [pattern, filePath] of wildcardRoutes) {
+      const matches = matchWildcardRoute(requestPath, pattern);
+      if (matches) {
+        return { filePath, matches };
+      }
+    }
+    return null;
+  };
+
   // Track 404 attempts to avoid unnecessary rescans
   const rescanAttempts = new Map(); // path -> attempt count
   const dynamicNoRescanPaths = new Set(); // paths that have exceeded max attempts
@@ -122,6 +165,29 @@ export default async (flags, log) => {
         return; // Successfully served custom route
       } catch (error) {
         log(`Error serving custom route ${requestPath}: ${error.message}`, 0);
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Internal Server Error');
+        return;
+      }
+    }
+    
+    // Check wildcard routes
+    const wildcardMatch = findWildcardRoute(requestPath);
+    if (wildcardMatch) {
+      const resolvedFilePath = resolveWildcardPath(wildcardMatch.filePath, wildcardMatch.matches);
+      log(`Serving wildcard route: ${requestPath} -> ${resolvedFilePath}`, 2);
+      
+      try {
+        const fileContent = await readFile(resolvedFilePath);
+        const fileExtension = path.extname(resolvedFilePath).toLowerCase().slice(1);
+        const mimeType = config.allowedMimes[fileExtension] || 'application/octet-stream';
+        
+        log(`Serving wildcard file as ${mimeType} (${fileContent.length} bytes)`, 2);
+        res.writeHead(200, { 'Content-Type': mimeType });
+        res.end(fileContent);
+        return; // Successfully served wildcard route
+      } catch (error) {
+        log(`Error serving wildcard route ${requestPath}: ${error.message}`, 0);
         res.writeHead(500, { 'Content-Type': 'text/plain' });
         res.end('Internal Server Error');
         return;

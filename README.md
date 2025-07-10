@@ -288,6 +288,7 @@ An array of regex patterns for paths that should not trigger a file system resca
 
 An object mapping custom route paths to file paths. Useful for aliasing or serving files from outside the document root.
 
+**Basic Routes:**
 ```json
 {
   "customRoutes": {
@@ -296,6 +297,26 @@ An object mapping custom route paths to file paths. Useful for aliasing or servi
   }
 }
 ```
+
+**Wildcard Routes:**
+Wildcard routes allow you to map entire directory structures using the `*` wildcard:
+
+```json
+{
+  "customRoutes": {
+    "kempo/*": "./node_modules/kempo/dust/*",
+    "assets/*": "./static-files/*",
+    "docs/*": "./documentation/*"
+  }
+}
+```
+
+With wildcard routes:
+- `kempo/styles.css` would serve `./node_modules/kempo/dust/styles.css`
+- `assets/logo.png` would serve `./static-files/logo.png`  
+- `docs/readme.md` would serve `./documentation/readme.md`
+
+The `*` wildcard matches any single path segment (anything between `/` characters). Multiple wildcards can be used in a single route pattern.
 
 ### maxRescanAttempts
 
