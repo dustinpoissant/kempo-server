@@ -34,6 +34,15 @@
             <li><a href="#noRescanPaths">noRescanPaths</a></li>
             <li><a href="#customRoutes">customRoutes</a></li>
             <li><a href="#maxRescanAttempts">maxRescanAttempts</a></li>
+            <li><a href="#middleware">middleware</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="#middlewareSection">Middleware</a>
+          <ul>
+            <li><a href="#builtinMiddleware">Built-in Middleware</a></li>
+            <li><a href="#customMiddleware">Custom Middleware</a></li>
+            <li><a href="#middlewareExamples">Middleware Examples</a></li>
           </ul>
         </li>
         <li><a href="#features">Features</a></li>
@@ -172,18 +181,51 @@
     <p>The maximum number of times to attempt rescanning the file system when a file is not found. Defaults to 3.</p>
     <pre><code class="hljs json">{<br />  <span class="hljs-attr">"maxRescanAttempts"</span>: <span class="hljs-number">3</span><br />}</code></pre>
 
+    <h4 id="middleware">middleware</h4>
+    <p>Configuration for built-in and custom middleware. Middleware runs before your route handlers and can modify requests, responses, or handle requests entirely.</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"middleware"</span>: {<br />    <span class="hljs-attr">"cors"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"origin"</span>: <span class="hljs-string">"*"</span><br />    },<br />    <span class="hljs-attr">"compression"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span><br />    },<br />    <span class="hljs-attr">"custom"</span>: [<span class="hljs-string">"./middleware/auth.js"</span>]<br />  }<br />}</code></pre>
+
+    <h3 id="middlewareSection">Middleware</h3>
+    <p>Kempo Server includes a powerful middleware system that allows you to add functionality like authentication, logging, CORS, compression, and more.</p>
+
+    <h4 id="builtinMiddleware">Built-in Middleware</h4>
+    
+    <p><strong>CORS:</strong> Enable Cross-Origin Resource Sharing</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"middleware"</span>: {<br />    <span class="hljs-attr">"cors"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"origin"</span>: <span class="hljs-string">"*"</span>,<br />      <span class="hljs-attr">"methods"</span>: [<span class="hljs-string">"GET"</span>, <span class="hljs-string">"POST"</span>, <span class="hljs-string">"PUT"</span>, <span class="hljs-string">"DELETE"</span>],<br />      <span class="hljs-attr">"headers"</span>: [<span class="hljs-string">"Content-Type"</span>, <span class="hljs-string">"Authorization"</span>]<br />    }<br />  }<br />}</code></pre>
+
+    <p><strong>Compression:</strong> Automatically compress responses with gzip</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"middleware"</span>: {<br />    <span class="hljs-attr">"compression"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"threshold"</span>: <span class="hljs-number">1024</span><br />    }<br />  }<br />}</code></pre>
+
+    <p><strong>Rate Limiting:</strong> Limit requests per client</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"middleware"</span>: {<br />    <span class="hljs-attr">"rateLimit"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"maxRequests"</span>: <span class="hljs-number">100</span>,<br />      <span class="hljs-attr">"windowMs"</span>: <span class="hljs-number">60000</span><br />    }<br />  }<br />}</code></pre>
+
+    <p><strong>Security Headers:</strong> Add security headers to responses</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"middleware"</span>: {<br />    <span class="hljs-attr">"security"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"headers"</span>: {<br />        <span class="hljs-attr">"X-Content-Type-Options"</span>: <span class="hljs-string">"nosniff"</span>,<br />        <span class="hljs-attr">"X-Frame-Options"</span>: <span class="hljs-string">"DENY"</span><br />      }<br />    }<br />  }<br />}</code></pre>
+
+    <h4 id="customMiddleware">Custom Middleware</h4>
+    <p>Create your own middleware by writing JavaScript files and referencing them in your config:</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"middleware"</span>: {<br />    <span class="hljs-attr">"custom"</span>: [<span class="hljs-string">"./middleware/auth.js"</span>, <span class="hljs-string">"./middleware/analytics.js"</span>]<br />  }<br />}</code></pre>
+
+    <h4 id="middlewareExamples">Middleware Examples</h4>
+    <p><strong>Authentication Middleware:</strong></p>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// middleware/auth.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-function">(<span class="hljs-params">config</span>) =></span> {<br />  <span class="hljs-keyword">return</span> <span class="hljs-keyword">async</span> <span class="hljs-function">(<span class="hljs-params">req, res, next</span>) =></span> {<br />    <span class="hljs-keyword">const</span> token = req.<span class="hljs-property">headers</span>.<span class="hljs-property">authorization</span>;<br />    <br />    <span class="hljs-keyword">if</span> (token) {<br />      req.<span class="hljs-property">user</span> = <span class="hljs-title function_">verifyToken</span>(token);<br />      req.<span class="hljs-property">permissions</span> = <span class="hljs-keyword">await</span> <span class="hljs-title function_">getUserPermissions</span>(req.<span class="hljs-property">user</span>.<span class="hljs-property">id</span>);<br />      req.<span class="hljs-property">hasPermission</span> = <span class="hljs-function">(<span class="hljs-params">permission</span>) =></span> req.<span class="hljs-property">permissions</span>.<span class="hljs-title function_">includes</span>(permission);<br />    }<br />    <br />    <span class="hljs-keyword">await</span> <span class="hljs-title function_">next</span>();<br />  };<br />};</code></pre>
+
+    <p><strong>Using Enhanced Requests in Routes:</strong></p>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// api/user/profile/GET.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, params</span>) </span>{<br />  <span class="hljs-keyword">if</span> (!req.<span class="hljs-property">user</span>) {<br />    <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">401</span>).<span class="hljs-title function_">json</span>({ <span class="hljs-attr">error</span>: <span class="hljs-string">'Authentication required'</span> });<br />  }<br />  <br />  <span class="hljs-keyword">if</span> (!req.<span class="hljs-title function_">hasPermission</span>(<span class="hljs-string">'user:read'</span>)) {<br />    <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">403</span>).<span class="hljs-title function_">json</span>({ <span class="hljs-attr">error</span>: <span class="hljs-string">'Insufficient permissions'</span> });<br />  }<br />  <br />  <span class="hljs-keyword">const</span> profile = <span class="hljs-keyword">await</span> <span class="hljs-title function_">getUserProfile</span>(req.<span class="hljs-property">user</span>.<span class="hljs-property">id</span>);<br />  res.<span class="hljs-title function_">json</span>(profile);<br />}</code></pre>
+
     <h3 id="features">Features</h3>
     <ul>
       <li><strong>Zero Dependencies</strong> - No external dependencies required</li>
       <li><strong>File-based Routing</strong> - Routes are defined by your directory structure</li>
       <li><strong>Dynamic Routes</strong> - Support for parameterized routes with square bracket syntax</li>
       <li><strong>Wildcard Routes</strong> - Map entire directory structures with wildcard patterns</li>
+      <li><strong>Middleware System</strong> - Built-in and custom middleware support for authentication, logging, CORS, and more</li>
       <li><strong>Multiple HTTP Methods</strong> - Support for GET, POST, PUT, DELETE, and more</li>
       <li><strong>Static File Serving</strong> - Automatically serves static files with proper MIME types</li>
       <li><strong>HTML Routes</strong> - Support for both JavaScript and HTML route handlers</li>
       <li><strong>Configurable</strong> - Customize behavior with a simple JSON config file</li>
-      <li><strong>Security</strong> - Built-in protection against serving sensitive files</li>
-      <li><strong>Performance</strong> - Smart file system caching and rescan optimization</li>
+      <li><strong>Security</strong> - Built-in protection against serving sensitive files plus security headers middleware</li>
+      <li><strong>Performance</strong> - Smart file system caching, rescan optimization, and optional compression</li>
     </ul>
 
     <h3 id="examples">Examples</h3>

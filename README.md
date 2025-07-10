@@ -213,7 +213,7 @@ export default async function(request, response) {
 
 To configure the server create a `.config.json` within the root directory of your server (`public` in the start example [above](#getting-started)).
 
-This json file can have any of the following 6 properties, any property not defined will use the "Default Config".
+This json file can have any of the following properties, any property not defined will use the "Default Config".
 
 - [allowedMimes](#allowedmimes)
 - [disallowedRegex](#disallowedregex)
@@ -221,6 +221,189 @@ This json file can have any of the following 6 properties, any property not defi
 - [routeFiles](#routefiles)
 - [noRescanPaths](#norescanpaths)
 - [maxRescanAttempts](#maxrescanattempts)
+- [middleware](#middleware)
+
+## Middleware
+
+Kempo Server includes a powerful middleware system that allows you to add functionality like authentication, logging, CORS, compression, and more. Middleware runs before your route handlers and can modify requests, responses, or handle requests entirely.
+
+### Built-in Middleware
+
+#### CORS
+Enable Cross-Origin Resource Sharing for your API:
+
+```json
+{
+  "middleware": {
+    "cors": {
+      "enabled": true,
+      "origin": "*",
+      "methods": ["GET", "POST", "PUT", "DELETE"],
+      "headers": ["Content-Type", "Authorization"]
+    }
+  }
+}
+```
+
+#### Compression
+Automatically compress responses with gzip:
+
+```json
+{
+  "middleware": {
+    "compression": {
+      "enabled": true,
+      "threshold": 1024
+    }
+  }
+}
+```
+
+#### Rate Limiting
+Limit requests per client to prevent abuse:
+
+```json
+{
+  "middleware": {
+    "rateLimit": {
+      "enabled": true,
+      "maxRequests": 100,
+      "windowMs": 60000,
+      "message": "Too many requests"
+    }
+  }
+}
+```
+
+#### Security Headers
+Add security headers to all responses:
+
+```json
+{
+  "middleware": {
+    "security": {
+      "enabled": true,
+      "headers": {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "X-XSS-Protection": "1; mode=block"
+      }
+    }
+  }
+}
+```
+
+#### Request Logging
+Log requests with configurable detail:
+
+```json
+{
+  "middleware": {
+    "logging": {
+      "enabled": true,
+      "includeUserAgent": true,
+      "includeResponseTime": true
+    }
+  }
+}
+```
+
+### Custom Middleware
+
+Create your own middleware by writing JavaScript files and referencing them in your config:
+
+```json
+{
+  "middleware": {
+    "custom": ["./middleware/auth.js", "./middleware/analytics.js"]
+  }
+}
+```
+
+#### Custom Middleware Example
+
+```javascript
+// middleware/auth.js
+export default (config) => {
+  return async (req, res, next) => {
+    const token = req.headers.authorization;
+    
+    if (!token) {
+      req.user = null;
+      return await next();
+    }
+    
+    try {
+      // Verify JWT token (example)
+      const user = verifyToken(token);
+      req.user = user;
+      req.permissions = await getUserPermissions(user.id);
+      
+      // Add helper methods
+      req.hasPermission = (permission) => req.permissions.includes(permission);
+      
+    } catch (error) {
+      req.user = null;
+    }
+    
+    await next();
+  };
+};
+```
+
+#### Using Enhanced Requests in Routes
+
+Your route files can now access the enhanced request object:
+
+```javascript
+// api/user/profile/GET.js
+export default async (req, res, params) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  
+  if (!req.hasPermission('user:read')) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+  
+  const profile = await getUserProfile(req.user.id);
+  res.json(profile);
+};
+```
+
+### Middleware Order
+
+Middleware executes in this order:
+1. Built-in middleware (cors, compression, rateLimit, security, logging)
+2. Custom middleware (in the order listed in config)
+3. Your route handlers
+
+### Route Interception
+
+Middleware can intercept and handle routes completely, useful for authentication endpoints:
+
+```javascript
+// middleware/auth-routes.js
+export default (config) => {
+  return async (req, res, next) => {
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    
+    // Handle login endpoint
+    if (req.method === 'POST' && url.pathname === '/auth/login') {
+      const credentials = await req.json();
+      const token = await authenticateUser(credentials);
+      
+      if (token) {
+        return res.json({ token, success: true });
+      } else {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+    }
+    
+    await next();
+  };
+};
+```
 
 ### allowedMimes
 
@@ -333,6 +516,8 @@ The maximum number of times to attempt rescanning the file system when a file is
 - **Zero Dependencies** - No external dependencies required
 - **File-based Routing** - Routes are defined by your directory structure
 - **Dynamic Routes** - Support for parameterized routes with square bracket syntax
+- **Wildcard Routes** - Map entire directory structures with wildcard patterns
+- **Middleware System** - Built-in and custom middleware support for authentication, logging, CORS, and more
 - **Request Object** - Request handling with built-in body parsing
 - **Response Object** - Response handling with chainable methods
 - **Multiple HTTP Methods** - Support for GET, POST, PUT, DELETE, and more
@@ -340,8 +525,8 @@ The maximum number of times to attempt rescanning the file system when a file is
 - **HTML Routes** - Support for both JavaScript and HTML route handlers
 - **Query Parameters** - Easy access to URL query parameters
 - **Configurable** - Customize behavior with a simple JSON config file
-- **Security** - Built-in protection against serving sensitive files
-- **Performance** - Smart file system caching and rescan optimization
+- **Security** - Built-in protection against serving sensitive files plus security headers middleware
+- **Performance** - Smart file system caching, rescan optimization, and optional compression
 
 ## Examples
 
