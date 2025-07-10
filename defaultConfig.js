@@ -90,5 +90,41 @@ export default {
   customRoutes: {
     // Example: "/vendor/bootstrap.css": "./node_modules/bootstrap/dist/css/bootstrap.min.css"
     // Wildcard example: "kempo/*": "./node_modules/kempo/dust/*"
+  },
+  middleware: {
+    // Built-in middleware configuration
+    cors: {
+      enabled: false,
+      origin: "*",
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      headers: ["Content-Type", "Authorization"]
+    },
+    compression: {
+      enabled: false,
+      threshold: 1024 // Only compress files larger than 1KB
+    },
+    rateLimit: {
+      enabled: false,
+      maxRequests: 100,
+      windowMs: 60000, // 1 minute
+      message: "Too many requests"
+    },
+    security: {
+      enabled: true,
+      headers: {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "X-XSS-Protection": "1; mode=block"
+      }
+    },
+    logging: {
+      enabled: true,
+      includeUserAgent: false,
+      includeResponseTime: true
+    },
+    // Custom middleware files
+    custom: [
+      // Example: "./middleware/auth.js"
+    ]
   }
 }
