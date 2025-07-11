@@ -625,3 +625,23 @@ Kempo Server supports several command line options to customize its behavior:
 ```bash
 kempo-server --root public --port 8080 --host 0.0.0.0 --verbose
 ```
+
+## Documentation
+
+For complete documentation, visit the [Kempo Server Documentation](docs/index.html).
+
+### Quick Links
+
+- [Getting Started](docs/getting-started.html) - Installation and basic setup
+- [Routes & Routing](docs/routing.html) - File-based routing and dynamic routes
+- [Request & Response](docs/request-response.html) - Working with HTTP requests and responses
+- [Configuration](docs/configuration.html) - Server configuration options
+- [Middleware](docs/middleware.html) - Built-in and custom middleware
+- [Examples & Demos](docs/examples.html) - Code examples and interactive demos
+
+The documentation includes:
+- **Interactive examples** - Try API endpoints directly in your browser
+- **Complete code samples** - Real-world examples for common use cases
+- **Configuration guides** - Detailed setup instructions
+- **Middleware documentation** - Authentication, logging, CORS, and custom middleware
+- **Best practices** - Tips for production deployments

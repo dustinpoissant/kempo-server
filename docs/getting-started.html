@@ -1,0 +1,70 @@
+<html lang="en" theme="auto">
+<head>
+  <meta charset='utf-8'>
+  <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+  <title>Getting Started - Kempo Server</title>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <link rel="stylesheet" href="essential.css" />
+</head>
+<body>
+  <main>
+    <a href="./" class="btn">Home</a>
+    <h1>Getting Started</h1>
+    <p>Get up and running with Kempo Server in just a few steps.</p>
+
+    <h2>Installation</h2>
+    <p>1. Install the npm package.</p>
+    <pre><code>npm install kempo-server</code></pre>
+    
+    <p>2. Add it to your <code>package.json</code> scripts, use the <code>--root</code> flag to tell it where the root of your site is.</p>
+    <pre><code class="hljs json">{<br />  ...<br />  <span class="hljs-attr">"scripts"</span>: {<br />    <span class="hljs-attr">"start"</span>: <span class="hljs-string">"kempo-server --root public"</span><br />  }<br />  ...<br />}</code></pre>
+    
+    <p>3. Run it in your terminal.</p>
+    <pre><code>npm run start</code></pre>
+
+    <h2>Basic Project Structure</h2>
+    <p>Once installed, create a basic project structure:</p>
+    <pre><code class="hljs markdown">my-project/<br />├─ public/             # Your web root<br />│  ├─ index.html       # Homepage<br />│  ├─ styles.css       # CSS files<br />│  ├─ api/             # API routes<br />│  │  ├─ hello/<br />│  │  │  ├─ GET.js     # GET /api/hello/<br />│  │  ├─ users/<br />│  │  │  ├─ GET.js     # GET /api/users/<br />│  │  │  ├─ POST.js    # POST /api/users/<br />├─ package.json<br />├─ .config.json        # Optional configuration<br /></code></pre>
+
+    <h2>Your First Route</h2>
+    <p>Create a simple API endpoint:</p>
+    
+    <h3>1. Create the directory structure</h3>
+    <pre><code>mkdir -p public/api/hello</code></pre>
+    
+    <h3>2. Create your first route file</h3>
+    <p>Create <code>public/api/hello/GET.js</code>:</p>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// public/api/hello/GET.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">const</span> { name } = request.query;<br />  <span class="hljs-keyword">const</span> message = name ? <span class="hljs-string">`Hello ${name}!`</span> : <span class="hljs-string">'Hello World!'</span>;<br />  <br />  response.json({ message, timestamp: <span class="hljs-keyword">new</span> <span class="hljs-built_in">Date</span>().toISOString() });<br />}</code></pre>
+
+    <h3>3. Test your route</h3>
+    <p>Start your server and visit:</p>
+    <ul>
+      <li><code>http://localhost:3000/api/hello/</code></li>
+      <li><code>http://localhost:3000/api/hello/?name=World</code></li>
+    </ul>
+
+    <h2>Command Line Options</h2>
+    <p>Kempo Server supports several command line options:</p>
+    <ul>
+      <li><code>--root &lt;path&gt;</code> - Set the document root directory (required)</li>
+      <li><code>--port &lt;number&gt;</code> - Set the port number (default: 3000)</li>
+      <li><code>--host &lt;address&gt;</code> - Set the host address (default: localhost)</li>
+      <li><code>--verbose</code> - Enable verbose logging</li>
+    </ul>
+    
+    <p>Example:</p>
+    <pre><code>kempo-server --root public --port 8080 --host 0.0.0.0 --verbose</code></pre>
+
+    <h2>What's Next?</h2>
+    <p>Now that you have Kempo Server running, explore these topics:</p>
+    <ul>
+      <li><a href="routing.html">Learn about Routes & Routing</a> - File-based routing, dynamic routes, and HTML routes</li>
+      <li><a href="request-response.html">Request & Response Objects</a> - Working with HTTP requests and responses</li>
+      <li><a href="configuration.html">Configuration</a> - Customize server behavior</li>
+      <li><a href="middleware.html">Middleware</a> - Add authentication, logging, CORS, and more</li>
+      <li><a href="examples.html">Examples & Demos</a> - See real-world examples in action</li>
+    </ul>
+  </main>
+  <div style="height:25vh"></div>
+</body>
+</html>

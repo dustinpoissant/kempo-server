@@ -1,0 +1,145 @@
+<html lang="en" theme="auto">
+<head>
+  <meta charset='utf-8'>
+  <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+  <title>Middleware - Kempo Server</title>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <link rel="stylesheet" href="essential.css" />
+</head>
+<body>
+  <main>
+    <a href="./" class="btn">Home</a>
+    <h1>Middleware</h1>
+    <p>Kempo Server includes a powerful middleware system that allows you to add functionality like authentication, logging, CORS, compression, and more.</p>
+
+    <h2>How Middleware Works</h2>
+    <p>Middleware functions run before your route handlers and can:</p>
+    <ul>
+      <li>Modify request and response objects</li>
+      <li>Add new properties to requests (authentication, user data, etc.)</li>
+      <li>Handle requests entirely (authentication checks, rate limiting)</li>
+      <li>Log requests and responses</li>
+      <li>Add security headers</li>
+      <li>Compress responses</li>
+    </ul>
+
+    <h2>Built-in Middleware</h2>
+    <p>Kempo Server includes several built-in middleware options that you can enable and configure:</p>
+    
+    <h3>CORS (Cross-Origin Resource Sharing)</h3>
+    <p>Enable Cross-Origin Resource Sharing to allow requests from different domains:</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"middleware"</span>: {<br />    <span class="hljs-attr">"cors"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"origin"</span>: <span class="hljs-string">"*"</span>,<br />      <span class="hljs-attr">"methods"</span>: [<span class="hljs-string">"GET"</span>, <span class="hljs-string">"POST"</span>, <span class="hljs-string">"PUT"</span>, <span class="hljs-string">"DELETE"</span>],<br />      <span class="hljs-attr">"headers"</span>: [<span class="hljs-string">"Content-Type"</span>, <span class="hljs-string">"Authorization"</span>],<br />      <span class="hljs-attr">"credentials"</span>: <span class="hljs-literal">true</span><br />    }<br />  }<br />}</code></pre>
+
+    <h4>CORS Configuration Options</h4>
+    <ul>
+      <li><code>origin</code> - Allowed origins (<code>"*"</code> for all, or specific domains)</li>
+      <li><code>methods</code> - Allowed HTTP methods</li>
+      <li><code>headers</code> - Allowed request headers</li>
+      <li><code>credentials</code> - Allow credentials (cookies, authorization headers)</li>
+      <li><code>maxAge</code> - How long browsers can cache preflight responses</li>
+    </ul>
+
+    <h3>Compression</h3>
+    <p>Automatically compress responses with gzip to reduce bandwidth:</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"middleware"</span>: {<br />    <span class="hljs-attr">"compression"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"threshold"</span>: <span class="hljs-number">1024</span>,<br />      <span class="hljs-attr">"level"</span>: <span class="hljs-number">6</span><br />    }<br />  }<br />}</code></pre>
+
+    <h4>Compression Configuration Options</h4>
+    <ul>
+      <li><code>threshold</code> - Minimum size in bytes before compression is applied</li>
+      <li><code>level</code> - Compression level (1-9, where 9 is best compression)</li>
+      <li><code>filter</code> - Function to determine which responses to compress</li>
+    </ul>
+
+    <h3>Rate Limiting</h3>
+    <p>Limit the number of requests per client to prevent abuse:</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"middleware"</span>: {<br />    <span class="hljs-attr">"rateLimit"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"maxRequests"</span>: <span class="hljs-number">100</span>,<br />      <span class="hljs-attr">"windowMs"</span>: <span class="hljs-number">60000</span>,<br />      <span class="hljs-attr">"message"</span>: <span class="hljs-string">"Too many requests, please try again later."</span><br />    }<br />  }<br />}</code></pre>
+
+    <h4>Rate Limiting Configuration Options</h4>
+    <ul>
+      <li><code>maxRequests</code> - Maximum number of requests per window</li>
+      <li><code>windowMs</code> - Time window in milliseconds</li>
+      <li><code>message</code> - Error message to send when limit is exceeded</li>
+      <li><code>statusCode</code> - HTTP status code to return (default: 429)</li>
+    </ul>
+
+    <h3>Security Headers</h3>
+    <p>Add security headers to responses to protect against common attacks:</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"middleware"</span>: {<br />    <span class="hljs-attr">"security"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"headers"</span>: {<br />        <span class="hljs-attr">"X-Content-Type-Options"</span>: <span class="hljs-string">"nosniff"</span>,<br />        <span class="hljs-attr">"X-Frame-Options"</span>: <span class="hljs-string">"DENY"</span>,<br />        <span class="hljs-attr">"X-XSS-Protection"</span>: <span class="hljs-string">"1; mode=block"</span>,<br />        <span class="hljs-attr">"Strict-Transport-Security"</span>: <span class="hljs-string">"max-age=31536000; includeSubDomains"</span>,<br />        <span class="hljs-attr">"Referrer-Policy"</span>: <span class="hljs-string">"strict-origin-when-cross-origin"</span><br />      }<br />    }<br />  }<br />}</code></pre>
+
+    <h4>Common Security Headers</h4>
+    <ul>
+      <li><code>X-Content-Type-Options</code> - Prevents MIME type sniffing</li>
+      <li><code>X-Frame-Options</code> - Prevents clickjacking attacks</li>
+      <li><code>X-XSS-Protection</code> - Enables XSS filtering</li>
+      <li><code>Strict-Transport-Security</code> - Enforces HTTPS connections</li>
+      <li><code>Content-Security-Policy</code> - Controls resource loading</li>
+      <li><code>Referrer-Policy</code> - Controls referrer information</li>
+    </ul>
+
+    <h2>Custom Middleware</h2>
+    <p>Create your own middleware by writing JavaScript files and referencing them in your config:</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"middleware"</span>: {<br />    <span class="hljs-attr">"custom"</span>: [<br />      <span class="hljs-string">"./middleware/auth.js"</span>,<br />      <span class="hljs-string">"./middleware/logging.js"</span>,<br />      <span class="hljs-string">"./middleware/analytics.js"</span><br />    ]<br />  }<br />}</code></pre>
+
+    <h3>Custom Middleware Structure</h3>
+    <p>A custom middleware file must export a default function that returns a middleware function:</p>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// middleware/example.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-function">(<span class="hljs-params">config</span>) =></span> {<br />  <span class="hljs-keyword">return</span> <span class="hljs-keyword">async</span> <span class="hljs-function">(<span class="hljs-params">req, res, next</span>) =></span> {<br />    <span class="hljs-comment">// Your middleware logic here</span><br />    <span class="hljs-keyword">await</span> <span class="hljs-title function_">next</span>();<br />  };<br />};</code></pre>
+
+    <h3>Middleware Function Parameters</h3>
+    <ul>
+      <li><code>config</code> - Configuration object (can be used for middleware settings)</li>
+      <li><code>req</code> - Request object (can be modified)</li>
+      <li><code>res</code> - Response object (can be modified)</li>
+      <li><code>next</code> - Function to call the next middleware or route handler</li>
+    </ul>
+
+    <h2>Middleware Examples</h2>
+
+    <h3>Authentication Middleware</h3>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// middleware/auth.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-function">(<span class="hljs-params">config</span>) =></span> {<br />  <span class="hljs-keyword">return</span> <span class="hljs-keyword">async</span> <span class="hljs-function">(<span class="hljs-params">req, res, next</span>) =></span> {<br />    <span class="hljs-keyword">const</span> token = req.<span class="hljs-property">headers</span>.<span class="hljs-property">authorization</span>;<br />    <br />    <span class="hljs-keyword">if</span> (token) {<br />      <span class="hljs-keyword">try</span> {<br />        <span class="hljs-keyword">const</span> user = <span class="hljs-keyword">await</span> <span class="hljs-title function_">verifyToken</span>(token.<span class="hljs-title function_">replace</span>(<span class="hljs-string">'Bearer '</span>, <span class="hljs-string">''</span>));<br />        req.<span class="hljs-property">user</span> = user;<br />        req.<span class="hljs-property">permissions</span> = <span class="hljs-keyword">await</span> <span class="hljs-title function_">getUserPermissions</span>(user.<span class="hljs-property">id</span>);<br />        req.<span class="hljs-property">hasPermission</span> = <span class="hljs-function">(<span class="hljs-params">permission</span>) =></span> req.<span class="hljs-property">permissions</span>.<span class="hljs-title function_">includes</span>(permission);<br />      } <span class="hljs-keyword">catch</span> (error) {<br />        <span class="hljs-comment">// Token is invalid, but don't block the request</span><br />        req.<span class="hljs-property">user</span> = <span class="hljs-literal">null</span>;<br />      }<br />    } <span class="hljs-keyword">else</span> {<br />      req.<span class="hljs-property">user</span> = <span class="hljs-literal">null</span>;<br />    }<br />    <br />    <span class="hljs-keyword">await</span> <span class="hljs-title function_">next</span>();<br />  };<br />};<br /><br /><span class="hljs-comment">// Helper functions (you would implement these)</span><br /><span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">verifyToken</span>(<span class="hljs-params">token</span>) </span>{<br />  <span class="hljs-comment">// Verify JWT token or session token</span><br />  <span class="hljs-comment">// Return user object if valid, throw error if invalid</span><br />}<br /><br /><span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getUserPermissions</span>(<span class="hljs-params">userId</span>) </span>{<br />  <span class="hljs-comment">// Fetch user permissions from database</span><br />  <span class="hljs-comment">// Return array of permission strings</span><br />}</code></pre>
+
+    <h3>Logging Middleware</h3>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// middleware/logging.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-function">(<span class="hljs-params">config</span>) =></span> {<br />  <span class="hljs-keyword">return</span> <span class="hljs-keyword">async</span> <span class="hljs-function">(<span class="hljs-params">req, res, next</span>) =></span> {<br />    <span class="hljs-keyword">const</span> startTime = <span class="hljs-built_in">Date</span>.<span class="hljs-title function_">now</span>();<br />    <span class="hljs-keyword">const</span> { method, path, headers } = req;<br />    <br />    <span class="hljs-comment">// Log request</span><br />    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`[${new Date().toISOString()}] ${method} ${path}`</span>);<br />    <br />    <span class="hljs-comment">// Store original response methods</span><br />    <span class="hljs-keyword">const</span> originalSend = res.<span class="hljs-property">send</span>;<br />    <span class="hljs-keyword">const</span> originalJson = res.<span class="hljs-property">json</span>;<br />    <span class="hljs-keyword">const</span> originalHtml = res.<span class="hljs-property">html</span>;<br />    <br />    <span class="hljs-comment">// Override response methods to log response</span><br />    res.<span class="hljs-property">send</span> = <span class="hljs-keyword">function</span>(<span class="hljs-params">data</span>) {<br />      <span class="hljs-keyword">const</span> duration = <span class="hljs-built_in">Date</span>.<span class="hljs-title function_">now</span>() - startTime;<br />      <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`[${new Date().toISOString()}] ${method} ${path} - ${res.statusCode || 200} - ${duration}ms`</span>);<br />      <span class="hljs-keyword">return</span> <span class="hljs-title function_">originalSend</span>.<span class="hljs-title function_">call</span>(<span class="hljs-variable language_">this</span>, data);<br />    };<br />    <br />    res.<span class="hljs-property">json</span> = <span class="hljs-keyword">function</span>(<span class="hljs-params">data</span>) {<br />      <span class="hljs-keyword">const</span> duration = <span class="hljs-built_in">Date</span>.<span class="hljs-title function_">now</span>() - startTime;<br />      <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`[${new Date().toISOString()}] ${method} ${path} - ${res.statusCode || 200} - ${duration}ms`</span>);<br />      <span class="hljs-keyword">return</span> <span class="hljs-title function_">originalJson</span>.<span class="hljs-title function_">call</span>(<span class="hljs-variable language_">this</span>, data);<br />    };<br />    <br />    <span class="hljs-keyword">await</span> <span class="hljs-title function_">next</span>();<br />  };<br />};</code></pre>
+
+    <h3>Analytics Middleware</h3>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// middleware/analytics.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-function">(<span class="hljs-params">config</span>) =></span> {<br />  <span class="hljs-keyword">return</span> <span class="hljs-keyword">async</span> <span class="hljs-function">(<span class="hljs-params">req, res, next</span>) =></span> {<br />    <span class="hljs-keyword">const</span> userAgent = req.<span class="hljs-title function_">get</span>(<span class="hljs-string">'user-agent'</span>) || <span class="hljs-string">'Unknown'</span>;<br />    <span class="hljs-keyword">const</span> referer = req.<span class="hljs-title function_">get</span>(<span class="hljs-string">'referer'</span>) || <span class="hljs-string">'Direct'</span>;<br />    <span class="hljs-keyword">const</span> ip = req.<span class="hljs-property">headers</span>[<span class="hljs-string">'x-forwarded-for'</span>] || req.<span class="hljs-property">connection</span>.<span class="hljs-property">remoteAddress</span>;<br />    <br />    <span class="hljs-comment">// Track page view</span><br />    <span class="hljs-keyword">await</span> <span class="hljs-title function_">trackPageView</span>({<br />      <span class="hljs-attr">path</span>: req.<span class="hljs-property">path</span>,<br />      <span class="hljs-attr">method</span>: req.<span class="hljs-property">method</span>,<br />      <span class="hljs-attr">userAgent</span>,<br />      <span class="hljs-attr">referer</span>,<br />      <span class="hljs-attr">ip</span>,<br />      <span class="hljs-attr">timestamp</span>: <span class="hljs-keyword">new</span> <span class="hljs-built_in">Date</span>()<br />    });<br />    <br />    <span class="hljs-keyword">await</span> <span class="hljs-title function_">next</span>();<br />  };<br />};<br /><br /><span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">trackPageView</span>(<span class="hljs-params">data</span>) </span>{<br />  <span class="hljs-comment">// Send analytics data to your tracking service</span><br />  <span class="hljs-comment">// or save to database</span><br />}</code></pre>
+
+    <h3>Request Validation Middleware</h3>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// middleware/validation.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-function">(<span class="hljs-params">config</span>) =></span> {<br />  <span class="hljs-keyword">return</span> <span class="hljs-keyword">async</span> <span class="hljs-function">(<span class="hljs-params">req, res, next</span>) =></span> {<br />    <span class="hljs-comment">// Add validation helpers to request object</span><br />    req.<span class="hljs-property">validate</span> = {<br />      <span class="hljs-attr">email</span>: <span class="hljs-function">(<span class="hljs-params">value</span>) =></span> {<br />        <span class="hljs-keyword">const</span> emailRegex = <span class="hljs-regexp">/^[^\s@]+@[^\s@]+\.[^\s@]+$/</span>;<br />        <span class="hljs-keyword">return</span> emailRegex.<span class="hljs-title function_">test</span>(value);<br />      },<br />      <span class="hljs-attr">required</span>: <span class="hljs-function">(<span class="hljs-params">value</span>) =></span> {<br />        <span class="hljs-keyword">return</span> value !== <span class="hljs-literal">undefined</span> && value !== <span class="hljs-literal">null</span> && value !== <span class="hljs-string">''</span>;<br />      },<br />      <span class="hljs-attr">minLength</span>: <span class="hljs-function">(<span class="hljs-params">value, min</span>) =></span> {<br />        <span class="hljs-keyword">return</span> <span class="hljs-keyword">typeof</span> value === <span class="hljs-string">'string'</span> && value.<span class="hljs-property">length</span> >= min;<br />      },<br />      <span class="hljs-attr">maxLength</span>: <span class="hljs-function">(<span class="hljs-params">value, max</span>) =></span> {<br />        <span class="hljs-keyword">return</span> <span class="hljs-keyword">typeof</span> value === <span class="hljs-string">'string'</span> && value.<span class="hljs-property">length</span> <= max;<br />      }<br />    };<br />    <br />    <span class="hljs-keyword">await</span> <span class="hljs-title function_">next</span>();<br />  };<br />};</code></pre>
+
+    <h2>Using Enhanced Requests in Routes</h2>
+    <p>Once middleware has enhanced your request object, you can use the added properties in your route handlers:</p>
+
+    <h3>Using Authentication Data</h3>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// api/user/profile/GET.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res</span>) </span>{<br />  <span class="hljs-comment">// Check if user is authenticated (added by auth middleware)</span><br />  <span class="hljs-keyword">if</span> (!req.<span class="hljs-property">user</span>) {<br />    <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">401</span>).<span class="hljs-title function_">json</span>({ <span class="hljs-attr">error</span>: <span class="hljs-string">'Authentication required'</span> });<br />  }<br />  <br />  <span class="hljs-comment">// Check permissions (added by auth middleware)</span><br />  <span class="hljs-keyword">if</span> (!req.<span class="hljs-title function_">hasPermission</span>(<span class="hljs-string">'user:read'</span>)) {<br />    <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">403</span>).<span class="hljs-title function_">json</span>({ <span class="hljs-attr">error</span>: <span class="hljs-string">'Insufficient permissions'</span> });<br />  }<br />  <br />  <span class="hljs-keyword">const</span> profile = <span class="hljs-keyword">await</span> <span class="hljs-title function_">getUserProfile</span>(req.<span class="hljs-property">user</span>.<span class="hljs-property">id</span>);<br />  res.<span class="hljs-title function_">json</span>(profile);<br />}</code></pre>
+
+    <h3>Using Validation Helpers</h3>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// api/user/POST.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res</span>) </span>{<br />  <span class="hljs-keyword">const</span> { name, email, password } = <span class="hljs-keyword">await</span> req.<span class="hljs-title function_">json</span>();<br />  <span class="hljs-keyword">const</span> errors = [];<br />  <br />  <span class="hljs-comment">// Use validation helpers added by validation middleware</span><br />  <span class="hljs-keyword">if</span> (!req.<span class="hljs-property">validate</span>.<span class="hljs-title function_">required</span>(name)) {<br />    errors.<span class="hljs-title function_">push</span>(<span class="hljs-string">'Name is required'</span>);<br />  }<br />  <br />  <span class="hljs-keyword">if</span> (!req.<span class="hljs-property">validate</span>.<span class="hljs-title function_">required</span>(email)) {<br />    errors.<span class="hljs-title function_">push</span>(<span class="hljs-string">'Email is required'</span>);<br />  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!req.<span class="hljs-property">validate</span>.<span class="hljs-title function_">email</span>(email)) {<br />    errors.<span class="hljs-title function_">push</span>(<span class="hljs-string">'Invalid email format'</span>);<br />  }<br />  <br />  <span class="hljs-keyword">if</span> (!req.<span class="hljs-property">validate</span>.<span class="hljs-title function_">minLength</span>(password, <span class="hljs-number">8</span>)) {<br />    errors.<span class="hljs-title function_">push</span>(<span class="hljs-string">'Password must be at least 8 characters'</span>);<br />  }<br />  <br />  <span class="hljs-keyword">if</span> (errors.<span class="hljs-property">length</span> > <span class="hljs-number">0</span>) {<br />    <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">400</span>).<span class="hljs-title function_">json</span>({ errors });<br />  }<br />  <br />  <span class="hljs-comment">// Create user...</span><br />  <span class="hljs-keyword">const</span> user = <span class="hljs-keyword">await</span> <span class="hljs-title function_">createUser</span>({ name, email, password });<br />  res.<span class="hljs-title function_">status</span>(<span class="hljs-number">201</span>).<span class="hljs-title function_">json</span>(user);<br />}</code></pre>
+
+    <h2>Middleware Best Practices</h2>
+
+    <h3>Order Matters</h3>
+    <p>Middleware runs in the order specified in your configuration. Common ordering:</p>
+    <ol>
+      <li>Security headers (should run first)</li>
+      <li>CORS (before authentication)</li>
+      <li>Rate limiting (before heavy processing)</li>
+      <li>Authentication (before authorization)</li>
+      <li>Logging (can be early or late)</li>
+      <li>Compression (should run last)</li>
+    </ol>
+
+    <h3>Error Handling</h3>
+    <p>Always handle errors gracefully in custom middleware:</p>
+    <pre><code class="hljs javascript"><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-function">(<span class="hljs-params">config</span>) =></span> {<br />  <span class="hljs-keyword">return</span> <span class="hljs-keyword">async</span> <span class="hljs-function">(<span class="hljs-params">req, res, next</span>) =></span> {<br />    <span class="hljs-keyword">try</span> {<br />      <span class="hljs-comment">// Your middleware logic</span><br />      <span class="hljs-keyword">await</span> <span class="hljs-title function_">next</span>();<br />    } <span class="hljs-keyword">catch</span> (error) {<br />      <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">error</span>(<span class="hljs-string">'Middleware error:'</span>, error);<br />      <span class="hljs-comment">// Don't break the request chain</span><br />      <span class="hljs-keyword">await</span> <span class="hljs-title function_">next</span>();<br />    }<br />  };<br />};</code></pre>
+
+    <h3>Performance Considerations</h3>
+    <ul>
+      <li>Keep middleware lightweight - avoid heavy processing</li>
+      <li>Use async/await properly to avoid blocking</li>
+      <li>Cache expensive operations when possible</li>
+      <li>Consider the performance impact of middleware order</li>
+    </ul>
+  </main>
+  <div style="height:25vh"></div>
+</body>
+</html>

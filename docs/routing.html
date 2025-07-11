@@ -1,0 +1,75 @@
+<html lang="en" theme="auto">
+<head>
+  <meta charset='utf-8'>
+  <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+  <title>Routes & Routing - Kempo Server</title>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <link rel="stylesheet" href="essential.css" />
+</head>
+<body>
+  <main>
+    <a href="./" class="btn">Home</a>
+    <h1>Routes & Routing</h1>
+    <p>Learn how Kempo Server's file-based routing system works.</p>
+
+    <h2>How Routes Work</h2>
+    <p>A route is a request to a directory that will be handled by a file. To define routes, create the directory structure to the route and create a file with the name of the method that this file will handle. For example <code>GET.js</code> will handle the <code>GET</code> requests, <code>POST.js</code> will handle the <code>POST</code> requests and so on. Use <code>index.js</code> to handle all request types.</p>
+    
+    <p>The Javascript file must have a <b>default</b> export that is the function that will handle the request. It will be passed a <code>request</code> object and a <code>response</code> object.</p>
+    
+    <p>For example this directory structure:</p>
+    <pre><code class="hljs markdown">my/<br />├─ route/<br />│  ├─ GET.js<br />│  ├─ POST.js<br />├─ other/<br />│  ├─ route/<br />│  │  ├─ GET.js<br /></code></pre>
+    <p>Would be used to handle <code>GET my/route/</code>, <code>POST my/route/</code> and <code>GET my/other/route/</code></p>
+
+    <h2 id="htmlRoutes">HTML Routes</h2>
+    <p>Just like JS files, HTML files can be used to define a route. Use <code>GET.html</code>, <code>POST.html</code>, etc... to define files that will be served when that route is requested.</p>
+    <pre><code class="hljs markdown">my/<br />├─ route/<br />│  ├─ GET.js<br />│  ├─ POST.js<br />├─ other/<br />│  ├─ route/<br />│  │  ├─ GET.js<br />│  ├─ POST.html<br />│  ├─ GET.html<br /></code></pre>
+    
+    <h3><code>index</code> fallbacks</h3>
+    <p><code>index.js</code> or <code>index.html</code> will be used as a fallback for all routes if a <i>method</i> file is not defined. In the above examples we do not have any routes defined for <code>DELETE</code>, <code>PUT</code> <code>PATCH</code>, etc... so lets use an <code>index.js</code> and <code>index.html</code> to be a "catch-all" for all the methods we have not created handlers for.</p>
+    <pre><code class="hljs markdown">my/<br />├─ route/<br />│  ├─ GET.js<br />│  ├─ POST.js<br />│  ├─ index.js<br />├─ other/<br />│  ├─ route/<br />│  │  ├─ GET.js<br />│  │  ├─ index.js<br />│  ├─ POST.html<br />│  ├─ GET.html<br />│  ├─ index.html<br />├─ index.html<br /></code></pre>
+
+    <h2>Dynamic Routes</h2>
+    <p>A dynamic route is a route with a "param" in its path. To define the dynamic parts of the route just wrap the directory name in square brackets. For example if you wanted to get a users profile, or perform CRUD operations on a user you might create the following directory structure.</p>
+    <pre><code class="hljs markdown">api/<br />├─ user/<br />│  ├─ [id]/<br />│  │  ├─ [info]/<br />│  │  │  ├─ GET.js<br />│  │  │  ├─ DELETE.js<br />│  │  │  ├─ PUT.js<br />│  │  │  ├─ POST.js<br />│  │  ├─ GET.js<br /></code></pre>
+    <p>When a request is made to <code>/api/user/123/info</code>, the route file <code>api/user/[id]/[info]/GET.js</code> would be executed and receive a request object with <code>request.params</code> containing <code>{ id: "123", info: "info" }</code>.</p>
+
+    <h2>Route Examples</h2>
+    
+    <h3>Simple API Route</h3>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// api/hello/GET.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">const</span> { name } = request.query;<br />  <span class="hljs-keyword">const</span> message = name ? <span class="hljs-string">`Hello ${name}!`</span> : <span class="hljs-string">'Hello World!'</span>;<br />  <br />  response.json({ message });<br />}</code></pre>
+
+    <h3>Dynamic User Profile Route</h3>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// api/users/[id]/GET.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">const</span> { id } = request.params;<br />  <span class="hljs-keyword">const</span> { includeProfile } = request.query;<br />  <br />  <span class="hljs-comment">// Simulate database lookup</span><br />  <span class="hljs-keyword">const</span> user = {<br />    id: id,<br />    name: <span class="hljs-string">`User ${id}`</span>,<br />    email: <span class="hljs-string">`user${id}@example.com`</span><br />  };<br />  <br />  <span class="hljs-keyword">if</span> (includeProfile === <span class="hljs-string">'true'</span>) {<br />    user.profile = {<br />      bio: <span class="hljs-string">`Bio for user ${id}`</span>,<br />      joinDate: <span class="hljs-string">'2024-01-01'</span><br />    };<br />  }<br />  <br />  response.json(user);<br />}</code></pre>
+
+    <h3>Nested Dynamic Routes</h3>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// api/users/[id]/posts/[postId]/GET.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">const</span> { id, postId } = request.params;<br />  <br />  <span class="hljs-keyword">const</span> post = {<br />    id: postId,<br />    userId: id,<br />    title: <span class="hljs-string">`Post ${postId} by User ${id}`</span>,<br />    content: <span class="hljs-string">'This is the post content...'</span>,<br />    createdAt: <span class="hljs-string">'2024-01-01T00:00:00.000Z'</span><br />  };<br />  <br />  response.json(post);<br />}</code></pre>
+
+    <h3>HTML Route Example</h3>
+    <pre><code class="hljs html"><span class="hljs-comment">&lt;!-- pages/about/GET.html --&gt;</span><br /><span class="hljs-meta">&lt;!DOCTYPE html&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">html</span>&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">head</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">title</span>&gt;</span>About Us<span class="hljs-tag">&lt;/<span class="hljs-name">title</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">head</span>&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">body</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">h1</span>&gt;</span>About Our Company<span class="hljs-tag">&lt;/<span class="hljs-name">h1</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">p</span>&gt;</span>We are a company that does amazing things.<span class="hljs-tag">&lt;/<span class="hljs-name">p</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">body</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">html</span>&gt;</span></code></pre>
+
+    <h2>Route File Structure Best Practices</h2>
+    
+    <h3>Organize by Feature</h3>
+    <pre><code class="hljs markdown">api/<br />├─ auth/<br />│  ├─ login/<br />│  │  ├─ POST.js<br />│  ├─ logout/<br />│  │  ├─ POST.js<br />│  ├─ register/<br />│  │  ├─ POST.js<br />├─ users/<br />│  ├─ [id]/<br />│  │  ├─ GET.js<br />│  │  ├─ PUT.js<br />│  │  ├─ DELETE.js<br />│  ├─ GET.js<br />│  ├─ POST.js<br />├─ posts/<br />│  ├─ [id]/<br />│  │  ├─ GET.js<br />│  │  ├─ PUT.js<br />│  │  ├─ DELETE.js<br />│  ├─ GET.js<br />│  ├─ POST.js<br /></code></pre>
+
+    <h3>Use Index Files for Fallbacks</h3>
+    <p>Use <code>index.js</code> to handle methods not explicitly defined:</p>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// api/users/index.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-comment">// Handle any method not explicitly defined</span><br />  response.status(<span class="hljs-number">405</span>).json({<br />    error: <span class="hljs-string">'Method not allowed'</span>,<br />    allowed: [<span class="hljs-string">'GET'</span>, <span class="hljs-string">'POST'</span>]<br />  });<br />}</code></pre>
+
+    <h2>Static File Serving</h2>
+    <p>Any file that doesn't match a route pattern will be served as a static file. This includes:</p>
+    <ul>
+      <li>HTML files (except route files)</li>
+      <li>CSS files</li>
+      <li>JavaScript files (except route files)</li>
+      <li>Images</li>
+      <li>Any other static assets</li>
+    </ul>
+
+    <p>Example static file structure:</p>
+    <pre><code class="hljs markdown">public/<br />├─ index.html         # Served at /<br />├─ styles.css         # Served at /styles.css<br />├─ script.js          # Served at /script.js<br />├─ images/<br />│  ├─ logo.png        # Served at /images/logo.png<br />├─ api/               # Routes directory<br />│  ├─ hello/GET.js    # Route handler<br /></code></pre>
+  </main>
+  <div style="height:25vh"></div>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<html lang="en" theme="auto">
+<head>
+  <meta charset='utf-8'>
+  <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+  <title>Examples & Demos - Kempo Server</title>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <link rel="stylesheet" href="essential.css" />
+</head>
+<body>
+  <main>
+    <a href="./" class="btn">Home</a>
+    <h1>Examples & Demos</h1>
+    <p>Explore practical examples and try interactive demos of Kempo Server features.</p>
+
+    <h2>Code Examples</h2>
+
+    <h3>Simple API Route</h3>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// api/hello/GET.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">const</span> { name } = request.query;<br />  <span class="hljs-keyword">const</span> message = name ? <span class="hljs-string">`Hello ${name}!`</span> : <span class="hljs-string">'Hello World!'</span>;<br />  <br />  response.json({ message });<br />}</code></pre>
+
+    <h3>Dynamic User Profile Route</h3>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// api/users/[id]/GET.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">const</span> { id } = request.params;<br />  <span class="hljs-keyword">const</span> { includeProfile } = request.query;<br />  <br />  <span class="hljs-comment">// Simulate database lookup</span><br />  <span class="hljs-keyword">const</span> user = {<br />    id: id,<br />    name: <span class="hljs-string">`User ${id}`</span>,<br />    email: <span class="hljs-string">`user${id}@example.com`</span><br />  };<br />  <br />  <span class="hljs-keyword">if</span> (includeProfile === <span class="hljs-string">'true'</span>) {<br />    user.profile = {<br />      bio: <span class="hljs-string">`Bio for user ${id}`</span>,<br />      joinDate: <span class="hljs-string">'2024-01-01'</span><br />    };<br />  }<br />  <br />  response.json(user);<br />}</code></pre>
+
+    <h3>Form Handling Route</h3>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// contact/POST.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">try</span> {<br />    <span class="hljs-keyword">const</span> body = <span class="hljs-keyword">await</span> request.text();<br />    <span class="hljs-keyword">const</span> formData = <span class="hljs-keyword">new</span> URLSearchParams(body);<br />    <span class="hljs-keyword">const</span> name = formData.get(<span class="hljs-string">'name'</span>);<br />    <span class="hljs-keyword">const</span> email = formData.get(<span class="hljs-string">'email'</span>);<br />    <span class="hljs-keyword">const</span> message = formData.get(<span class="hljs-string">'message'</span>);<br />    <br />    <span class="hljs-comment">// Process form data...</span><br />    <span class="hljs-keyword">await</span> sendContactEmail({ name, email, message });<br />    <br />    response.html(<span class="hljs-string">'&lt;h1&gt;Thank you for your message!&lt;/h1&gt;'</span>);<br />  } <span class="hljs-keyword">catch</span> (error) {<br />    response.status(<span class="hljs-number">400</span>).html(<span class="hljs-string">'&lt;h1&gt;Error processing form&lt;/h1&gt;'</span>);<br />  }<br />}</code></pre>
+
+    <h3>File Upload Handling</h3>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// api/upload/POST.js</span><br /><span class="hljs-keyword">import</span> fs <span class="hljs-keyword">from</span> <span class="hljs-string">'fs/promises'</span>;<br /><span class="hljs-keyword">import</span> path <span class="hljs-keyword">from</span> <span class="hljs-string">'path'</span>;<br /><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">try</span> {<br />    <span class="hljs-keyword">const</span> buffer = <span class="hljs-keyword">await</span> request.buffer();<br />    <span class="hljs-keyword">const</span> contentType = request.get(<span class="hljs-string">'content-type'</span>);<br />    <br />    <span class="hljs-comment">// Generate filename</span><br />    <span class="hljs-keyword">const</span> extension = getExtensionFromMimeType(contentType);<br />    <span class="hljs-keyword">const</span> filename = <span class="hljs-string">`upload_${Date.now()}.${extension}`</span>;<br />    <span class="hljs-keyword">const</span> filepath = path.join(<span class="hljs-string">'./uploads'</span>, filename);<br />    <br />    <span class="hljs-comment">// Ensure uploads directory exists</span><br />    <span class="hljs-keyword">await</span> fs.mkdir(<span class="hljs-string">'./uploads'</span>, { recursive: <span class="hljs-literal">true</span> });<br />    <br />    <span class="hljs-comment">// Save file</span><br />    <span class="hljs-keyword">await</span> fs.writeFile(filepath, buffer);<br />    <br />    response.json({<br />      message: <span class="hljs-string">'File uploaded successfully'</span>,<br />      filename: filename,<br />      size: buffer.length,<br />      type: contentType<br />    });<br />  } <span class="hljs-keyword">catch</span> (error) {<br />    response.status(<span class="hljs-number">500</span>).json({<br />      error: <span class="hljs-string">'Upload failed'</span>,<br />      message: error.message<br />    });<br />  }<br />}<br /><br /><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getExtensionFromMimeType</span>(<span class="hljs-params">mimeType</span>) </span>{<br />  <span class="hljs-keyword">const</span> mimeMap = {<br />    <span class="hljs-string">'image/jpeg'</span>: <span class="hljs-string">'jpg'</span>,<br />    <span class="hljs-string">'image/png'</span>: <span class="hljs-string">'png'</span>,<br />    <span class="hljs-string">'image/gif'</span>: <span class="hljs-string">'gif'</span>,<br />    <span class="hljs-string">'text/plain'</span>: <span class="hljs-string">'txt'</span>,<br />    <span class="hljs-string">'application/pdf'</span>: <span class="hljs-string">'pdf'</span><br />  };<br />  <span class="hljs-keyword">return</span> mimeMap[mimeType] || <span class="hljs-string">'bin'</span>;<br />}</code></pre>
+
+    <h3>Authentication Route</h3>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// api/auth/login/POST.js</span><br /><span class="hljs-keyword">import</span> crypto <span class="hljs-keyword">from</span> <span class="hljs-string">'crypto'</span>;<br /><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">try</span> {<br />    <span class="hljs-keyword">const</span> { username, password } = <span class="hljs-keyword">await</span> request.json();<br />    <br />    <span class="hljs-comment">// Validate credentials</span><br />    <span class="hljs-keyword">const</span> user = <span class="hljs-keyword">await</span> authenticateUser(username, password);<br />    <br />    <span class="hljs-keyword">if</span> (!user) {<br />      <span class="hljs-keyword">return</span> response.status(<span class="hljs-number">401</span>).json({<br />        error: <span class="hljs-string">'Invalid credentials'</span><br />      });<br />    }<br />    <br />    <span class="hljs-comment">// Generate session token</span><br />    <span class="hljs-keyword">const</span> sessionToken = crypto.randomBytes(<span class="hljs-number">32</span>).toString(<span class="hljs-string">'hex'</span>);<br />    <span class="hljs-keyword">await</span> createSession(user.id, sessionToken);<br />    <br />    <span class="hljs-comment">// Set secure cookie</span><br />    response<br />      .cookie(<span class="hljs-string">'session'</span>, sessionToken, {<br />        httpOnly: <span class="hljs-literal">true</span>,<br />        secure: <span class="hljs-literal">true</span>,<br />        sameSite: <span class="hljs-string">'strict'</span>,<br />        maxAge: <span class="hljs-number">24</span> * <span class="hljs-number">60</span> * <span class="hljs-number">60</span> * <span class="hljs-number">1000</span> <span class="hljs-comment">// 24 hours</span><br />      })<br />      .json({<br />        message: <span class="hljs-string">'Login successful'</span>,<br />        user: {<br />          id: user.id,<br />          username: user.username,<br />          email: user.email<br />        }<br />      });<br />  } <span class="hljs-keyword">catch</span> (error) {<br />    response.status(<span class="hljs-number">400</span>).json({<br />      error: <span class="hljs-string">'Invalid request'</span>,<br />      message: error.message<br />    });<br />  }<br />}</code></pre>
+
+    <h2>Interactive Demos</h2>
+    <p>Try out the example API endpoints below. These demonstrations show the actual routes working in this documentation site.</p>
+
+    <div class="mb">
+      <h3 class="mt0">Get User Profile</h3>
+      <p><code>GET /api/user/[id]</code></p>
+      <div class="row -mx">
+        <div class="col m-span-12 d-span-6 px">
+          <pre><code class="hljs javascript"><span class="hljs-comment">// api/user/[id]/GET.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">const</span> { id } = request.params;<br />  <br />  <span class="hljs-keyword">const</span> userData = {<br />    id: id,<br />    profile: {<br />      name: <span class="hljs-string">`${id.charAt(0).toUpperCase()}${id.slice(1)}`</span>,<br />      joinDate: <span class="hljs-string">'2024-01-15'</span>,<br />      posts: <span class="hljs-number">42</span><br />    }<br />  };<br />  <br />  response.json(userData);<br />}</code></pre>
+          <div class="mb">
+            <input type="text" id="userId" placeholder="Enter user ID (e.g., john)" value="john" class="mb mr">
+            <button onclick="fetchUser()" class="primary">GET User</button>
+          </div>
+        </div>
+        <div class="col m-span-12 d-span-6 px">
+          <h4>Response:</h4>
+          <pre><output id="userOutput" class="pb">Click "GET User" to see the response</output></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="mb">
+      <h3 class="mt0">Get User Info</h3>
+      <p><code>GET /api/user/[id]/[info]</code></p>
+      <div class="row -mx">
+        <div class="col m-span-12 d-span-6 px">
+          <pre><code class="hljs javascript"><span class="hljs-comment">// api/user/[id]/[info]/GET.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">const</span> { id, info } = request.params;<br />  <br />  <span class="hljs-keyword">const</span> userInfo = {<br />    id: id,<br />    details: {<br />      bio: <span class="hljs-string">`This is ${id}'s bio`</span>,<br />      location: <span class="hljs-string">'Earth'</span>,<br />      website: <span class="hljs-string">`https://${id}.dev`</span>,<br />      followers: <span class="hljs-number">123</span>,<br />      following: <span class="hljs-number">456</span><br />    }<br />  };<br />  <br />  response.json(userInfo);<br />}</code></pre>
+          <div class="mb">
+            <input type="text" id="userInfoId" placeholder="Enter user ID" value="alice" class="mb mr">
+            <button onclick="fetchUserInfo()" class="primary">GET User Info</button>
+          </div>
+        </div>
+        <div class="col m-span-12 d-span-6 px">
+          <h4>Response:</h4>
+          <pre><output id="userInfoOutput" class="pb">Click "GET User Info" to see the response</output></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="mb">
+      <h3 class="mt0">Update User Info</h3>
+      <p><code>POST /api/user/[id]/[info]</code></p>
+      <div class="row -mx">
+        <div class="col m-span-12 d-span-6 px">
+          <pre><code class="hljs javascript"><span class="hljs-comment">// api/user/[id]/[info]/POST.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">const</span> { id, info } = request.params;<br />  <br />  <span class="hljs-keyword">try</span> {<br />    <span class="hljs-keyword">const</span> updateData = <span class="hljs-keyword">await</span> request.json();<br />    <br />    <span class="hljs-keyword">const</span> updatedUser = {<br />      id: id,<br />      message: <span class="hljs-string">'User info updated successfully'</span>,<br />      updatedFields: updateData<br />    };<br />    <br />    response.json(updatedUser);<br />  } <span class="hljs-keyword">catch</span> (error) {<br />    response.status(<span class="hljs-number">400</span>).json({ error: <span class="hljs-string">'Invalid JSON'</span> });<br />  }<br />}</code></pre>
+          <div class="mb">
+            <input type="text" id="postUserId" placeholder="Enter user ID" value="bob" class="mb">
+            <textarea id="postData" placeholder="Enter JSON data to update" class="mb">{
+  "bio": "Updated bio text",
+  "location": "New York"
+}</textarea>
+            <button onclick="updateUserInfo()" class="primary">POST Update</button>
+          </div>
+        </div>
+        <div class="col m-span-12 d-span-6 px">
+          <h4>Response:</h4>
+          <pre><output id="postOutput" class="pb">Click "POST Update" to see the response</output></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="mb">
+      <h3 class="mt0">Delete User Info</h3>
+      <p><code>DELETE /api/user/[id]/[info]</code></p>
+      <div class="row -mx">
+        <div class="col m-span-12 d-span-6 px">
+          <pre><code class="hljs javascript"><span class="hljs-comment">// api/user/[id]/[info]/DELETE.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">const</span> { id, info } = request.params;<br />  <br />  <span class="hljs-keyword">const</span> result = {<br />    id: id,<br />    message: <span class="hljs-string">'User info deleted successfully'</span>,<br />    deletedAt: <span class="hljs-keyword">new</span> <span class="hljs-built_in">Date</span>().toISOString()<br />  };<br />  <br />  response.json(result);<br />}</code></pre>
+          <div class="mb">
+            <input type="text" id="deleteUserId" placeholder="Enter user ID" value="charlie" class="mr">
+            <button onclick="deleteUserInfo()" class="primary">DELETE Info</button>
+          </div>
+        </div>
+        <div class="col m-span-12 d-span-6 px">
+          <h4>Response:</h4>
+          <pre><output id="deleteOutput" class="pb">Click "DELETE Info" to see the response</output></pre>
+        </div>
+      </div>
+    </div>
+
+    <h2>Project Structure Examples</h2>
+
+    <h3>Basic Blog API</h3>
+    <pre><code class="hljs markdown">blog-api/<br />├─ public/                    # Web root<br />│  ├─ index.html             # Homepage<br />│  ├─ api/<br />│  │  ├─ posts/<br />│  │  │  ├─ GET.js           # Get all posts<br />│  │  │  ├─ POST.js          # Create new post<br />│  │  │  ├─ [id]/<br />│  │  │  │  ├─ GET.js        # Get specific post<br />│  │  │  │  ├─ PUT.js        # Update post<br />│  │  │  │  ├─ DELETE.js     # Delete post<br />│  │  │  │  ├─ comments/<br />│  │  │  │  │  ├─ GET.js     # Get post comments<br />│  │  │  │  │  ├─ POST.js    # Add comment<br />│  │  ├─ users/<br />│  │  │  ├─ GET.js           # Get all users<br />│  │  │  ├─ POST.js          # Create user<br />│  │  │  ├─ [id]/<br />│  │  │  │  ├─ GET.js        # Get user profile<br />│  │  │  │  ├─ PUT.js        # Update user<br />│  │  │  │  ├─ DELETE.js     # Delete user<br />│  │  ├─ auth/<br />│  │  │  ├─ login/<br />│  │  │  │  ├─ POST.js       # User login<br />│  │  │  ├─ logout/<br />│  │  │  │  ├─ POST.js       # User logout<br />│  │  │  ├─ register/<br />│  │  │  │  ├─ POST.js       # User registration<br />├─ middleware/<br />│  ├─ auth.js                # Authentication middleware<br />│  ├─ logging.js             # Request logging<br />├─ .config.json              # Server configuration<br />├─ package.json<br /></code></pre>
+
+    <h3>E-commerce API</h3>
+    <pre><code class="hljs markdown">ecommerce-api/<br />├─ public/<br />│  ├─ api/<br />│  │  ├─ products/<br />│  │  │  ├─ GET.js           # Get all products<br />│  │  │  ├─ POST.js          # Create product<br />│  │  │  ├─ [id]/<br />│  │  │  │  ├─ GET.js        # Get product details<br />│  │  │  │  ├─ PUT.js        # Update product<br />│  │  │  │  ├─ DELETE.js     # Delete product<br />│  │  │  │  ├─ reviews/<br />│  │  │  │  │  ├─ GET.js     # Get product reviews<br />│  │  │  │  │  ├─ POST.js    # Add review<br />│  │  │  ├─ categories/<br />│  │  │  │  ├─ [category]/<br />│  │  │  │  │  ├─ GET.js     # Get products by category<br />│  │  ├─ cart/<br />│  │  │  ├─ GET.js           # Get cart contents<br />│  │  │  ├─ POST.js          # Add item to cart<br />│  │  │  ├─ [id]/<br />│  │  │  │  ├─ PUT.js        # Update cart item<br />│  │  │  │  ├─ DELETE.js     # Remove cart item<br />│  │  ├─ orders/<br />│  │  │  ├─ GET.js           # Get user orders<br />│  │  │  ├─ POST.js          # Create order<br />│  │  │  ├─ [id]/<br />│  │  │  │  ├─ GET.js        # Get order details<br />│  │  │  │  ├─ PUT.js        # Update order status<br />│  │  ├─ users/<br />│  │  │  ├─ [id]/<br />│  │  │  │  ├─ profile/<br />│  │  │  │  │  ├─ GET.js     # Get user profile<br />│  │  │  │  │  ├─ PUT.js     # Update profile<br />│  │  │  │  ├─ addresses/<br />│  │  │  │  │  ├─ GET.js     # Get addresses<br />│  │  │  │  │  ├─ POST.js    # Add address<br />│  │  │  │  │  ├─ [addressId]/<br />│  │  │  │  │  │  ├─ PUT.js  # Update address<br />│  │  │  │  │  │  ├─ DELETE.js # Delete address<br />├─ middleware/<br />│  ├─ auth.js                # User authentication<br />│  ├─ admin.js               # Admin-only routes<br />│  ├─ cors.js                # CORS configuration<br />├─ .config.json<br /></code></pre>
+
+    <h3>SaaS Application API</h3>
+    <pre><code class="hljs markdown">saas-api/<br />├─ public/<br />│  ├─ api/<br />│  │  ├─ auth/<br />│  │  │  ├─ login/<br />│  │  │  ├─ register/<br />│  │  │  ├─ reset-password/<br />│  │  │  ├─ verify-email/<br />│  │  ├─ organizations/<br />│  │  │  ├─ [orgId]/<br />│  │  │  │  ├─ GET.js        # Get organization<br />│  │  │  │  ├─ PUT.js        # Update organization<br />│  │  │  │  ├─ members/<br />│  │  │  │  │  ├─ GET.js     # Get members<br />│  │  │  │  │  ├─ POST.js    # Invite member<br />│  │  │  │  │  ├─ [userId]/<br />│  │  │  │  │  │  ├─ PUT.js  # Update member role<br />│  │  │  │  │  │  ├─ DELETE.js # Remove member<br />│  │  │  │  ├─ projects/<br />│  │  │  │  │  ├─ GET.js     # Get projects<br />│  │  │  │  │  ├─ POST.js    # Create project<br />│  │  │  │  │  ├─ [projectId]/<br />│  │  │  │  │  │  ├─ GET.js  # Get project<br />│  │  │  │  │  │  ├─ PUT.js  # Update project<br />│  │  │  │  │  │  ├─ DELETE.js # Delete project<br />│  │  │  │  │  │  ├─ tasks/<br />│  │  │  │  │  │  │  ├─ GET.js # Get tasks<br />│  │  │  │  │  │  │  ├─ POST.js # Create task<br />│  │  │  │  │  │  │  ├─ [taskId]/<br />│  │  │  │  │  │  │  │  ├─ GET.js # Get task<br />│  │  │  │  │  │  │  │  ├─ PUT.js # Update task<br />│  │  │  │  │  │  │  │  ├─ DELETE.js # Delete task<br />│  │  ├─ billing/<br />│  │  │  ├─ subscriptions/<br />│  │  │  ├─ invoices/<br />│  │  │  ├─ payment-methods/<br />│  │  ├─ analytics/<br />│  │  │  ├─ dashboard/<br />│  │  │  ├─ reports/<br />├─ middleware/<br />│  ├─ auth.js                # Authentication<br />│  ├─ organization.js        # Organization context<br />│  ├─ permissions.js         # Permission checking<br />│  ├─ rate-limit.js          # API rate limiting<br />│  ├─ analytics.js           # Usage analytics<br />├─ .config.json<br /></code></pre>
+
+    <h2>Configuration Examples</h2>
+
+    <h3>Development Configuration</h3>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"allowedMimes"</span>: {<br />    <span class="hljs-attr">"html"</span>: <span class="hljs-string">"text/html"</span>,<br />    <span class="hljs-attr">"css"</span>: <span class="hljs-string">"text/css"</span>,<br />    <span class="hljs-attr">"js"</span>: <span class="hljs-string">"application/javascript"</span>,<br />    <span class="hljs-attr">"json"</span>: <span class="hljs-string">"application/json"</span>,<br />    <span class="hljs-attr">"map"</span>: <span class="hljs-string">"application/json"</span>,<br />    <span class="hljs-attr">"png"</span>: <span class="hljs-string">"image/png"</span>,<br />    <span class="hljs-attr">"jpg"</span>: <span class="hljs-string">"image/jpeg"</span><br />  },<br />  <span class="hljs-attr">"middleware"</span>: {<br />    <span class="hljs-attr">"cors"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"origin"</span>: <span class="hljs-string">"*"</span><br />    },<br />    <span class="hljs-attr">"compression"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">false</span><br />    },<br />    <span class="hljs-attr">"custom"</span>: [<br />      <span class="hljs-string">"./middleware/logging.js"</span><br />    ]<br />  }<br />}</code></pre>
+
+    <h3>Production Configuration</h3>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"allowedMimes"</span>: {<br />    <span class="hljs-attr">"html"</span>: <span class="hljs-string">"text/html"</span>,<br />    <span class="hljs-attr">"css"</span>: <span class="hljs-string">"text/css"</span>,<br />    <span class="hljs-attr">"js"</span>: <span class="hljs-string">"application/javascript"</span>,<br />    <span class="hljs-attr">"json"</span>: <span class="hljs-string">"application/json"</span>,<br />    <span class="hljs-attr">"png"</span>: <span class="hljs-string">"image/png"</span>,<br />    <span class="hljs-attr">"jpg"</span>: <span class="hljs-string">"image/jpeg"</span>,<br />    <span class="hljs-attr">"svg"</span>: <span class="hljs-string">"image/svg+xml"</span>,<br />    <span class="hljs-attr">"woff"</span>: <span class="hljs-string">"font/woff"</span>,<br />    <span class="hljs-attr">"woff2"</span>: <span class="hljs-string">"font/woff2"</span><br />  },<br />  <span class="hljs-attr">"disallowedRegex"</span>: [<br />    <span class="hljs-string">"^/\\..*"</span>,<br />    <span class="hljs-string">"\\.env$"</span>,<br />    <span class="hljs-string">"\\.config$"</span>,<br />    <span class="hljs-string">"password"</span>,<br />    <span class="hljs-string">"secret"</span>,<br />    <span class="hljs-string">"node_modules"</span>,<br />    <span class="hljs-string">"\\.git"</span>,<br />    <span class="hljs-string">"\\.map$"</span><br />  ],<br />  <span class="hljs-attr">"middleware"</span>: {<br />    <span class="hljs-attr">"cors"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"origin"</span>: <span class="hljs-string">"https://yourdomain.com"</span>,<br />      <span class="hljs-attr">"credentials"</span>: <span class="hljs-literal">true</span><br />    },<br />    <span class="hljs-attr">"compression"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"threshold"</span>: <span class="hljs-number">1024</span><br />    },<br />    <span class="hljs-attr">"security"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"headers"</span>: {<br />        <span class="hljs-attr">"X-Content-Type-Options"</span>: <span class="hljs-string">"nosniff"</span>,<br />        <span class="hljs-attr">"X-Frame-Options"</span>: <span class="hljs-string">"DENY"</span>,<br />        <span class="hljs-attr">"X-XSS-Protection"</span>: <span class="hljs-string">"1; mode=block"</span>,<br />        <span class="hljs-attr">"Strict-Transport-Security"</span>: <span class="hljs-string">"max-age=31536000; includeSubDomains"</span><br />      }<br />    },<br />    <span class="hljs-attr">"rateLimit"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"maxRequests"</span>: <span class="hljs-number">100</span>,<br />      <span class="hljs-attr">"windowMs"</span>: <span class="hljs-number">60000</span><br />    },<br />    <span class="hljs-attr">"custom"</span>: [<br />      <span class="hljs-string">"./middleware/auth.js"</span>,<br />      <span class="hljs-string">"./middleware/logging.js"</span>,<br />      <span class="hljs-string">"./middleware/analytics.js"</span><br />    ]<br />  }<br />}</code></pre>
+
+    <script>
+      async function fetchUser() {
+        const userId = document.getElementById('userId').value || 'john';
+        const output = document.getElementById('userOutput');
+        
+        try {
+          output.textContent = 'Loading...';
+          const response = await fetch(`/api/user/${userId}`);
+          const data = await response.json();
+          output.textContent = JSON.stringify(data, null, 2);
+        } catch (error) {
+          output.textContent = `Error: ${error.message}`;
+        }
+      }
+
+      async function fetchUserInfo() {
+        const userId = document.getElementById('userInfoId').value || 'alice';
+        const output = document.getElementById('userInfoOutput');
+        
+        try {
+          output.textContent = 'Loading...';
+          const response = await fetch(`/api/user/${userId}/info`);
+          const data = await response.json();
+          output.textContent = JSON.stringify(data, null, 2);
+        } catch (error) {
+          output.textContent = `Error: ${error.message}`;
+        }
+      }
+
+      async function updateUserInfo() {
+        const userId = document.getElementById('postUserId').value || 'bob';
+        const postData = document.getElementById('postData').value;
+        const output = document.getElementById('postOutput');
+        
+        try {
+          output.textContent = 'Loading...';
+          const response = await fetch(`/api/user/${userId}/info`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: postData
+          });
+          const data = await response.json();
+          output.textContent = JSON.stringify(data, null, 2);
+        } catch (error) {
+          output.textContent = `Error: ${error.message}`;
+        }
+      }
+
+      async function deleteUserInfo() {
+        const userId = document.getElementById('deleteUserId').value || 'charlie';
+        const output = document.getElementById('deleteOutput');
+        
+        try {
+          output.textContent = 'Loading...';
+          const response = await fetch(`/api/user/${userId}/info`, {
+            method: 'DELETE'
+          });
+          const data = await response.json();
+          output.textContent = JSON.stringify(data, null, 2);
+        } catch (error) {
+          output.textContent = `Error: ${error.message}`;
+        }
+      }
+    </script>
+  </main>
+  <div style="height:25vh"></div>
+</body>
+</html>
