@@ -12,7 +12,7 @@ npm install kempo-server
 
 2. Add it to your `package.json` scripts, use the `--root` flag to tell it where the root of your site is.
 
-```json
+```
 {
   ...
   "scripts": {
