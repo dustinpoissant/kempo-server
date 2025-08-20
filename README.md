@@ -626,22 +626,25 @@ Kempo Server supports several command line options to customize its behavior:
 kempo-server --root public --port 8080 --host 0.0.0.0 --verbose
 ```
 
-## Documentation
+## Testing
 
-For complete documentation, visit the [Kempo Server Documentation](docs/index.html).
+This project uses the Kempo Testing Framework. Tests live in the `tests/` folder and follow these naming conventions:
 
-### Quick Links
+- `[name].node-test.js` — Node-only tests
+- `[name].browser-test.js` — Browser-only tests
+- `[name].test.js` — Runs in both environments
 
-- [Getting Started](docs/getting-started.html) - Installation and basic setup
-- [Routes & Routing](docs/routing.html) - File-based routing and dynamic routes
-- [Request & Response](docs/request-response.html) - Working with HTTP requests and responses
-- [Configuration](docs/configuration.html) - Server configuration options
-- [Middleware](docs/middleware.html) - Built-in and custom middleware
-- [Examples & Demos](docs/examples.html) - Code examples and interactive demos
+### Run tests
 
-The documentation includes:
-- **Interactive examples** - Try API endpoints directly in your browser
-- **Complete code samples** - Real-world examples for common use cases
-- **Configuration guides** - Detailed setup instructions
-- **Middleware documentation** - Authentication, logging, CORS, and custom middleware
-- **Best practices** - Tips for production deployments
+Using npm scripts:
+
+```bash
+npm run tests         # Run all tests (Node + Browser)
+npm run tests:node    # Run Node tests only
+npm run tests:browser # Run Browser tests only
+npm run tests:gui     # Start the GUI test runner
+```
+
+For advanced usage (filters, flags, GUI options), see:
+https://github.com/dustinpoissant/kempo-testing-framework
+

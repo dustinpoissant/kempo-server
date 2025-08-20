@@ -1,18 +1,23 @@
 {
   "name": "kempo-server",
   "type": "module",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "description": "A lightweight, zero-dependency, file based routing server.",
   "main": "index.js",
   "bin": {
     "kempo-server": "./index.js"
   },
   "scripts": {
-    "start": "node index.js -r ./docs"
+  "start": "node index.js -r ./docs",
+  "tests": "npx kempo-test",
+  "tests:gui": "npx kempo-test --gui",
+  "tests:browser": "npx kempo-test -b",
+  "tests:node": "npx kempo-test -n"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "essentialcss": "^2.0.1"
+    "essentialcss": "^2.0.1",
+    "kempo-testing-framework": "^1.2.3"
   }
 }
