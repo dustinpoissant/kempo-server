@@ -10,11 +10,13 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    permissions: 
-      contents: read
+    permissions:
+      contents: write
       id-token: write  # enables npm provenance
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       # Setup Node and create an .npmrc that uses the token from NODE_AUTH_TOKEN
       - uses: actions/setup-node@v4
@@ -33,6 +35,8 @@ jobs:
           git add package.json package-lock.json || true
           git commit -m "ci: bump patch version [skip ci]" || echo "No changes to commit"
           git push origin HEAD:main || echo "No changes to push"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # If your package is public and scoped (e.g., @scope/name), keep --access public.
       # For unscoped public packages, you can omit --access.
