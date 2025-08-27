@@ -1,5 +1,5 @@
 import MiddlewareRunner from '../middlewareRunner.js';
-import {createMockReq, createMockRes, expect} from './test-utils.js';
+import {createMockReq, createMockRes} from './test-utils.js';
 
 export default {
   'runs middleware in order and calls finalHandler': async ({pass, fail}) => {
@@ -11,7 +11,7 @@ export default {
       const req = createMockReq();
       const res = createMockRes();
       await mr.run(req, res, async () => { calls.push('final'); });
-      expect(calls.join(',') === 'a,b,final,b:after,a:after', 'order incorrect');
+      if(calls.join(',') !== 'a,b,final,b:after,a:after') return fail('order incorrect');
       pass('middleware order');
     } catch(e){ fail(e.message); }
   }

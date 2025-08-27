@@ -1,4 +1,4 @@
-import {createMockReq, expect} from './test-utils.js';
+import {createMockReq} from './test-utils.js';
 import createRequestWrapper from '../requestWrapper.js';
 
 export default {
@@ -6,9 +6,9 @@ export default {
     try {
       const req = createMockReq({url: '/user/123?x=1&y=2', headers: {host: 'localhost'}});
       const wrapped = createRequestWrapper(req, {id: '123'});
-      expect(wrapped.path === '/user/123', 'path');
-      expect(wrapped.query.x === '1' && wrapped.query.y === '2', 'query');
-      expect(wrapped.params.id === '123', 'params');
+      if(wrapped.path !== '/user/123') return fail('path');
+      if(!(wrapped.query.x === '1' && wrapped.query.y === '2')) return fail('query');
+      if(wrapped.params.id !== '123') return fail('params');
       pass('parsed url');
     } catch(e){ fail(e.message); }
   },
@@ -18,15 +18,15 @@ export default {
       // Each body reader must have its own stream instance
       const reqText = createMockReq({method: 'POST', url: '/', headers: {host: 'x', 'content-type': 'application/json'}, body: JSON.stringify(payload)});
       const text = await createRequestWrapper(reqText).text();
-      expect(text === JSON.stringify(payload), 'text');
+      if(text !== JSON.stringify(payload)) return fail('text');
 
       const reqJson = createMockReq({method: 'POST', url: '/', headers: {host: 'x', 'content-type': 'application/json'}, body: JSON.stringify(payload)});
       const obj = await createRequestWrapper(reqJson).json();
-      expect(obj.a === 1, 'json');
+      if(obj.a !== 1) return fail('json');
 
       const reqBuf = createMockReq({url: '/', headers: {host: 'x'}, body: 'abc'});
       const buf = await createRequestWrapper(reqBuf).buffer();
-      expect(Buffer.isBuffer(buf) && buf.toString() === 'abc', 'buffer');
+      if(!(Buffer.isBuffer(buf) && buf.toString() === 'abc')) return fail('buffer');
       pass('helpers');
     } catch(e){ fail(e.message); }
   },
@@ -43,8 +43,8 @@ export default {
     try {
       const req = createMockReq({url: '/', headers: {'content-type': 'text/plain', host: 'x'}});
       const w = createRequestWrapper(req);
-      expect(w.get('content-type') === 'text/plain', 'get');
-      expect(w.is('text/plain') === true, 'is');
+      if(w.get('content-type') !== 'text/plain') return fail('get');
+      if(w.is('text/plain') !== true) return fail('is');
       pass('header helpers');
     } catch(e){ fail(e.message); }
   }

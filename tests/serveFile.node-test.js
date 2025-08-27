@@ -2,7 +2,7 @@ import serveFile from '../serveFile.js';
 import findFile from '../findFile.js';
 import defaultConfig from '../defaultConfig.js';
 import path from 'path';
-import {createMockReq, createMockRes, withTempDir, write, expect, log} from './test-utils.js';
+import {createMockReq, createMockRes, withTempDir, write, log} from './test-utils.js';
 
 export default {
   'serves static file with correct mime': async ({pass, fail}) => {
@@ -13,9 +13,9 @@ export default {
         const files = [path.join(dir, 'index.html')];
         const res = createMockRes();
         const ok = await serveFile(files, dir, '/index.html', 'GET', cfg, createMockReq(), res, log);
-        expect(ok === true, 'should serve');
-        expect(res.statusCode === 200, 'status');
-        expect(res.getHeader('Content-Type') === 'text/html', 'mime');
+        if(ok !== true) return fail('should serve');
+        if(res.statusCode !== 200) return fail('status');
+        if(res.getHeader('Content-Type') !== 'text/html') return fail('mime');
       });
       pass('static');
     } catch(e){ fail(e.message); }
@@ -28,9 +28,9 @@ export default {
         const files = [path.join(dir, 'api/GET.js')];
         const res = createMockRes();
         const ok = await serveFile(files, dir, '/api', 'GET', cfg, createMockReq(), res, log);
-        expect(ok === true, 'served route');
-        expect(res.statusCode === 201, 'route status');
-        expect(res.getBody().toString().includes('ok'), 'body contains ok');
+        if(ok !== true) return fail('served route');
+        if(res.statusCode !== 201) return fail('route status');
+        if(!res.getBody().toString().includes('ok')) return fail('body contains ok');
       });
       pass('route exec');
     } catch(e){ fail(e.message); }
@@ -43,8 +43,8 @@ export default {
         const files = [path.join(dir, 'api/GET.js')];
         const res = createMockRes();
         const ok = await serveFile(files, dir, '/api', 'GET', cfg, createMockReq(), res, log);
-        expect(ok === true, 'handled');
-        expect(res.statusCode === 500, '500');
+        if(ok !== true) return fail('handled');
+        if(res.statusCode !== 500) return fail('500');
       });
       pass('route no default');
     } catch(e){ fail(e.message); }

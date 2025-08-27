@@ -51,11 +51,16 @@
       <li><code>--root &lt;path&gt;</code> - Set the document root directory (required)</li>
       <li><code>--port &lt;number&gt;</code> - Set the port number (default: 3000)</li>
       <li><code>--host &lt;address&gt;</code> - Set the host address (default: localhost)</li>
+      <li><code>--config &lt;path&gt;</code> - Set the configuration file path (default: .config.json)</li>
       <li><code>--verbose</code> - Enable verbose logging</li>
     </ul>
     
-    <p>Example:</p>
+    <p>Basic example:</p>
     <pre><code>kempo-server --root public --port 8080 --host 0.0.0.0 --verbose</code></pre>
+
+    <h3>Configuration File Examples</h3>
+    <p>You can specify different configuration files for different environments:</p>
+    <pre><code class="hljs bash"># Development<br />kempo-server --root public --config dev.config.json<br /><br /># Staging<br />kempo-server --root public --config staging.config.json<br /><br /># Production with absolute path<br />kempo-server --root public --config /etc/kempo/production.config.json<br /><br /># Mix with other options<br />kempo-server --root dist --port 8080 --config production.config.json --scan</code></pre>
 
     <h2>What's Next?</h2>
     <p>Now that you have Kempo Server running, explore these topics:</p>

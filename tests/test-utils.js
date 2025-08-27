@@ -92,10 +92,6 @@ export const setEnv = (pairs, fn) => {
   return fn().finally(restore);
 };
 
-export const expect = (condition, message) => {
-  if(!condition){ throw new Error(message); }
-};
-
 export const toString = (buf) => Buffer.isBuffer(buf) ? buf.toString() : String(buf);
 
 export const gzipSize = async (buf) => {

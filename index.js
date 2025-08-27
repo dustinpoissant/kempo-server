@@ -7,12 +7,14 @@ const flags = getFlags(process.argv.slice(2), {
   port: 3000,
   logging: 2,
   root: './',
-  scan: false
+  scan: false,
+  config: '.config.json'
 }, {
   p: 'port',
   l: 'logging',
   r: 'root',
-  s: 'scan'
+  s: 'scan',
+  c: 'config'
 });
 
 if(typeof(flags.logging) === 'string'){

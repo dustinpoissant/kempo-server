@@ -1,4 +1,4 @@
-import {createMockRes, expect, parseCookies} from './test-utils.js';
+import {createMockRes, parseCookies} from './test-utils.js';
 import createResponseWrapper from '../responseWrapper.js';
 
 export default {
@@ -7,9 +7,9 @@ export default {
       const res = createMockRes();
       const w = createResponseWrapper(res);
       w.status(201).set('X-Test', '1').type('json');
-      expect(res.statusCode === 201, 'status');
-      expect(res.getHeader('X-Test') === '1', 'set/get');
-      expect(res.getHeader('Content-Type') === 'application/json', 'type');
+      if(res.statusCode !== 201) return fail('status');
+      if(res.getHeader('X-Test') !== '1') return fail('set/get');
+      if(res.getHeader('Content-Type') !== 'application/json') return fail('type');
       pass('status+headers+type');
     } catch(e){ fail(e.message); }
   },
@@ -18,7 +18,7 @@ export default {
       const res = createMockRes();
       const w = createResponseWrapper(res);
       w.json({a: 1});
-      expect(res.isEnded(), 'ended');
+      if(!res.isEnded()) return fail('ended');
       try { w.set('X', 'y'); fail('should not set after send'); } catch(_){ /* ok */ }
       pass('json');
     } catch(e){ fail(e.message); }
@@ -28,22 +28,22 @@ export default {
   const res1 = createMockRes();
   createResponseWrapper(res1).send('hello');
   // Content-Type defaults to text/html for string when not set
-  expect(res1.getHeader('Content-Type') === 'text/html', 'string content-type');
-      expect(res1.getBody().toString() === 'hello', 'string body');
+  if(res1.getHeader('Content-Type') !== 'text/html') return fail('string content-type');
+      if(res1.getBody().toString() !== 'hello') return fail('string body');
 
       const res2 = createMockRes();
       createResponseWrapper(res2).send({a:1});
-      expect(res2.getHeader('Content-Type') === 'application/json', 'object content-type');
+      if(res2.getHeader('Content-Type') !== 'application/json') return fail('object content-type');
 
   const res3 = createMockRes();
   const buf = Buffer.from('abc');
   createResponseWrapper(res3).send(buf);
   const body3 = res3.getBody().toString();
-  expect(body3.includes('"data"'), 'buffer equal');
+  if(!body3.includes('"data"')) return fail('buffer equal');
 
   const res4 = createMockRes();
   createResponseWrapper(res4).send(null);
-  expect(res4.isEnded(), 'null ended');
+  if(!res4.isEnded()) return fail('null ended');
       pass('send variants');
     } catch(e){ fail(e.message); }
   },
@@ -51,11 +51,11 @@ export default {
     try {
       const r1 = createMockRes();
       createResponseWrapper(r1).html('<h1>Ok</h1>');
-      expect(r1.getHeader('Content-Type') === 'text/html', 'html type');
+      if(r1.getHeader('Content-Type') !== 'text/html') return fail('html type');
 
       const r2 = createMockRes();
       createResponseWrapper(r2).text('plain');
-      expect(r2.getHeader('Content-Type') === 'text/plain', 'text type');
+      if(r2.getHeader('Content-Type') !== 'text/plain') return fail('text type');
       pass('helpers');
     } catch(e){ fail(e.message); }
   },
@@ -65,9 +65,9 @@ export default {
       const w = createResponseWrapper(r);
       w.cookie('a', 'b', {httpOnly: true, path: '/'});
       const cookies = parseCookies(r.getHeader('Set-Cookie'));
-      expect(cookies.length === 1 && cookies[0].includes('a=b'), 'cookie added');
+      if(!(cookies.length === 1 && cookies[0].includes('a=b'))) return fail('cookie added');
       w.redirect('/next', 301);
-      expect(r.statusCode === 301 && r.getHeader('Location') === '/next', 'redirect');
+      if(!(r.statusCode === 301 && r.getHeader('Location') === '/next')) return fail('redirect');
       pass('redirect+cookie');
     } catch(e){ fail(e.message); }
   }

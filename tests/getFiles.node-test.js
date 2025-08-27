@@ -1,7 +1,7 @@
 import getFiles from '../getFiles.js';
 import defaultConfig from '../defaultConfig.js';
 import path from 'path';
-import {withTempDir, write, expect, log} from './test-utils.js';
+import {withTempDir, write, log} from './test-utils.js';
 
 export default {
   'scans directories recursively and filters by mime and disallowed': async ({pass, fail}) => {
@@ -14,10 +14,10 @@ export default {
         await write(dir, 'sub/app.js', 'console.log(1)');
   const files = await getFiles(dir, cfg, log);
   const rel = files.map(f => path.relative(dir, f).replace(/\\/g, '/'));
-        expect(rel.includes('index.html'), 'includes html');
-        expect(rel.includes('sub/app.js'), 'includes js');
-  expect(!rel.includes('.env'), 'excludes disallowed');
-        expect(!rel.includes('notes.xyz'), 'excludes unknown ext');
+        if(!rel.includes('index.html')) return fail('includes html');
+        if(!rel.includes('sub/app.js')) return fail('includes js');
+  if(rel.includes('.env')) return fail('excludes disallowed');
+        if(rel.includes('notes.xyz')) return fail('excludes unknown ext');
       });
       pass('scan and filter');
     } catch(e){ fail(e.message); }

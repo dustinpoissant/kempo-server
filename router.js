@@ -21,17 +21,34 @@ export default async (flags, log) => {
   
   let config = defaultConfig;
   try {
-    const configPath = path.join(rootPath, '.config.json');
+    // Use the provided config path or fallback to .config.json in rootPath
+    const configFileName = flags.config || '.config.json';
+    const configPath = path.isAbsolute(configFileName) 
+      ? configFileName 
+      : path.join(rootPath, configFileName);
     log(`Loading config from: ${configPath}`, 2);
     const configContent = await readFile(configPath, 'utf8');
     const userConfig = JSON.parse(configContent);
     config = {
       ...defaultConfig,
-      ...userConfig
+      ...userConfig,
+      // Deep merge nested objects
+      allowedMimes: {
+        ...defaultConfig.allowedMimes,
+        ...userConfig.allowedMimes
+      },
+      middleware: {
+        ...defaultConfig.middleware,
+        ...userConfig.middleware
+      },
+      customRoutes: {
+        ...defaultConfig.customRoutes,
+        ...userConfig.customRoutes
+      }
     };
     log('User config loaded and merged with defaults', 2);
   } catch (e){
-    log('Using default config (no .config.json found)', 2);
+    log('Using default config (no config file found)', 2);
   }
   
   /*

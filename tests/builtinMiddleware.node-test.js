@@ -1,5 +1,5 @@
 import http from 'http';
-import {createMockReq, createMockRes, expect, bigString, gzipSize, setEnv} from './test-utils.js';
+import {createMockReq, createMockRes, bigString, gzipSize, setEnv} from './test-utils.js';
 import {corsMiddleware, compressionMiddleware, rateLimitMiddleware, securityMiddleware, loggingMiddleware} from '../builtinMiddleware.js';
 
 export default {
@@ -9,8 +9,8 @@ export default {
       const mw = corsMiddleware({origin: '*', methods: ['GET'], headers: ['X']});
       const req = createMockReq({method: 'OPTIONS', headers: {origin: 'http://x'}});
       await mw(req, res, async () => {});
-      expect(res.isEnded(), 'preflight should end');
-      expect(res.getHeader('Access-Control-Allow-Origin') === 'http://x' || res.getHeader('Access-Control-Allow-Origin') === '*', 'origin header');
+      if(!res.isEnded()) return fail('preflight should end');
+      if(!(res.getHeader('Access-Control-Allow-Origin') === 'http://x' || res.getHeader('Access-Control-Allow-Origin') === '*')) return fail('origin header');
       pass('cors');
     } catch(e){ fail(e.message); }
   },
@@ -30,9 +30,9 @@ export default {
       const gzLen = await gzipSize(original);
       // If gzipped is smaller, we expect gzip header. Otherwise, implementation may send uncompressed.
       if(gzLen < original.length){
-        expect(res.getHeader('Content-Encoding') === 'gzip', 'should gzip when beneficial');
+        if(res.getHeader('Content-Encoding') !== 'gzip') return fail('should gzip when beneficial');
       }
-      expect(body.length > 0, 'has body');
+      if(body.length <= 0) return fail('has body');
       pass('compression');
     } catch(e){ fail(e.message); }
   },
@@ -47,7 +47,7 @@ export default {
       await mw(req, res2, async () => {});
       const res3 = createMockRes();
       await mw(req, res3, async () => {});
-      expect(res3.statusCode === 429, 'should rate limit');
+      if(res3.statusCode !== 429) return fail('should rate limit');
       pass('rateLimit');
     } catch(e){ fail(e.message); }
   },
@@ -56,7 +56,7 @@ export default {
       const res = createMockRes();
       const mw = securityMiddleware({headers: {'X-Test': '1'}});
       await mw(createMockReq(), res, async () => {});
-      expect(res.getHeader('X-Test') === '1', 'header set');
+      if(res.getHeader('X-Test') !== '1') return fail('header set');
       pass('security');
     } catch(e){ fail(e.message); }
   },
@@ -67,7 +67,7 @@ export default {
       const mw = loggingMiddleware({includeUserAgent: true, includeResponseTime: true}, logger);
       const res = createMockRes();
       await mw(createMockReq({headers: {'user-agent': 'UA'}}), res, async () => { res.end('x'); });
-      expect(logs.length === 1 && logs[0].includes('GET /') && logs[0].includes('UA'), 'logged');
+      if(!(logs.length === 1 && logs[0].includes('GET /') && logs[0].includes('UA'))) return fail('logged');
       pass('logging');
     } catch(e){ fail(e.message); }
   }

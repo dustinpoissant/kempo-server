@@ -1,5 +1,5 @@
 import {corsMiddleware} from '../builtinMiddleware.js';
-import {createMockReq, createMockRes, expect} from './test-utils.js';
+import {createMockReq, createMockRes} from './test-utils.js';
 
 export default {
   'cors origin array and non-OPTIONS continues to next': async ({pass, fail}) => {
@@ -9,8 +9,8 @@ export default {
       const req = createMockReq({method: 'GET', headers: {origin: 'http://b'}});
       let called = false;
       await mw(req, res, async () => { called = true; });
-      expect(called, 'next not called');
-      expect(res.getHeader('Access-Control-Allow-Origin') === 'http://b', 'allowed origin');
+      if(!called) return fail('next not called');
+      if(res.getHeader('Access-Control-Allow-Origin') !== 'http://b') return fail('allowed origin');
       pass('cors array');
     } catch(e){ fail(e.message); }
   }

@@ -1,4 +1,4 @@
-import {startNode, expect, randomPort, httpGet, withTempDir, write} from './test-utils.js';
+import {startNode, randomPort, httpGet, withTempDir, write} from './test-utils.js';
 import path from 'path';
 
 export default {
@@ -12,8 +12,8 @@ export default {
   // wait briefly for server to start
   await new Promise(r => setTimeout(r, 400));
         const {res, body} = await httpGet(`http://localhost:${port}/index.html`);
-        expect(res.statusCode === 200, 'server running');
-        expect(body.toString() === 'home', 'served');
+        if(res.statusCode !== 200) return fail('server running');
+        if(body.toString() !== 'home') return fail('served');
   child.kill();
   await new Promise(r => setTimeout(r, 50));
       });

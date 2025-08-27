@@ -1,6 +1,6 @@
 import http from 'http';
 import path from 'path';
-import {withTempDir, write, expect, randomPort, httpGet, log} from './test-utils.js';
+import {withTempDir, write, randomPort, httpGet, log} from './test-utils.js';
 import router from '../router.js';
 import defaultConfig from '../defaultConfig.js';
 

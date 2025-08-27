@@ -211,7 +211,7 @@ export default async function(request, response) {
 
 ## Configuration
 
-To configure the server create a `.config.json` within the root directory of your server (`public` in the start example [above](#getting-started)).
+To configure the server, create a configuration file (by default `.config.json`) within the root directory of your server (`public` in the start example [above](#getting-started)). You can specify a different configuration file using the `--config` flag.
 
 This json file can have any of the following properties, any property not defined will use the "Default Config".
 
@@ -620,10 +620,29 @@ Kempo Server supports several command line options to customize its behavior:
 - `--root <path>` - Set the document root directory (required)
 - `--port <number>` - Set the port number (default: 3000)
 - `--host <address>` - Set the host address (default: localhost)
+- `--config <path>` - Set the configuration file path (default: `.config.json`)
 - `--verbose` - Enable verbose logging
 
 ```bash
 kempo-server --root public --port 8080 --host 0.0.0.0 --verbose
+```
+
+### Configuration File Examples
+
+You can specify different configuration files for different environments:
+
+```bash
+# Development
+kempo-server --root public --config dev.config.json
+
+# Staging
+kempo-server --root public --config staging.config.json
+
+# Production with absolute path
+kempo-server --root public --config /etc/kempo/production.config.json
+
+# Mix with other options
+kempo-server --root dist --port 8080 --config production.config.json --scan
 ```
 
 ## Testing

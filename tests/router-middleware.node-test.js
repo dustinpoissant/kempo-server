@@ -1,5 +1,5 @@
 import http from 'http';
-import {withTempDir, write, expect, randomPort} from './test-utils.js';
+import {withTempDir, write, randomPort} from './test-utils.js';
 import router from '../router.js';
 
 export default {
@@ -31,13 +31,13 @@ export default {
               const chunks = []; r.on('data', c => chunks.push(c)); r.on('end', ()=> res({r, body: Buffer.concat(chunks)}));
             });
           });
-          expect(one.r.statusCode === 200, 'first ok');
+          if(one.r.statusCode !== 200) return fail('first ok');
           const two = await new Promise((res)=>{
             get(`http://localhost:${port}/index.html`, r =>{
               const chunks = []; r.on('data', c => chunks.push(c)); r.on('end', ()=> res({r, body: Buffer.concat(chunks)}));
             });
           });
-          expect(two.r.statusCode === 429, 'rate limited');
+          if(two.r.statusCode !== 429) return fail('rate limited');
         } finally { server.close(); process.chdir(prev); }
       });
       pass('router middleware');
