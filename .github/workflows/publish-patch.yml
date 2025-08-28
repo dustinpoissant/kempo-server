@@ -1,5 +1,5 @@
 
-name: Publish Package to npmjs
+name: Publish Patch Version to npmjs
 
 on:
   push:

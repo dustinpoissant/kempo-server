@@ -149,9 +149,10 @@ export default async (flags, log) => {
   // Helper function to match wildcard patterns
   const matchWildcardRoute = (requestPath, pattern) => {
     // Convert wildcard pattern to regex
+    // IMPORTANT: Replace ** BEFORE * to avoid replacing both * in **
     const regexPattern = pattern
-      .replace(/\*/g, '([^/]+)')  // Replace * with capture group for single segment
-      .replace(/\*\*/g, '(.+)');  // Replace ** with capture group for multiple segments
+      .replace(/\*\*/g, '(.+)')     // Replace ** with capture group for multiple segments
+      .replace(/\*/g, '([^/]+)');   // Replace * with capture group for single segment
     
     const regex = new RegExp(`^${regexPattern}$`);
     return regex.exec(requestPath);
@@ -163,7 +164,12 @@ export default async (flags, log) => {
     
     // Replace wildcards with captured values
     for (let i = 1; i < matches.length; i++) {
-      resolvedPath = resolvedPath.replace('*', matches[i]);
+      // Replace ** first, then single *
+      if (resolvedPath.includes('**')) {
+        resolvedPath = resolvedPath.replace('**', matches[i]);
+      } else {
+        resolvedPath = resolvedPath.replace('*', matches[i]);
+      }
     }
     
     return path.resolve(resolvedPath);
