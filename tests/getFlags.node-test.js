@@ -1,4 +1,4 @@
-import getFlags from '../getFlags.js';
+import getFlags from '../src/getFlags.js';
 
 export default {
   'parses long flags with values and booleans': async ({pass, fail}) => {

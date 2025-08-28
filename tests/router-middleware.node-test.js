@@ -1,6 +1,6 @@
 import http from 'http';
 import {withTempDir, write, randomPort} from './test-utils.js';
-import router from '../router.js';
+import router from '../src/router.js';
 
 export default {
   'built-in middleware can be configured on router': async ({pass, fail}) => {

@@ -15,7 +15,7 @@ export default {
       await write(dir, 'test.default', 'default config content');
       
       const port = randomPort();
-      const args = [path.join(process.cwd(), 'index.js'), '-r', '.', '-p', String(port), '-l', '0'];
+      const args = [path.join(process.cwd(), 'dist/index.js'), '-r', '.', '-p', String(port), '-l', '0'];
       const child = await startNode(args, {cwd: dir});
       
       // Wait briefly for server to start
@@ -54,7 +54,7 @@ export default {
       
       const port = randomPort();
       const args = [
-        path.join(process.cwd(), 'index.js'), 
+        path.join(process.cwd(), 'dist/index.js'), 
         '-r', '.', 
         '-p', String(port), 
         '-l', '0',
@@ -98,7 +98,7 @@ export default {
       
       const port = randomPort();
       const args = [
-        path.join(process.cwd(), 'index.js'), 
+        path.join(process.cwd(), 'dist/index.js'), 
         '-r', '.', 
         '-p', String(port), 
         '-l', '0',
@@ -143,7 +143,7 @@ export default {
       
       const port = randomPort();
       const args = [
-        path.join(process.cwd(), 'index.js'), 
+        path.join(process.cwd(), 'dist/index.js'), 
         '-r', '.', 
         '-p', String(port), 
         '-l', '0',
@@ -180,7 +180,7 @@ export default {
       
       const port = randomPort();
       const args = [
-        path.join(process.cwd(), 'index.js'), 
+        path.join(process.cwd(), 'dist/index.js'), 
         '-r', '.', 
         '-p', String(port), 
         '-l', '0',
@@ -227,7 +227,7 @@ export default {
       
       const port = randomPort();
       const args = [
-        path.join(process.cwd(), 'index.js'), 
+        path.join(process.cwd(), 'dist/index.js'), 
         '-r', '.', 
         '-p', String(port), 
         '-l', '0',

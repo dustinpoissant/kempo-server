@@ -1,4 +1,4 @@
-import {corsMiddleware} from '../builtinMiddleware.js';
+import {corsMiddleware} from '../src/builtinMiddleware.js';
 import {createMockReq, createMockRes} from './test-utils.js';
 
 export default {

@@ -1,5 +1,5 @@
 import {createMockReq} from './test-utils.js';
-import createRequestWrapper from '../requestWrapper.js';
+import createRequestWrapper from '../src/requestWrapper.js';
 
 export default {
   'parses query and path and provides params': async ({pass, fail}) => {

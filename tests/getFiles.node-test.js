@@ -1,5 +1,5 @@
-import getFiles from '../getFiles.js';
-import defaultConfig from '../defaultConfig.js';
+import getFiles from '../src/getFiles.js';
+import defaultConfig from '../src/defaultConfig.js';
 import path from 'path';
 import {withTempDir, write, log} from './test-utils.js';
 

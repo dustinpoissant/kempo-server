@@ -3,12 +3,13 @@
   "type": "module",
   "version": "1.4.8",
   "description": "A lightweight, zero-dependency, file based routing server.",
-  "main": "index.js",
+  "main": "dist/index.js",
   "bin": {
-    "kempo-server": "./index.js"
+    "kempo-server": "./dist/index.js"
   },
   "scripts": {
-    "start": "node index.js -r ./docs",
+    "build": "node scripts/build.js",
+    "start": "node dist/index.js -r ./docs",
     "tests": "npx kempo-test",
     "tests:gui": "npx kempo-test --gui",
     "tests:browser": "npx kempo-test -b",
@@ -18,10 +19,14 @@
   "license": "ISC",
   "devDependencies": {
     "essentialcss": "^2.0.1",
-    "kempo-testing-framework": "^1.2.3"
+    "kempo-testing-framework": "^1.2.3",
+    "terser": "^5.43.1"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/dustinpoissant/kempo-server"
+  },
+  "dependencies": {
+    "kempo-css": "^1.0.5"
   }
 }

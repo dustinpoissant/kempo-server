@@ -1,6 +1,6 @@
-import serveFile from '../serveFile.js';
-import findFile from '../findFile.js';
-import defaultConfig from '../defaultConfig.js';
+import serveFile from '../src/serveFile.js';
+import findFile from '../src/findFile.js';
+import defaultConfig from '../src/defaultConfig.js';
 import path from 'path';
 import {createMockReq, createMockRes, withTempDir, write, log} from './test-utils.js';
 

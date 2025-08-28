@@ -7,7 +7,7 @@ export default {
       await withTempDir(async (dir) => {
   await write(dir, 'index.html', 'home');
   const port = randomPort();
-  const args = [path.join(process.cwd(), 'index.js'), '-r', '.', '-p', String(port), '-l', '0'];
+  const args = [path.join(process.cwd(), 'dist/index.js'), '-r', '.', '-p', String(port), '-l', '0'];
   const child = await startNode(args, {cwd: dir});
   // wait briefly for server to start
   await new Promise(r => setTimeout(r, 400));

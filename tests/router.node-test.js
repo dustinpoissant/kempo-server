@@ -1,8 +1,8 @@
 import http from 'http';
 import path from 'path';
 import {withTempDir, write, randomPort, httpGet, log} from './test-utils.js';
-import router from '../router.js';
-import defaultConfig from '../defaultConfig.js';
+import router from '../src/router.js';
+import defaultConfig from '../src/defaultConfig.js';
 
 export default {
   'serves static files and 404s unknown': async ({pass, fail, log}) => {

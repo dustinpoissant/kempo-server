@@ -1,4 +1,4 @@
-import defaultConfig from '../defaultConfig.js';
+import defaultConfig from '../src/defaultConfig.js';
 
 export default {
   'defaultConfig contains required fields and types': async ({pass, fail}) => {

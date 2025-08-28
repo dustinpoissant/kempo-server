@@ -1,6 +1,6 @@
 import http from 'http';
 import {createMockReq, createMockRes, bigString, gzipSize, setEnv} from './test-utils.js';
-import {corsMiddleware, compressionMiddleware, rateLimitMiddleware, securityMiddleware, loggingMiddleware} from '../builtinMiddleware.js';
+import {corsMiddleware, compressionMiddleware, rateLimitMiddleware, securityMiddleware, loggingMiddleware} from '../src/builtinMiddleware.js';
 
 export default {
   'cors middleware sets headers and handles OPTIONS': async ({pass, fail}) => {

@@ -1,8 +1,8 @@
 import http from 'http';
 import path from 'path';
 import {withTempDir, write, randomPort, httpGet} from './test-utils.js';
-import router from '../router.js';
-import getFlags from '../getFlags.js';
+import router from '../src/router.js';
+import getFlags from '../src/getFlags.js';
 
 export default {
   'getFlags includes config flag with default value': async ({pass, fail}) => {

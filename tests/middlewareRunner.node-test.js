@@ -1,4 +1,4 @@
-import MiddlewareRunner from '../middlewareRunner.js';
+import MiddlewareRunner from '../src/middlewareRunner.js';
 import {createMockReq, createMockRes} from './test-utils.js';
 
 export default {

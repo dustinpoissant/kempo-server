@@ -3,7 +3,7 @@ import url from 'url';
 import {createMockReq, createMockRes, setEnv} from './test-utils.js';
 
 // import the middleware module by file path to avoid executing index.js
-const examplePath = path.join(process.cwd(), 'example-middleware.js');
+const examplePath = path.join(process.cwd(), 'tests', 'example-middleware.js');
 const {default: authMiddleware} = await import(url.pathToFileURL(examplePath));
 
 export default {

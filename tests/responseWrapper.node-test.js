@@ -1,5 +1,5 @@
 import {createMockRes, parseCookies} from './test-utils.js';
-import createResponseWrapper from '../responseWrapper.js';
+import createResponseWrapper from '../src/responseWrapper.js';
 
 export default {
   'status and set/get headers and type': async ({pass, fail}) => {

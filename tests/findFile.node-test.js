@@ -1,4 +1,4 @@
-import findFile from '../findFile.js';
+import findFile from '../src/findFile.js';
 import path from 'path';
 
 const toAbs = (root, p) => path.join(root, p);
