@@ -22,7 +22,7 @@
       "type": "image/png"
     },
     {
-      "src": "media/icon48.png",
+      "src": "./media/icon48.png",
       "sizes": "48x48",
       "type": "image/png"
     },

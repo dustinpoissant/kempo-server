@@ -1,6 +1,6 @@
 {
   "customRoutes": {
-    "/essential.css": "./node_modules/essentialcss/dist/essential.min.css",
+    "/./kempo.min.css": "./node_modules/essentialcss/dist/essential.min.css",
     "/essential-hljs.css": "./node_modules/essentialcss/dist/essential-hljs.min.css"
   }
 }
