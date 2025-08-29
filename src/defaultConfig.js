@@ -126,5 +126,15 @@ export default {
     custom: [
       // Example: "./middleware/auth.js"
     ]
+  },
+  cache: {
+    enabled: false,                  // Disabled by default - opt-in for performance  
+    maxSize: 100,                    // Maximum number of cached modules
+    maxMemoryMB: 50,                 // Memory limit for cache in MB
+    ttlMs: 300000,                   // Cache TTL (5 minutes default)
+    maxHeapUsagePercent: 70,         // Clear cache if heap usage exceeds this
+    memoryCheckInterval: 30000,      // Memory check interval (30 seconds)
+    watchFiles: true,                // Auto-invalidate on file changes
+    enableMemoryMonitoring: true     // Enable automatic memory monitoring
   }
 }

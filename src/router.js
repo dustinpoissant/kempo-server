@@ -6,6 +6,7 @@ import getFiles from './getFiles.js';
 import findFile from './findFile.js';
 import serveFile from './serveFile.js';
 import MiddlewareRunner from './middlewareRunner.js';
+import ModuleCache from './moduleCache.js';
 import { 
   corsMiddleware, 
   compressionMiddleware, 
@@ -44,6 +45,10 @@ export default async (flags, log) => {
       customRoutes: {
         ...defaultConfig.customRoutes,
         ...userConfig.customRoutes
+      },
+      cache: {
+        ...defaultConfig.cache,
+        ...userConfig.cache
       }
     };
     log('User config loaded and merged with defaults', 2);
@@ -113,6 +118,16 @@ export default async (flags, log) => {
         log(`Custom middleware error for ${middlewarePath}: ${error.message}`, 1);
       }
     }
+  }
+  
+  /*
+    Initialize Module Cache
+  */
+  let moduleCache = null;
+  if (config.cache?.enabled) {
+    moduleCache = new ModuleCache(config.cache);
+    log(`Module cache initialized: ${config.cache.maxSize} max modules, ` +
+        `${config.cache.maxMemoryMB}MB limit, ${config.cache.ttlMs}ms TTL`, 2);
   }
   
   // Process custom routes - resolve paths and validate files exist
@@ -227,7 +242,7 @@ export default async (flags, log) => {
     return newAttempts;
   };
   
-  return async (req, res) => {
+  const requestHandler = async (req, res) => {
     await middlewareRunner.run(req, res, async () => {
       const requestPath = req.url.split('?')[0];
       log(`${req.method} ${requestPath}`, 0);
@@ -278,7 +293,7 @@ export default async (flags, log) => {
       }
       
       // Try to serve the file normally
-      const served = await serveFile(files, rootPath, requestPath, req.method, config, req, res, log);
+      const served = await serveFile(files, rootPath, requestPath, req.method, config, req, res, log, moduleCache);
       
       // If not served and scan flag is enabled, try rescanning once (with blacklist check)
       if (!served && flags.scan && !shouldSkipRescan(requestPath)) {
@@ -288,7 +303,7 @@ export default async (flags, log) => {
         log(`Rescan found ${files.length} files`, 2);
         
         // Try to serve again after rescan
-        const reserved = await serveFile(files, rootPath, requestPath, req.method, config, req, res, log);
+        const reserved = await serveFile(files, rootPath, requestPath, req.method, config, req, res, log, moduleCache);
         
         if (!reserved) {
           log(`404 - File not found after rescan: ${requestPath}`, 1);
@@ -305,5 +320,14 @@ export default async (flags, log) => {
         res.end('Not Found');
       }
     });
-  }
+  };
+
+  // Return handler with cache instance for external access
+  const handler = requestHandler;
+  handler.moduleCache = moduleCache;
+  handler.getStats = () => moduleCache?.getStats() || null;
+  handler.logCacheStats = () => moduleCache?.logStats(log);
+  handler.clearCache = () => moduleCache?.clear();
+  
+  return handler;
 }

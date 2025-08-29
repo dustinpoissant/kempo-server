@@ -1,0 +1,23 @@
+{
+  "_comment": "Low-memory configuration for resource-constrained environments",
+  "cache": {
+    "enabled": true,
+    "maxSize": 20,
+    "maxMemoryMB": 5,
+    "ttlMs": 120000,
+    "maxHeapUsagePercent": 60,
+    "memoryCheckInterval": 10000,
+    "watchFiles": true,
+    "enableMemoryMonitoring": true
+  },
+  "middleware": {
+    "compression": {
+      "enabled": true,
+      "threshold": 512
+    },
+    "logging": {
+      "enabled": true,
+      "includeResponseTime": false
+    }
+  }
+}

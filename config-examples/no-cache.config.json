@@ -1,0 +1,13 @@
+{
+  "_comment": "Cache disabled configuration for debugging or special environments",
+  "cache": {
+    "enabled": false
+  },
+  "middleware": {
+    "logging": {
+      "enabled": true,
+      "includeUserAgent": true,
+      "includeResponseTime": true
+    }
+  }
+}

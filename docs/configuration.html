@@ -27,6 +27,7 @@
       <li><a href="#routeFiles">routeFiles</a> - Files that should be treated as route handlers</li>
       <li><a href="#noRescanPaths">noRescanPaths</a> - Paths that should not trigger file system rescans</li>
       <li><a href="#maxRescanAttempts">maxRescanAttempts</a> - Maximum number of rescan attempts</li>
+      <li><a href="#cache">cache</a> - Module caching configuration</li>
       <li><a href="#middleware">middleware</a> - Middleware configuration</li>
     </ul>
 
@@ -91,6 +92,76 @@
     <pre><code class="hljs json">{<br />  <span class="hljs-attr">"allowedMimes"</span>: {<br />    <span class="hljs-attr">"html"</span>: <span class="hljs-string">"text/html"</span>,<br />    <span class="hljs-attr">"css"</span>: <span class="hljs-string">"text/css"</span>,<br />    <span class="hljs-attr">"js"</span>: <span class="hljs-string">"application/javascript"</span>,<br />    <span class="hljs-attr">"json"</span>: <span class="hljs-string">"application/json"</span>,<br />    <span class="hljs-attr">"png"</span>: <span class="hljs-string">"image/png"</span>,<br />    <span class="hljs-attr">"jpg"</span>: <span class="hljs-string">"image/jpeg"</span><br />  },<br />  <span class="hljs-attr">"disallowedRegex"</span>: [<br />    <span class="hljs-string">"^/\\..*"</span>,<br />    <span class="hljs-string">"\\.env$"</span>,<br />    <span class="hljs-string">"\\.config$"</span>,<br />    <span class="hljs-string">"password"</span>,<br />    <span class="hljs-string">"node_modules"</span>,<br />    <span class="hljs-string">"\\.git"</span>,<br />    <span class="hljs-string">"\\.map$"</span><br />  ],<br />  <span class="hljs-attr">"middleware"</span>: {<br />    <span class="hljs-attr">"cors"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"origin"</span>: <span class="hljs-string">"https://yourdomain.com"</span><br />    },<br />    <span class="hljs-attr">"compression"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"threshold"</span>: <span class="hljs-number">1024</span><br />    },<br />    <span class="hljs-attr">"security"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"headers"</span>: {<br />        <span class="hljs-attr">"X-Content-Type-Options"</span>: <span class="hljs-string">"nosniff"</span>,<br />        <span class="hljs-attr">"X-Frame-Options"</span>: <span class="hljs-string">"DENY"</span>,<br />        <span class="hljs-attr">"X-XSS-Protection"</span>: <span class="hljs-string">"1; mode=block"</span>,<br />        <span class="hljs-attr">"Strict-Transport-Security"</span>: <span class="hljs-string">"max-age=31536000; includeSubDomains"</span><br />      }<br />    }<br />  }<br />}</code></pre>
     <p>Use with: <code>kempo-server --root public --config .config.prod.json</code></p>
 
+    <h3 id="cache">cache</h3>
+    <p>Module caching configuration to improve performance by keeping compiled JavaScript modules in memory. The cache supports LRU eviction, TTL expiration, memory monitoring, and automatic file watching.</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"cache"</span>: {<br />    <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />    <span class="hljs-attr">"maxSize"</span>: <span class="hljs-number">1000</span>,<br />    <span class="hljs-attr">"ttlMs"</span>: <span class="hljs-number">3600000</span>,<br />    <span class="hljs-attr">"maxMemoryUsageMB"</span>: <span class="hljs-number">500</span>,<br />    <span class="hljs-attr">"checkIntervalMs"</span>: <span class="hljs-number">30000</span>,<br />    <span class="hljs-attr">"fileWatching"</span>: <span class="hljs-literal">true</span><br />  }<br />}</code></pre>
+
+    <h4>Cache Configuration Options</h4>
+    <table>
+      <thead>
+        <tr>
+          <th>Option</th>
+          <th>Type</th>
+          <th>Default</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>enabled</code></td>
+          <td>boolean</td>
+          <td>true</td>
+          <td>Enable/disable module caching system</td>
+        </tr>
+        <tr>
+          <td><code>maxSize</code></td>
+          <td>number</td>
+          <td>1000</td>
+          <td>Maximum number of modules to cache (LRU eviction)</td>
+        </tr>
+        <tr>
+          <td><code>ttlMs</code></td>
+          <td>number</td>
+          <td>3600000</td>
+          <td>Time-to-live in milliseconds (default: 1 hour)</td>
+        </tr>
+        <tr>
+          <td><code>maxMemoryUsageMB</code></td>
+          <td>number</td>
+          <td>500</td>
+          <td>Maximum memory usage in MB before triggering cleanup</td>
+        </tr>
+        <tr>
+          <td><code>checkIntervalMs</code></td>
+          <td>number</td>
+          <td>30000</td>
+          <td>Memory check interval in milliseconds (default: 30 seconds)</td>
+        </tr>
+        <tr>
+          <td><code>fileWatching</code></td>
+          <td>boolean</td>
+          <td>true</td>
+          <td>Watch files for changes and auto-invalidate cache</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4>Environment-Specific Cache Settings</h4>
+    <h5>Development (.config.dev.json)</h5>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"cache"</span>: {<br />    <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />    <span class="hljs-attr">"maxSize"</span>: <span class="hljs-number">100</span>,<br />    <span class="hljs-attr">"ttlMs"</span>: <span class="hljs-number">300000</span>,<br />    <span class="hljs-attr">"fileWatching"</span>: <span class="hljs-literal">true</span><br />  }<br />}</code></pre>
+
+    <h5>Production (.config.prod.json)</h5>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"cache"</span>: {<br />    <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />    <span class="hljs-attr">"maxSize"</span>: <span class="hljs-number">5000</span>,<br />    <span class="hljs-attr">"ttlMs"</span>: <span class="hljs-number">7200000</span>,<br />    <span class="hljs-attr">"maxMemoryUsageMB"</span>: <span class="hljs-number">1000</span>,<br />    <span class="hljs-attr">"fileWatching"</span>: <span class="hljs-literal">false</span><br />  }<br />}</code></pre>
+
+    <h4>Cache Monitoring</h4>
+    <p>Access cache statistics and management via admin endpoints:</p>
+    <ul>
+      <li><code>GET /_admin/cache</code> - View cache statistics (hits, misses, size, memory usage)</li>
+      <li><code>DELETE /_admin/cache</code> - Clear all cached modules</li>
+    </ul>
+
+    <p>For detailed cache usage and configuration examples, see the <a href="caching.html">Caching Guide</a>.</p>
+
     <h3>Package.json Scripts</h3>
     <p>Add environment-specific scripts to your <code>package.json</code>:</p>
     <pre><code class="hljs json">{<br />  <span class="hljs-attr">"scripts"</span>: {<br />    <span class="hljs-attr">"start"</span>: <span class="hljs-string">"kempo-server --root public"</span>,<br />    <span class="hljs-attr">"start:dev"</span>: <span class="hljs-string">"kempo-server --root public --config .config.dev.json --verbose"</span>,<br />    <span class="hljs-attr">"start:staging"</span>: <span class="hljs-string">"kempo-server --root public --config .config.staging.json"</span>,<br />    <span class="hljs-attr">"start:prod"</span>: <span class="hljs-string">"kempo-server --root public --config .config.prod.json"</span><br />  }<br />}</code></pre>
@@ -107,10 +178,12 @@
 
     <h3>Performance Optimization</h3>
     <ul>
+      <li>Enable module caching with appropriate <code>maxSize</code> and <code>ttlMs</code> settings</li>
       <li>Use <code>noRescanPaths</code> for static assets to improve performance</li>
       <li>Enable compression for larger files</li>
       <li>Use custom routes to serve files from CDN or optimized locations</li>
       <li>Limit <code>maxRescanAttempts</code> to prevent excessive file system scanning</li>
+      <li>Configure <code>maxMemoryUsageMB</code> to prevent memory issues in production</li>
     </ul>
 
     <h3>Development vs Production</h3>
@@ -119,6 +192,9 @@
       <li>Use relaxed CORS in development, strict in production</li>
       <li>Enable compression in production for better performance</li>
       <li>Add more security headers in production</li>
+      <li>Use smaller cache sizes in development, larger in production</li>
+      <li>Enable file watching in development, disable in production for stability</li>
+      <li>Use shorter TTL in development for faster iteration</li>
     </ul>
   </main>
   <div style="height:25vh"></div>

@@ -15,5 +15,15 @@
   "noRescanPaths": [
     "/vendor/"
   ],
-  "maxRescanAttempts": 3
+  "maxRescanAttempts": 3,
+  "cache": {
+    "enabled": true,
+    "maxSize": 150,
+    "maxMemoryMB": 75,
+    "ttlMs": 600000,
+    "maxHeapUsagePercent": 75,
+    "memoryCheckInterval": 20000,
+    "watchFiles": true,
+    "enableMemoryMonitoring": true
+  }
 }

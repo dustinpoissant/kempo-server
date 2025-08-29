@@ -40,7 +40,7 @@ export default {
   process.chdir(dir);
   const flags = {root: '.', logging: 0, scan: true};
   const handler = await router(flags, log);
-        const server = http.createServer(handler);
+  const server = http.createServer(handler);
         const port = randomPort();
   await new Promise(r => server.listen(port, r));
   await new Promise(r => setTimeout(r, 50));
@@ -67,7 +67,9 @@ export default {
   const flags = {root: '.', logging: 0, scan: false};
   const logFn = () => {};
   // write config before init
-  await write(dir, '.config.json', JSON.stringify({customRoutes: {'/a': fileA, 'b/*': path.join(dir, 'b/*')}}));
+  await write(dir, '.config.json', JSON.stringify({
+    customRoutes: {'/a': fileA, 'b/*': path.join(dir, 'b/*')}
+  }));
   const handler = await router(flags, logFn);
   const server = http.createServer(handler);
         const port = randomPort();

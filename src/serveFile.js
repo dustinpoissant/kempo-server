@@ -1,11 +1,11 @@
 import path from 'path';
-import { readFile } from 'fs/promises';
+import { readFile, stat } from 'fs/promises';
 import { pathToFileURL } from 'url';
 import findFile from './findFile.js';
 import createRequestWrapper from './requestWrapper.js';
 import createResponseWrapper from './responseWrapper.js';
 
-export default async (files, rootPath, requestPath, method, config, req, res, log) => {
+export default async (files, rootPath, requestPath, method, config, req, res, log, moduleCache = null) => {
   log(`Attempting to serve: ${requestPath}`, 3);
   const [file, params] = await findFile(files, rootPath, requestPath, method, log);
   
@@ -21,10 +21,34 @@ export default async (files, rootPath, requestPath, method, config, req, res, lo
   if (config.routeFiles.includes(fileName)) {
     log(`Executing route file: ${fileName}`, 2);
     try {
-      // Load the file as a module
-      const fileUrl = pathToFileURL(file).href;
-      log(`Loading module from: ${fileUrl}`, 3);
-      const module = await import(fileUrl);
+      let module;
+      
+      if (moduleCache && config.cache?.enabled) {
+        // Get file stats for cache validation
+        const fileStats = await stat(file);
+        
+        // Try to get from cache first
+        module = moduleCache.get(file, fileStats);
+        
+        if (!module) {
+          // Cache miss - load module
+          const fileUrl = pathToFileURL(file).href + `?t=${Date.now()}`;
+          log(`Loading module from: ${fileUrl}`, 3);
+          module = await import(fileUrl);
+          
+          // Estimate module size (rough approximation based on file size)
+          const estimatedSizeKB = fileStats.size / 1024;
+          moduleCache.set(file, module, fileStats, estimatedSizeKB);
+          log(`Cached module: ${fileName} (${estimatedSizeKB.toFixed(1)}KB)`, 3);
+        } else {
+          log(`Using cached module: ${fileName}`, 3);
+        }
+      } else {
+        // No caching - load fresh each time
+        const fileUrl = pathToFileURL(file).href + `?t=${Date.now()}`;
+        log(`Loading module from: ${fileUrl}`, 3);
+        module = await import(fileUrl);
+      }
       
       // Execute the default export function
       if (typeof module.default === 'function') {
@@ -33,6 +57,11 @@ export default async (files, rootPath, requestPath, method, config, req, res, lo
         // Create enhanced request and response wrappers
         const enhancedRequest = createRequestWrapper(req, params);
         const enhancedResponse = createResponseWrapper(res);
+        
+        // Make module cache accessible for admin endpoints
+        if (moduleCache) {
+          enhancedRequest._kempoCache = moduleCache;
+        }
         
         await module.default(enhancedRequest, enhancedResponse);
         log(`Route executed successfully: ${fileName}`, 2);

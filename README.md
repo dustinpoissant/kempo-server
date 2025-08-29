@@ -221,7 +221,94 @@ This json file can have any of the following properties, any property not define
 - [routeFiles](#routefiles)
 - [noRescanPaths](#norescanpaths)
 - [maxRescanAttempts](#maxrescanattempts)
+- [cache](#cache)
 - [middleware](#middleware)
+
+## Cache
+
+Kempo Server includes an intelligent module caching system that dramatically improves performance by caching JavaScript route modules in memory. The cache combines multiple strategies:
+
+- **LRU (Least Recently Used)** - Evicts oldest modules when cache fills
+- **Time-based expiration** - Modules expire after configurable TTL
+- **Memory monitoring** - Automatically clears cache if memory usage gets too high
+- **File watching** - Instantly invalidates cache when files change (development)
+
+### Basic Cache Configuration
+
+Enable caching in your `.config.json`:
+
+```json
+{
+  "cache": {
+    "enabled": true,
+    "maxSize": 100,
+    "maxMemoryMB": 50,
+    "ttlMs": 300000,
+    "watchFiles": true
+  }
+}
+```
+
+### Cache Options
+
+- `enabled` (boolean) - Enable/disable caching (default: `true`)
+- `maxSize` (number) - Maximum cached modules (default: `100`) 
+- `maxMemoryMB` (number) - Memory limit in MB (default: `50`)
+- `ttlMs` (number) - Cache lifetime in milliseconds (default: `300000` - 5 minutes)
+- `maxHeapUsagePercent` (number) - Clear cache when heap exceeds % (default: `70`)
+- `memoryCheckInterval` (number) - Memory check frequency in ms (default: `30000`)
+- `watchFiles` (boolean) - Auto-invalidate on file changes (default: `true`)
+- `enableMemoryMonitoring` (boolean) - Enable memory monitoring (default: `true`)
+
+### Environment-Specific Configurations
+
+Use different config files for different environments:
+
+**Development (`dev.config.json`):**
+```json
+{
+  "cache": {
+    "enabled": true,
+    "maxSize": 50,
+    "ttlMs": 300000,
+    "watchFiles": true
+  }
+}
+```
+
+**Production (`prod.config.json`):**
+```json
+{
+  "cache": {
+    "enabled": true,
+    "maxSize": 1000,
+    "maxMemoryMB": 200,
+    "ttlMs": 3600000,
+    "watchFiles": false
+  }
+}
+```
+
+Run with specific config: `node src/index.js --config prod.config.json`
+
+### Cache Monitoring
+
+Monitor cache performance at runtime:
+
+- **View stats:** `GET /_admin/cache` - Returns detailed cache statistics
+- **Clear cache:** `DELETE /_admin/cache` - Clears entire cache
+
+Example response:
+```json
+{
+  "cache": {
+    "size": 45,
+    "maxSize": 100,
+    "memoryUsageMB": 12.5,
+    "hitRate": 87
+  }
+}
+```
 
 ## Middleware
 
@@ -510,6 +597,37 @@ The maximum number of times to attempt rescanning the file system when a file is
   "maxRescanAttempts": 3
 }
 ```
+
+### cache
+
+Configure the intelligent module caching system for improved performance:
+
+```json
+{
+  "cache": {
+    "enabled": true,
+    "maxSize": 100,
+    "maxMemoryMB": 50,
+    "ttlMs": 300000,
+    "maxHeapUsagePercent": 70,
+    "memoryCheckInterval": 30000,
+    "watchFiles": true,
+    "enableMemoryMonitoring": true
+  }
+}
+```
+
+Cache options:
+- `enabled` - Enable/disable caching (boolean, default: `true`)
+- `maxSize` - Maximum cached modules (number, default: `100`) 
+- `maxMemoryMB` - Memory limit in MB (number, default: `50`)
+- `ttlMs` - Cache lifetime in milliseconds (number, default: `300000`)
+- `maxHeapUsagePercent` - Clear cache when heap exceeds % (number, default: `70`)
+- `memoryCheckInterval` - Memory check frequency in ms (number, default: `30000`)
+- `watchFiles` - Auto-invalidate on file changes (boolean, default: `true`)
+- `enableMemoryMonitoring` - Enable memory monitoring (boolean, default: `true`)
+
+Use different config files for different environments rather than nested objects.
 
 ## Features
 
