@@ -27,6 +27,25 @@ export default async (flags, log) => {
     const configPath = path.isAbsolute(configFileName) 
       ? configFileName 
       : path.join(rootPath, configFileName);
+    
+    log(`Config file name: ${configFileName}`, 2);
+    log(`Config path: ${configPath}`, 2);
+    
+    // Validate that config file is within the server root directory
+    // Allow absolute paths (user explicitly specified location)
+    if (!path.isAbsolute(configFileName)) {
+      const relativeConfigPath = path.relative(rootPath, configPath);
+      log(`Relative config path: ${relativeConfigPath}`, 2);
+      log(`Starts with '..': ${relativeConfigPath.startsWith('..')}`, 2);
+      if (relativeConfigPath.startsWith('..') || path.isAbsolute(relativeConfigPath)) {
+        log(`Validation failed - throwing error`, 2);
+        throw new Error(`Config file must be within the server root directory. Config path: ${configPath}, Root path: ${rootPath}`);
+      }
+      log(`Validation passed`, 2);
+    } else {
+      log(`Config file name is absolute, skipping validation`, 2);
+    }
+    
     log(`Loading config from: ${configPath}`, 2);
     const configContent = await readFile(configPath, 'utf8');
     const userConfig = JSON.parse(configContent);
@@ -53,6 +72,11 @@ export default async (flags, log) => {
     };
     log('User config loaded and merged with defaults', 2);
   } catch (e){
+    // Only fall back to default config for file reading/parsing errors
+    // Let validation errors propagate up
+    if (e.message.includes('Config file must be within the server root directory')) {
+      throw e;
+    }
     log('Using default config (no config file found)', 2);
   }
   
@@ -139,14 +163,14 @@ export default async (flags, log) => {
     for (const [urlPath, filePath] of Object.entries(config.customRoutes)) {
       // Check if this is a wildcard route
       if (urlPath.includes('*')) {
-        // Resolve the file path relative to the current working directory
-        const resolvedPath = path.resolve(filePath);
+        // Resolve the file path relative to rootPath if relative, otherwise use absolute path
+        const resolvedPath = path.isAbsolute(filePath) ? filePath : path.resolve(rootPath, filePath);
         // Store wildcard routes separately for pattern matching
         wildcardRoutes.set(urlPath, resolvedPath);
         log(`Wildcard route mapped: ${urlPath} -> ${resolvedPath}`, 2);
       } else {
-        // Resolve the file path relative to the current working directory
-        const resolvedPath = path.resolve(filePath);
+        // Resolve the file path relative to rootPath if relative, otherwise use absolute path
+        const resolvedPath = path.isAbsolute(filePath) ? filePath : path.resolve(rootPath, filePath);
         customRoutes.set(urlPath, resolvedPath);
         log(`Custom route mapped: ${urlPath} -> ${resolvedPath}`, 2);
       }
@@ -179,7 +203,9 @@ export default async (flags, log) => {
       }
     }
     
-    return path.resolve(resolvedPath);
+    // If the path is already absolute, return it as-is
+    // If it's relative, resolve it relative to rootPath
+    return path.isAbsolute(resolvedPath) ? resolvedPath : path.resolve(rootPath, resolvedPath);
   };
   
   // Helper function to find matching wildcard route

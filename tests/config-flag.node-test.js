@@ -317,5 +317,56 @@ export default {
         process.chdir(prev);
       }
     });
+  },
+
+  'router throws error when config file is outside server root': async ({pass, fail, log}) => {
+    await withTempDir(async (dir) => {
+      // Create a config file outside the server root
+      const configDir = path.join(dir, '..', 'config-outside-root');
+      const configFilePath = await write(configDir, 'outside.config.json', '{"allowedMimes": {"test": "application/test"}}');
+      
+      // Create a file in the server root to verify it doesn't start
+      await write(dir, 'index.html', '<h1>Home</h1>');
+      
+      const prev = process.cwd();
+      process.chdir(dir);
+      
+      try {
+        // Try to use config file outside server root with relative path
+        const flags = {root: '.', logging: 0, scan: false, config: '../config-outside-root/outside.config.json'};
+        
+        log('Test setup:');
+        log('dir: ' + dir);
+        log('configDir: ' + configDir);
+        log('configFilePath: ' + configFilePath);
+        log('flags.root: ' + flags.root);
+        log('flags.config: ' + flags.config);
+        
+        // Check if file exists
+        const fs = await import('fs/promises');
+        try {
+          await fs.access(configFilePath);
+          log('Config file exists at: ' + configFilePath);
+        } catch (e) {
+          log('Config file does NOT exist at: ' + configFilePath);
+        }
+        
+        // This should throw an error
+        await router(flags, log);
+        
+        // If we reach here, the test failed
+        return fail('router should have thrown error for config file outside root');
+      } catch (error) {
+        log('Error caught: ' + error.message);
+        // Verify the error message contains expected text
+        if (!error.message.includes('Config file must be within the server root directory')) {
+          return fail(`unexpected error message: ${error.message}`);
+        }
+        
+        pass('router correctly throws error for config file outside server root');
+      } finally {
+        process.chdir(prev);
+      }
+    });
   }
 };

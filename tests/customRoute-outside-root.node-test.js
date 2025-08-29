@@ -21,7 +21,7 @@ export default {
         await mkdir(path.join(rootDir, 'src'), { recursive: true });
         await writeFile(path.join(rootDir, 'src', 'file.txt'), 'static');
   // Create custom file outside rootPath, matching resolved customRoute
-  const customFilePath = path.resolve(dir, '..', 'src', 'file.txt');
+  const customFilePath = path.resolve(rootDir, '..', 'src', 'file.txt');
   await mkdir(path.dirname(customFilePath), { recursive: true });
   await writeFile(customFilePath, 'custom');
   log('Custom file path: ' + customFilePath);

@@ -213,6 +213,11 @@ export default async function(request, response) {
 
 To configure the server, create a configuration file (by default `.config.json`) within the root directory of your server (`public` in the start example [above](#getting-started)). You can specify a different configuration file using the `--config` flag.
 
+**Important:** 
+- When using a relative path for the `--config` flag, the config file must be located within the server root directory
+- When using an absolute path for the `--config` flag, the config file can be located anywhere on the filesystem
+- The server will throw an error if you attempt to use a relative config file path that points outside the root directory
+
 This json file can have any of the following properties, any property not defined will use the "Default Config".
 
 - [allowedMimes](#allowedmimes)
@@ -558,35 +563,41 @@ An array of regex patterns for paths that should not trigger a file system resca
 
 An object mapping custom route paths to file paths. Useful for aliasing or serving files from outside the document root.
 
+**Note:** All file paths in customRoutes are resolved relative to the server root directory (the `--root` path). This allows you to reference files both inside and outside the document root.
+
 **Basic Routes:**
 ```json
 {
   "customRoutes": {
-    "/vendor/bootstrap.css": "./node_modules/bootstrap/dist/css/bootstrap.min.css",
+    "/vendor/bootstrap.css": "../node_modules/bootstrap/dist/css/bootstrap.min.css",
     "/api/status": "./status.js"
   }
 }
 ```
 
 **Wildcard Routes:**
-Wildcard routes allow you to map entire directory structures using the `*` wildcard:
+Wildcard routes allow you to map entire directory structures using the `*` and `**` wildcards:
 
 ```json
 {
   "customRoutes": {
-    "kempo/*": "./node_modules/kempo/dust/*",
-    "assets/*": "./static-files/*",
-    "docs/*": "./documentation/*"
+    "kempo/*": "../node_modules/kempo/dist/*",
+    "assets/*": "../static-files/*",
+    "docs/*": "../documentation/*",
+    "src/**": "../src/**"
   }
 }
 ```
 
 With wildcard routes:
-- `kempo/styles.css` would serve `./node_modules/kempo/dust/styles.css`
-- `assets/logo.png` would serve `./static-files/logo.png`  
-- `docs/readme.md` would serve `./documentation/readme.md`
+- `kempo/styles.css` would serve `../node_modules/kempo/dist/styles.css`
+- `assets/logo.png` would serve `../static-files/logo.png`  
+- `docs/readme.md` would serve `../documentation/readme.md`
+- `src/components/Button.js` would serve `../src/components/Button.js`
 
-The `*` wildcard matches any single path segment (anything between `/` characters). Multiple wildcards can be used in a single route pattern.
+The `*` wildcard matches any single path segment (anything between `/` characters).
+The `**` wildcard matches any number of path segments, allowing you to map entire directory trees.
+Multiple wildcards can be used in a single route pattern.
 
 ### maxRescanAttempts
 

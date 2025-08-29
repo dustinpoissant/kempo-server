@@ -25,7 +25,7 @@ export default {
         // Configure double asterisk wildcard route
         const config = {
           customRoutes: {
-            '/src/**': './src/**'
+            '/src/**': '../src/**'
           }
         };
         
@@ -86,7 +86,7 @@ export default {
         // Configure single asterisk wildcard route
         const config = {
           customRoutes: {
-            '/src/*': './src/*'
+            '/src/*': '../src/*'
           }
         };
         
@@ -140,7 +140,7 @@ export default {
         // Configure wildcard route that overrides static file
         const config = {
           customRoutes: {
-            '/api/**': './custom/**'
+            '/api/**': '../custom/**'
           }
         };
         
