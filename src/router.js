@@ -17,7 +17,7 @@ import {
 
 export default async (flags, log) => {
   log('Initializing router', 2);
-  const rootPath = path.join(process.cwd(), flags.root);
+  const rootPath = path.isAbsolute(flags.root) ? flags.root : path.join(process.cwd(), flags.root);
   log(`Root path: ${rootPath}`, 2);
   
   let config = defaultConfig;
@@ -136,27 +136,19 @@ export default async (flags, log) => {
   
   if (config.customRoutes && Object.keys(config.customRoutes).length > 0) {
     log(`Processing ${Object.keys(config.customRoutes).length} custom routes`, 2);
-    
     for (const [urlPath, filePath] of Object.entries(config.customRoutes)) {
-      try {
-        // Check if this is a wildcard route
-        if (urlPath.includes('*')) {
-          // Store wildcard routes separately for pattern matching
-          wildcardRoutes.set(urlPath, filePath);
-          log(`Wildcard route mapped: ${urlPath} -> ${filePath}`, 2);
-        } else {
-          // Resolve the file path relative to the current working directory
-          const resolvedPath = path.resolve(filePath);
-          
-          // Check if the file exists (we'll do this async)
-          const { stat } = await import('fs/promises');
-          await stat(resolvedPath);
-          
-          customRoutes.set(urlPath, resolvedPath);
-          log(`Custom route mapped: ${urlPath} -> ${resolvedPath}`, 2);
-        }
-      } catch (error) {
-        log(`Custom route error for ${urlPath} -> ${filePath}: ${error.message}`, 1);
+      // Check if this is a wildcard route
+      if (urlPath.includes('*')) {
+        // Resolve the file path relative to the current working directory
+        const resolvedPath = path.resolve(filePath);
+        // Store wildcard routes separately for pattern matching
+        wildcardRoutes.set(urlPath, resolvedPath);
+        log(`Wildcard route mapped: ${urlPath} -> ${resolvedPath}`, 2);
+      } else {
+        // Resolve the file path relative to the current working directory
+        const resolvedPath = path.resolve(filePath);
+        customRoutes.set(urlPath, resolvedPath);
+        log(`Custom route mapped: ${urlPath} -> ${resolvedPath}`, 2);
       }
     }
   }
@@ -247,39 +239,63 @@ export default async (flags, log) => {
       const requestPath = req.url.split('?')[0];
       log(`${req.method} ${requestPath}`, 0);
       
-      // Check custom routes first
-      if (customRoutes.has(requestPath)) {
-        const customFilePath = customRoutes.get(requestPath);
-        log(`Serving custom route: ${requestPath} -> ${customFilePath}`, 2);
-        
+
+      // Check custom routes first (allow outside rootPath)
+      log(`customRoutes keys: ${Array.from(customRoutes.keys()).join(', ')}`, 1);
+      // Normalize requestPath and keys for matching
+      const normalizePath = p => {
+        let np = decodeURIComponent(p);
+        if (!np.startsWith('/')) np = '/' + np;
+        if (np.length > 1 && np.endsWith('/')) np = np.slice(0, -1);
+        return np;
+      };
+      const normalizedRequestPath = normalizePath(requestPath);
+      log(`Normalized requestPath: ${normalizedRequestPath}`, 1);
+      let matchedKey = null;
+      for (const key of customRoutes.keys()) {
+        if (normalizePath(key) === normalizedRequestPath) {
+          matchedKey = key;
+          break;
+        }
+      }
+      if (matchedKey) {
+        const customFilePath = customRoutes.get(matchedKey);
+        log(`Serving custom route: ${normalizedRequestPath} -> ${customFilePath}`, 2);
         try {
+          const { stat } = await import('fs/promises');
+          try {
+            await stat(customFilePath);
+            log(`Custom route file exists: ${customFilePath}`, 2);
+          } catch (e) {
+            log(`Custom route file does NOT exist: ${customFilePath}`, 0);
+            res.writeHead(404, { 'Content-Type': 'text/plain' });
+            res.end('Custom route file not found');
+            return;
+          }
           const fileContent = await readFile(customFilePath);
           const fileExtension = path.extname(customFilePath).toLowerCase().slice(1);
           const mimeType = config.allowedMimes[fileExtension] || 'application/octet-stream';
-          
           log(`Serving custom file as ${mimeType} (${fileContent.length} bytes)`, 2);
           res.writeHead(200, { 'Content-Type': mimeType });
           res.end(fileContent);
           return; // Successfully served custom route
         } catch (error) {
-          log(`Error serving custom route ${requestPath}: ${error.message}`, 0);
+          log(`Error serving custom route ${normalizedRequestPath}: ${error.message}`, 0);
           res.writeHead(500, { 'Content-Type': 'text/plain' });
           res.end('Internal Server Error');
           return;
         }
       }
-      
-      // Check wildcard routes
+
+      // Check wildcard routes (allow outside rootPath)
       const wildcardMatch = findWildcardRoute(requestPath);
       if (wildcardMatch) {
         const resolvedFilePath = resolveWildcardPath(wildcardMatch.filePath, wildcardMatch.matches);
         log(`Serving wildcard route: ${requestPath} -> ${resolvedFilePath}`, 2);
-        
         try {
           const fileContent = await readFile(resolvedFilePath);
           const fileExtension = path.extname(resolvedFilePath).toLowerCase().slice(1);
           const mimeType = config.allowedMimes[fileExtension] || 'application/octet-stream';
-          
           log(`Serving wildcard file as ${mimeType} (${fileContent.length} bytes)`, 2);
           res.writeHead(200, { 'Content-Type': mimeType });
           res.end(fileContent);
