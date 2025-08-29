@@ -192,15 +192,18 @@ export default async (flags, log) => {
   // Helper function to resolve wildcard file paths
   const resolveWildcardPath = (filePath, matches) => {
     let resolvedPath = filePath;
+    let matchIndex = 1; // Start from matches[1] (first capture group)
     
-    // Replace wildcards with captured values
-    for (let i = 1; i < matches.length; i++) {
-      // Replace ** first, then single *
-      if (resolvedPath.includes('**')) {
-        resolvedPath = resolvedPath.replace('**', matches[i]);
-      } else {
-        resolvedPath = resolvedPath.replace('*', matches[i]);
-      }
+    // Replace ** wildcards first
+    while (resolvedPath.includes('**') && matchIndex < matches.length) {
+      resolvedPath = resolvedPath.replace('**', matches[matchIndex]);
+      matchIndex++;
+    }
+    
+    // Replace any remaining * wildcards
+    while (resolvedPath.includes('*') && matchIndex < matches.length) {
+      resolvedPath = resolvedPath.replace('*', matches[matchIndex]);
+      matchIndex++;
     }
     
     // If the path is already absolute, return it as-is
