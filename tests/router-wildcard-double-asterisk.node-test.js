@@ -169,5 +169,71 @@ export default {
     } catch(e){ 
       fail(e.message); 
     }
+  },
+
+  'wildcard routes serve nested files from server root': async ({pass, fail, log}) => {
+    try {
+      await withTempDir(async (dir) => {
+        // Create nested file structure in src directory
+        const importFile = await write(dir, 'src/components/Import.js', 'export default ImportComponent');
+        const utilsFile = await write(dir, 'src/utils/helpers.js', 'export const helpers = {}');
+        const deepFile = await write(dir, 'src/deep/nested/file.js', 'export const nested = true');
+        
+        // Create index.html in server root
+        await write(dir, 'index.html', '<h1>Home</h1>');
+        
+        const prev = process.cwd();
+        process.chdir(dir);
+        
+        // Server root is the current directory (dir)
+        const flags = {root: '.', logging: 0, scan: false};
+        const logFn = () => {};
+        
+        // Configure wildcard route to serve from ./src/**
+        const config = {
+          customRoutes: {
+            '/src/**': './src/**'
+          }
+        };
+        
+        await write(dir, '.config.json', JSON.stringify(config));
+        const handler = await router(flags, logFn);
+        const server = http.createServer(handler);
+        const port = randomPort();
+        
+        await new Promise(r => server.listen(port, r));
+        await new Promise(r => setTimeout(r, 50));
+        
+        try {
+          // Test that /src/components/Import.js is served correctly
+          const r1 = await httpGet(`http://localhost:${port}/src/components/Import.js`);
+          log('Import.js status: ' + r1.res.statusCode);
+          if(r1.res.statusCode !== 200) throw new Error(`Expected 200, got ${r1.res.statusCode}`);
+          if(r1.body.toString() !== 'export default ImportComponent') throw new Error('Import.js content mismatch');
+          
+          // Test deeper nested file
+          const r2 = await httpGet(`http://localhost:${port}/src/utils/helpers.js`);
+          log('helpers.js status: ' + r2.res.statusCode);
+          if(r2.res.statusCode !== 200) throw new Error(`Expected 200 for helpers.js, got ${r2.res.statusCode}`);
+          
+          // Test very deeply nested file
+          const r3 = await httpGet(`http://localhost:${port}/src/deep/nested/file.js`);
+          log('deep nested file status: ' + r3.res.statusCode);
+          if(r3.res.statusCode !== 200) throw new Error(`Expected 200 for deep nested file, got ${r3.res.statusCode}`);
+          
+          // Test that index.html still works (non-wildcard route)
+          const r4 = await httpGet(`http://localhost:${port}/index.html`);
+          log('index.html status: ' + r4.res.statusCode);
+          if(r4.res.statusCode !== 200) throw new Error(`Expected 200 for index.html, got ${r4.res.statusCode}`);
+          
+        } finally { 
+          server.close(); 
+          process.chdir(prev); 
+        }
+      });
+      pass('wildcard routes serve nested files from server root');
+    } catch(e){ 
+      fail(e.message); 
+    }
   }
 };
