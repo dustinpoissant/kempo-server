@@ -1,9 +1,10 @@
-import {startNode, randomPort, httpGet, withTempDir, write} from './test-utils.js';
+import {startNode, randomPort, httpGet, withTestDir, write} from './test-utils.js';
 import path from 'path';
 
 export default {
   'index.js CLI starts server and serves root': async ({pass, fail}) => {
-    await withTempDir(async (dir) => {
+    await withTestDir(async (dir) => {
+      // Create custom index.html for this test
       await write(dir, 'index.html', 'home');
       const port = randomPort();
       const args = [path.join(process.cwd(), 'dist/index.js'), '-r', '.', '-p', String(port), '-l', '0'];

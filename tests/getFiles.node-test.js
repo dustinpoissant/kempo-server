@@ -1,13 +1,13 @@
 import getFiles from '../src/getFiles.js';
 import defaultConfig from '../src/defaultConfig.js';
 import path from 'path';
-import {withTempDir, write, log} from './test-utils.js';
+import {withTestDir, write, log} from './test-utils.js';
 
 export default {
   'scans directories recursively and filters by mime and disallowed': async ({pass, fail}) => {
-    await withTempDir(async (dir) => {
+    await withTestDir(async (dir) => {
       const cfg = JSON.parse(JSON.stringify(defaultConfig));
-      await write(dir, 'index.html', '<!doctype html>');
+      // Create test-specific files for this test
       await write(dir, '.env', 'SECRET=1');
       await write(dir, 'notes.xyz', 'unknown');
       await write(dir, 'sub/app.js', 'console.log(1)');

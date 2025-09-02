@@ -1,7 +1,11 @@
 import {Readable} from 'stream';
-import {mkdtemp, rm, writeFile, mkdir} from 'fs/promises';
+import {mkdtemp, rm, writeFile, mkdir, cp} from 'fs/promises';
 import os from 'os';
 import path from 'path';
+import {fileURLToPath} from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const TEST_SERVER_ROOT = path.join(__dirname, 'test-server-root');
 
 export const createMockReq = ({method = 'GET', url = '/', headers = {}, body = null, remoteAddress = '127.0.0.1'} = {}) => {
   const stream = new Readable({read(){}});
@@ -43,12 +47,57 @@ export const createMockRes = () => {
   };
 };
 
+// Legacy function for backward compatibility - will be deprecated
 export const withTempDir = async (fn) => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'kempo-tests-'));
   try {
     return await fn(dir);
   } finally {
     await rm(dir, {recursive: true, force: true});
+  }
+};
+
+// New function that uses the persistent test server root as a base
+export const withTestDir = async (fn, {subdir = null} = {}) => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'kempo-tests-'));
+  try {
+    // Copy the test server root to the temporary directory
+    await cp(TEST_SERVER_ROOT, tempDir, {recursive: true});
+    let workingDir = tempDir;
+    
+    if (subdir) {
+      workingDir = path.join(tempDir, subdir);
+    }
+    
+    return await fn(workingDir);
+  } finally {
+    await rm(tempDir, {recursive: true, force: true});
+  }
+};
+
+// Helper to get the path to a file in the test server root
+export const getTestFilePath = (relativePath) => {
+  return path.join(TEST_SERVER_ROOT, relativePath);
+};
+
+// Helper to reset or prepare specific test scenarios
+export const prepareTestScenario = async (dir, scenario) => {
+  switch (scenario) {
+    case 'basic-server':
+      // Already has index.html, api/GET.js, etc.
+      break;
+    case 'wildcard-routes':
+      await write(dir, 'docs/.config.json', JSON.stringify({
+        customRoutes: { '/src/**': '../src/**' }
+      }));
+      break;
+    case 'middleware':
+      await write(dir, '.config.json', JSON.stringify({
+        middleware: { cors: {enabled: true} }
+      }));
+      break;
+    default:
+      // No special preparation needed
   }
 };
 

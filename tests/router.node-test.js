@@ -1,13 +1,12 @@
 import http from 'http';
 import path from 'path';
-import {withTempDir, write, randomPort, httpGet, log} from './test-utils.js';
+import {withTestDir, write, randomPort, httpGet, log} from './test-utils.js';
 import router from '../src/router.js';
 import defaultConfig from '../src/defaultConfig.js';
 
 export default {
   'serves static files and 404s unknown': async ({pass, fail}) => {
-    await withTempDir(async (dir) => {
-      await write(dir, 'index.html', '<h1>Home</h1>');
+    await withTestDir(async (dir) => {
       const prev = process.cwd();
       process.chdir(dir);
       const flags = {root: '.', logging: 0, scan: false};
@@ -38,7 +37,7 @@ export default {
     pass('static + 404');
   },
   'rescan on 404 when enabled and not blacklisted': async ({pass, fail}) => {
-    await withTempDir(async (dir) => {
+    await withTestDir(async (dir) => {
       const prev = process.cwd();
       process.chdir(dir);
       const flags = {root: '.', logging: 0, scan: true};
@@ -55,7 +54,7 @@ export default {
         return fail('first 404');
       }
       
-      await write(dir, 'late.html', 'later');
+      // File already exists, should be found on rescan
       const hit = await httpGet(`http://localhost:${port}/late.html`);
       if(hit.res.statusCode !== 200) {
         server.close();
@@ -69,9 +68,9 @@ export default {
     pass('rescan');
   },
   'custom and wildcard routes serve mapped files': async ({pass, fail}) => {
-    await withTempDir(async (dir) => {
-      const fileA = await write(dir, 'a.txt', 'A');
-      const fileB = await write(dir, 'b/1.txt', 'B1');
+    await withTestDir(async (dir) => {
+      const fileA = path.join(dir, 'a.txt');
+      const fileB = path.join(dir, 'b/1.txt');
       const prev = process.cwd();
       process.chdir(dir);
       const flags = {root: '.', logging: 0, scan: false};

@@ -2,14 +2,13 @@ import serveFile from '../src/serveFile.js';
 import findFile from '../src/findFile.js';
 import defaultConfig from '../src/defaultConfig.js';
 import path from 'path';
-import {createMockReq, createMockRes, withTempDir, write, log} from './test-utils.js';
+import {createMockReq, createMockRes, withTestDir, write, log} from './test-utils.js';
 
 export default {
   'serves static file with correct mime': async ({pass, fail}) => {
     try {
-      await withTempDir(async (dir) => {
+      await withTestDir(async (dir) => {
         const cfg = JSON.parse(JSON.stringify(defaultConfig));
-        await write(dir, 'index.html', '<h1>Hi</h1>');
         const files = [path.join(dir, 'index.html')];
         const res = createMockRes();
         const ok = await serveFile(files, dir, '/index.html', 'GET', cfg, createMockReq(), res, log);
@@ -22,9 +21,8 @@ export default {
   },
   'executes route files by calling default export': async ({pass, fail}) => {
     try {
-      await withTempDir(async (dir) => {
+      await withTestDir(async (dir) => {
         const cfg = JSON.parse(JSON.stringify(defaultConfig));
-        await write(dir, 'api/GET.js', "export default async (req, res) => { res.status(201).json({ok:true, params:req.params}); }\n");
         const files = [path.join(dir, 'api/GET.js')];
         const res = createMockRes();
         const ok = await serveFile(files, dir, '/api', 'GET', cfg, createMockReq(), res, log);
@@ -37,10 +35,9 @@ export default {
   },
   'handles route file without default function': async ({pass, fail}) => {
     try {
-      await withTempDir(async (dir) => {
+      await withTestDir(async (dir) => {
         const cfg = JSON.parse(JSON.stringify(defaultConfig));
-        await write(dir, 'api/GET.js', "export const x = 1;\n");
-        const files = [path.join(dir, 'api/GET.js')];
+        const files = [path.join(dir, 'api/no-default.js')];
         const res = createMockRes();
         const ok = await serveFile(files, dir, '/api', 'GET', cfg, createMockReq(), res, log);
         if(ok !== true) return fail('handled');

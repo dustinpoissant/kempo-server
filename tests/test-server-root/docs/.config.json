@@ -1,0 +1,6 @@
+{
+  "customRoutes": {
+    "/src/*": "../src/$1"
+  },
+  "routePreference": "customRoute"
+}

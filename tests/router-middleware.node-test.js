@@ -1,10 +1,10 @@
 import http from 'http';
-import {withTempDir, write, randomPort} from './test-utils.js';
+import {withTestDir, write, randomPort} from './test-utils.js';
 import router from '../src/router.js';
 
 export default {
   'built-in middleware can be configured on router': async ({pass, fail}) => {
-    await withTempDir(async (dir) => {
+    await withTestDir(async (dir) => {
       await write(dir, '.config.json', JSON.stringify({
         middleware: {
           cors: {enabled: true, origin: '*', methods: ['GET'], headers: ['X']},
@@ -14,7 +14,6 @@ export default {
           logging: {enabled: true, includeUserAgent: false, includeResponseTime: true}
         }
       }));
-      await write(dir, 'index.html', 'hello world');
       const prev = process.cwd();
       process.chdir(dir);
       const flags = {root: '.', logging: 0, scan: false};
