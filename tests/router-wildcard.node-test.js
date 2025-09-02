@@ -13,8 +13,8 @@ export default {
         const fileC = await write(dir, 'src/deep/nested/folder/file.js', 'export const deep = true');
         
         // Create files in docs directory that should be ignored when custom routes match
-        await write(dir, 'docs/src/components/Button.js', 'WRONG FILE');
-        await write(dir, 'docs/src/utils/helpers/format.js', 'WRONG FILE');
+        await write(dir, 'docs/src/components/Button.js', '// WRONG FILE');
+        await write(dir, 'docs/src/utils/helpers/format.js', '// WRONG FILE');
         
         const prev = process.cwd();
         process.chdir(dir);
@@ -70,12 +70,12 @@ export default {
   'single asterisk only matches single path segments': async ({pass, fail, log}) => {
     try {
       await withTempDir(async (dir) => {
-        // Create nested file structure
-        await write(dir, 'src/file.js', 'single level');
-        await write(dir, 'src/nested/file.js', 'nested level');
+        // Create files at different nesting levels
+        await write(dir, 'src/file.js', '// single level');
+        await write(dir, 'src/nested/file.js', '// nested level');
         
-        // Create fallback file in docs
-        await write(dir, 'docs/src/nested/file.js', 'fallback file');
+        // Create docs directory with fallback file
+        await write(dir, 'docs/src/nested/file.js', '// fallback file');
         
         const prev = process.cwd();
         process.chdir(dir);
@@ -103,13 +103,13 @@ export default {
           const r1 = await httpGet(`http://localhost:${port}/src/file.js`);
           log('single level status: ' + r1.res.statusCode);
           if(r1.res.statusCode !== 200) throw new Error('single level 200');
-          if(r1.body.toString() !== 'single level') throw new Error('single level content');
+          if(r1.body.toString() !== '// single level') throw new Error('single level content');
           
           // Nested level should NOT work with single asterisk, should fall back to docs
           const r2 = await httpGet(`http://localhost:${port}/src/nested/file.js`);
           log('nested level status: ' + r2.res.statusCode);
           if(r2.res.statusCode !== 200) throw new Error('nested level 200');
-          if(r2.body.toString() !== 'fallback file') throw new Error('nested level should use fallback');
+          if(r2.body.toString() !== '// fallback file') throw new Error('nested level should use fallback');
           
         } finally { 
           server.close(); 
@@ -125,11 +125,11 @@ export default {
   'wildcard routes take precedence over static files': async ({pass, fail, log}) => {
     try {
       await withTempDir(async (dir) => {
-        // Create source files
-        await write(dir, 'custom/data.json', '{"source": "custom"}');
-        
-        // Create static files in docs that should be overridden
+        // Create static file in docs
         await write(dir, 'docs/api/data.json', '{"source": "static"}');
+        
+        // Create custom file outside docs
+        await write(dir, 'custom/data.json', '{"source": "custom"}');
         
         const prev = process.cwd();
         process.chdir(dir);
