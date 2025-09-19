@@ -103,5 +103,51 @@ export default {
       process.chdir(prev);
     });
     pass('custom+wildcard');
+  },
+
+  'handles malformed URLs gracefully': async ({pass, fail, log}) => {
+    await withTestDir(async (dir) => {
+      const prev = process.cwd();
+      process.chdir(dir);
+      const flags = {root: '.', logging: 0, scan: false};
+      const logFn = () => {};
+      const handler = await router(flags, logFn);
+      const server = http.createServer(handler);
+      const port = randomPort();
+      await new Promise(r => server.listen(port, r));
+      await new Promise(r => setTimeout(r, 50));
+      
+      try {
+        // Test various malformed URLs that could cause decodeURIComponent to throw
+        const malformedUrls = [
+          '/test%',        // Incomplete percent encoding
+          '/test%2',       // Incomplete percent encoding 
+          '/test%G1',      // Invalid hex characters
+          '/test%ZZ',      // Invalid hex characters
+          '/test%1G',      // Invalid hex characters
+          '/%E0%A4%A',     // Incomplete UTF-8 sequence
+          '/%C0%80'        // Overlong UTF-8 encoding
+        ];
+        
+        for (const url of malformedUrls) {
+          log(`Testing malformed URL: ${url}`);
+          const response = await httpGet(`http://localhost:${port}${url}`);
+          // Server should handle the request gracefully (return 404 or serve content)
+          // and not crash with URIError
+          if (response.res.statusCode !== 404 && response.res.statusCode !== 200) {
+            throw new Error(`Unexpected status code ${response.res.statusCode} for URL ${url}`);
+          }
+          log(`URL ${url} handled gracefully with status ${response.res.statusCode}`);
+        }
+        
+        server.close();
+        process.chdir(prev);
+        pass('malformed URLs handled gracefully');
+      } catch (e) {
+        server.close();
+        process.chdir(prev);
+        fail(`Error handling malformed URL: ${e.message}`);
+      }
+    });
   }
 };

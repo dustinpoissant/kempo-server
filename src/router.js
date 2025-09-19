@@ -16,9 +16,9 @@ import {
 } from './builtinMiddleware.js';
 
 export default async (flags, log) => {
-  log('Initializing router', 2);
+  log('Initializing router', 3);
   const rootPath = path.isAbsolute(flags.root) ? flags.root : path.join(process.cwd(), flags.root);
-  log(`Root path: ${rootPath}`, 2);
+  log(`Root path: ${rootPath}`, 3);
   
   let config = defaultConfig;
   try {
@@ -28,25 +28,25 @@ export default async (flags, log) => {
       ? configFileName 
       : path.join(rootPath, configFileName);
     
-    log(`Config file name: ${configFileName}`, 2);
-    log(`Config path: ${configPath}`, 2);
+    log(`Config file name: ${configFileName}`, 3);
+    log(`Config path: ${configPath}`, 3);
     
     // Validate that config file is within the server root directory
     // Allow absolute paths (user explicitly specified location)
     if (!path.isAbsolute(configFileName)) {
       const relativeConfigPath = path.relative(rootPath, configPath);
-      log(`Relative config path: ${relativeConfigPath}`, 2);
-      log(`Starts with '..': ${relativeConfigPath.startsWith('..')}`, 2);
+      log(`Relative config path: ${relativeConfigPath}`, 4);
+      log(`Starts with '..': ${relativeConfigPath.startsWith('..')}`, 4);
       if (relativeConfigPath.startsWith('..') || path.isAbsolute(relativeConfigPath)) {
-        log(`Validation failed - throwing error`, 2);
+        log(`Validation failed - throwing error`, 4);
         throw new Error(`Config file must be within the server root directory. Config path: ${configPath}, Root path: ${rootPath}`);
       }
-      log(`Validation passed`, 2);
+      log(`Validation passed`, 4);
     } else {
-      log(`Config file name is absolute, skipping validation`, 2);
+      log(`Config file name is absolute, skipping validation`, 4);
     }
     
-    log(`Loading config from: ${configPath}`, 2);
+    log(`Loading config from: ${configPath}`, 3);
     const configContent = await readFile(configPath, 'utf8');
     const userConfig = JSON.parse(configContent);
     config = {
@@ -70,14 +70,14 @@ export default async (flags, log) => {
         ...userConfig.cache
       }
     };
-    log('User config loaded and merged with defaults', 2);
+    log('User config loaded and merged with defaults', 3);
   } catch (e){
     // Only fall back to default config for file reading/parsing errors
     // Let validation errors propagate up
     if (e.message.includes('Config file must be within the server root directory')) {
       throw e;
     }
-    log('Using default config (no config file found)', 2);
+    log('Using default config (no config file found)', 3);
   }
   
   /*
@@ -88,10 +88,10 @@ export default async (flags, log) => {
   dis.add("\\.config$");
   dis.add("\\.git/"); 
   config.disallowedRegex = [...dis];
-  log(`Config loaded with ${config.disallowedRegex.length} disallowed patterns`, 2);
+  log(`Config loaded with ${config.disallowedRegex.length} disallowed patterns`, 3);
   
   let files = await getFiles(rootPath, config, log);
-  log(`Initial scan found ${files.length} files`, 1);
+  log(`Initial scan found ${files.length} files`, 2);
   
   // Initialize middleware runner
   const middlewareRunner = new MiddlewareRunner();
@@ -99,32 +99,32 @@ export default async (flags, log) => {
   // Load built-in middleware based on config
   if (config.middleware?.cors?.enabled) {
     middlewareRunner.use(corsMiddleware(config.middleware.cors));
-    log('CORS middleware enabled', 2);
+    log('CORS middleware enabled', 3);
   }
   
   if (config.middleware?.compression?.enabled) {
     middlewareRunner.use(compressionMiddleware(config.middleware.compression));
-    log('Compression middleware enabled', 2);
+    log('Compression middleware enabled', 3);
   }
   
   if (config.middleware?.rateLimit?.enabled) {
     middlewareRunner.use(rateLimitMiddleware(config.middleware.rateLimit));
-    log('Rate limit middleware enabled', 2);
+    log('Rate limit middleware enabled', 3);
   }
   
   if (config.middleware?.security?.enabled) {
     middlewareRunner.use(securityMiddleware(config.middleware.security));
-    log('Security middleware enabled', 2);
+    log('Security middleware enabled', 3);
   }
   
   if (config.middleware?.logging?.enabled) {
     middlewareRunner.use(loggingMiddleware(config.middleware.logging, log));
-    log('Logging middleware enabled', 2);
+    log('Logging middleware enabled', 3);
   }
   
   // Load custom middleware files
   if (config.middleware?.custom && config.middleware.custom.length > 0) {
-    log(`Loading ${config.middleware.custom.length} custom middleware files`, 2);
+    log(`Loading ${config.middleware.custom.length} custom middleware files`, 3);
     
     for (const middlewarePath of config.middleware.custom) {
       try {
@@ -134,7 +134,7 @@ export default async (flags, log) => {
         
         if (typeof customMiddleware === 'function') {
           middlewareRunner.use(customMiddleware(config.middleware));
-          log(`Custom middleware loaded: ${middlewarePath}`, 2);
+          log(`Custom middleware loaded: ${middlewarePath}`, 3);
         } else {
           log(`Custom middleware error: ${middlewarePath} does not export a default function`, 1);
         }
@@ -159,7 +159,7 @@ export default async (flags, log) => {
   const wildcardRoutes = new Map();
   
   if (config.customRoutes && Object.keys(config.customRoutes).length > 0) {
-    log(`Processing ${Object.keys(config.customRoutes).length} custom routes`, 2);
+    log(`Processing ${Object.keys(config.customRoutes).length} custom routes`, 3);
     for (const [urlPath, filePath] of Object.entries(config.customRoutes)) {
       // Check if this is a wildcard route
       if (urlPath.includes('*')) {
@@ -167,12 +167,12 @@ export default async (flags, log) => {
         const resolvedPath = path.isAbsolute(filePath) ? filePath : path.resolve(rootPath, filePath);
         // Store wildcard routes separately for pattern matching
         wildcardRoutes.set(urlPath, resolvedPath);
-        log(`Wildcard route mapped: ${urlPath} -> ${resolvedPath}`, 2);
+        log(`Wildcard route mapped: ${urlPath} -> ${resolvedPath}`, 3);
       } else {
         // Resolve the file path relative to rootPath if relative, otherwise use absolute path
         const resolvedPath = path.isAbsolute(filePath) ? filePath : path.resolve(rootPath, filePath);
         customRoutes.set(urlPath, resolvedPath);
-        log(`Custom route mapped: ${urlPath} -> ${resolvedPath}`, 2);
+        log(`Custom route mapped: ${urlPath} -> ${resolvedPath}`, 3);
       }
     }
   }
@@ -259,27 +259,36 @@ export default async (flags, log) => {
       log(`Path ${requestPath} added to dynamic blacklist after ${newAttempts} failed attempts`, 1);
     }
     
-    log(`Rescan attempt ${newAttempts}/${config.maxRescanAttempts} for: ${requestPath}`, 2);
+    log(`Rescan attempt ${newAttempts}/${config.maxRescanAttempts} for: ${requestPath}`, 3);
     return newAttempts;
   };
   
   const requestHandler = async (req, res) => {
     await middlewareRunner.run(req, res, async () => {
       const requestPath = req.url.split('?')[0];
-      log(`${req.method} ${requestPath}`, 0);
+      log(`${req.method} ${requestPath}`, 4);
       
 
       // Check custom routes first (allow outside rootPath)
-      log(`customRoutes keys: ${Array.from(customRoutes.keys()).join(', ')}`, 1);
+      log(`customRoutes keys: ${Array.from(customRoutes.keys()).join(', ')}`, 4);
       // Normalize requestPath and keys for matching
       const normalizePath = p => {
-        let np = decodeURIComponent(p);
-        if (!np.startsWith('/')) np = '/' + np;
-        if (np.length > 1 && np.endsWith('/')) np = np.slice(0, -1);
-        return np;
+        try {
+          let np = decodeURIComponent(p);
+          if (!np.startsWith('/')) np = '/' + np;
+          if (np.length > 1 && np.endsWith('/')) np = np.slice(0, -1);
+          return np;
+        } catch (e) {
+          log(`Warning: Failed to decode URI component "${p}": ${e.message}`, 1);
+          // Return the original path if decoding fails
+          let np = p;
+          if (!np.startsWith('/')) np = '/' + np;
+          if (np.length > 1 && np.endsWith('/')) np = np.slice(0, -1);
+          return np;
+        }
       };
       const normalizedRequestPath = normalizePath(requestPath);
-      log(`Normalized requestPath: ${normalizedRequestPath}`, 1);
+      log(`Normalized requestPath: ${normalizedRequestPath}`, 4);
       let matchedKey = null;
       for (const key of customRoutes.keys()) {
         if (normalizePath(key) === normalizedRequestPath) {
@@ -289,14 +298,14 @@ export default async (flags, log) => {
       }
       if (matchedKey) {
         const customFilePath = customRoutes.get(matchedKey);
-        log(`Serving custom route: ${normalizedRequestPath} -> ${customFilePath}`, 2);
+        log(`Serving custom route: ${normalizedRequestPath} -> ${customFilePath}`, 3);
         try {
           const { stat } = await import('fs/promises');
           try {
             await stat(customFilePath);
-            log(`Custom route file exists: ${customFilePath}`, 2);
+            log(`Custom route file exists: ${customFilePath}`, 4);
           } catch (e) {
-            log(`Custom route file does NOT exist: ${customFilePath}`, 0);
+            log(`Custom route file does NOT exist: ${customFilePath}`, 1);
             res.writeHead(404, { 'Content-Type': 'text/plain' });
             res.end('Custom route file not found');
             return;
@@ -309,7 +318,7 @@ export default async (flags, log) => {
           res.end(fileContent);
           return; // Successfully served custom route
         } catch (error) {
-          log(`Error serving custom route ${normalizedRequestPath}: ${error.message}`, 0);
+          log(`Error serving custom route ${normalizedRequestPath}: ${error.message}`, 1);
           res.writeHead(500, { 'Content-Type': 'text/plain' });
           res.end('Internal Server Error');
           return;
@@ -320,17 +329,17 @@ export default async (flags, log) => {
       const wildcardMatch = findWildcardRoute(requestPath);
       if (wildcardMatch) {
         const resolvedFilePath = resolveWildcardPath(wildcardMatch.filePath, wildcardMatch.matches);
-        log(`Serving wildcard route: ${requestPath} -> ${resolvedFilePath}`, 2);
+        log(`Serving wildcard route: ${requestPath} -> ${resolvedFilePath}`, 3);
         try {
           const fileContent = await readFile(resolvedFilePath);
           const fileExtension = path.extname(resolvedFilePath).toLowerCase().slice(1);
           const mimeType = config.allowedMimes[fileExtension] || 'application/octet-stream';
-          log(`Serving wildcard file as ${mimeType} (${fileContent.length} bytes)`, 2);
+          log(`Serving wildcard file as ${mimeType} (${fileContent.length} bytes)`, 4);
           res.writeHead(200, { 'Content-Type': mimeType });
           res.end(fileContent);
           return; // Successfully served wildcard route
         } catch (error) {
-          log(`Error serving wildcard route ${requestPath}: ${error.message}`, 0);
+          log(`Error serving wildcard route ${requestPath}: ${error.message}`, 1);
           res.writeHead(500, { 'Content-Type': 'text/plain' });
           res.end('Internal Server Error');
           return;
