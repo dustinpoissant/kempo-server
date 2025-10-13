@@ -4,7 +4,11 @@ export default (files, rootPath, requestPath, method, log) => {
   log(`Finding file for: ${method} ${requestPath}`, 3);
   
   // Normalize paths for comparison
-  const normalizeRequestPath = requestPath.startsWith('/') ? requestPath.slice(1) : requestPath;
+  let normalizeRequestPath = requestPath.startsWith('/') ? requestPath.slice(1) : requestPath;
+  // Remove trailing slash for directory path normalization (except for root)
+  if (normalizeRequestPath.endsWith('/') && normalizeRequestPath.length > 0) {
+    normalizeRequestPath = normalizeRequestPath.slice(0, -1);
+  }
   const requestSegments = normalizeRequestPath ? normalizeRequestPath.split('/') : [];
   
   log(`Normalized request path: ${normalizeRequestPath}`, 4);
