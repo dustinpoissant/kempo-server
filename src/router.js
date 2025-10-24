@@ -55,19 +55,19 @@ export default async (flags, log) => {
       // Deep merge nested objects
       allowedMimes: {
         ...defaultConfig.allowedMimes,
-        ...userConfig.allowedMimes
+        ...(userConfig.allowedMimes || {})
       },
       middleware: {
         ...defaultConfig.middleware,
-        ...userConfig.middleware
+        ...(userConfig.middleware || {})
       },
       customRoutes: {
         ...defaultConfig.customRoutes,
-        ...userConfig.customRoutes
+        ...(userConfig.customRoutes || {})
       },
       cache: {
         ...defaultConfig.cache,
-        ...userConfig.cache
+        ...(userConfig.cache || {})
       }
     };
     log('User config loaded and merged with defaults', 3);
