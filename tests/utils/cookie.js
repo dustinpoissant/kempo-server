@@ -1,0 +1,1 @@
+export const parseCookies = (setCookie) => Array.isArray(setCookie) ? setCookie : (setCookie ? [setCookie] : []);

@@ -1,5 +1,6 @@
 import {corsMiddleware} from '../src/builtinMiddleware.js';
-import {createMockReq, createMockRes} from './test-utils.js';
+import {createMockReq} from './utils/mock-req.js';
+import {createMockRes} from './utils/mock-res.js';
 
 export default {
   'cors origin array and non-OPTIONS continues to next': async ({pass, fail}) => {

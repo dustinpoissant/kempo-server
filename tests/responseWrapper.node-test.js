@@ -1,4 +1,5 @@
-import {createMockRes, parseCookies} from './test-utils.js';
+import {createMockRes} from './utils/mock-res.js';
+import {parseCookies} from './utils/cookie.js';
 import createResponseWrapper from '../src/responseWrapper.js';
 
 export default {

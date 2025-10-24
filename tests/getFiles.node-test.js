@@ -1,7 +1,9 @@
 import getFiles from '../src/getFiles.js';
 import defaultConfig from '../src/defaultConfig.js';
 import path from 'path';
-import {withTestDir, write, log} from './test-utils.js';
+import {withTestDir} from './utils/test-dir.js';
+import {write} from './utils/file-writer.js';
+import {log} from './utils/logging.js';
 
 export default {
   'scans directories recursively and filters by mime and disallowed': async ({pass, fail}) => {

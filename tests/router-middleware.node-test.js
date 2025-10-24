@@ -1,5 +1,7 @@
 import http from 'http';
-import {withTestDir, write, randomPort} from './test-utils.js';
+import {withTestDir} from './utils/test-dir.js';
+import {write} from './utils/file-writer.js';
+import {randomPort} from './utils/port.js';
 import router from '../src/router.js';
 
 export default {

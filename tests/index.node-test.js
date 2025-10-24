@@ -1,6 +1,10 @@
-import {startNode, randomPort, httpGet, withTestDir, write} from './test-utils.js';
+import {startNode} from './utils/process.js';
+import {randomPort} from './utils/port.js';
+import {httpGet} from './utils/http.js';
+import {withTestDir} from './utils/test-dir.js';
+import {write} from './utils/file-writer.js';
 import path from 'path';
-import ensureBuild from './ensure-build.js';
+import ensureBuild from './utils/ensure-build.js';
 
 ensureBuild();
 

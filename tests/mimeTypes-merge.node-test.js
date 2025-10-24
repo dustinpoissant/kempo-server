@@ -63,24 +63,24 @@ export default {
         if(cssResponse.res.statusCode !== 200){
           return fail('CSS file should be served');
         }
-        if(cssResponse.res.headers['content-type'] !== 'text/css'){
-          return fail(`CSS should have text/css MIME type, got: ${cssResponse.res.headers['content-type']}`);
+        if(cssResponse.res.headers['content-type'] !== 'text/css; charset=utf-8'){
+          return fail(`CSS should have text/css MIME type with charset, got: ${cssResponse.res.headers['content-type']}`);
         }
         
         const jsResponse = await httpGet(`http://localhost:${port}/test.js`);
         if(jsResponse.res.statusCode !== 200){
           return fail('JS file should be served');
         }
-        if(jsResponse.res.headers['content-type'] !== 'text/javascript'){
-          return fail(`JS should have custom text/javascript MIME type, got: ${jsResponse.res.headers['content-type']}`);
+        if(jsResponse.res.headers['content-type'] !== 'text/javascript; charset=utf-8'){
+          return fail(`JS should have custom text/javascript MIME type with charset, got: ${jsResponse.res.headers['content-type']}`);
         }
         
         const htmlResponse = await httpGet(`http://localhost:${port}/test.html`);
         if(htmlResponse.res.statusCode !== 200){
           return fail('HTML file should be served');
         }
-        if(htmlResponse.res.headers['content-type'] !== 'text/html'){
-          return fail(`HTML should have text/html MIME type, got: ${htmlResponse.res.headers['content-type']}`);
+        if(htmlResponse.res.headers['content-type'] !== 'text/html; charset=utf-8'){
+          return fail(`HTML should have text/html MIME type with charset, got: ${htmlResponse.res.headers['content-type']}`);
         }
         
         pass('allowedMimes merges correctly with defaults');
@@ -162,8 +162,8 @@ export default {
       
       try {
         const tests = [
-          { file: 'test.css', expectedType: 'text/css' },
-          { file: 'test.html', expectedType: 'text/html' },
+          { file: 'test.css', expectedType: 'text/css; charset=utf-8' },
+          { file: 'test.html', expectedType: 'text/html; charset=utf-8' },
           { file: 'test.json', expectedType: 'application/json' },
           { file: 'test.svg', expectedType: 'image/svg+xml' },
           { file: 'test.png', expectedType: 'image/png' },

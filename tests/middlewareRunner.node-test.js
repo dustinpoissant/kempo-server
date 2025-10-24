@@ -1,5 +1,6 @@
 import MiddlewareRunner from '../src/middlewareRunner.js';
-import {createMockReq, createMockRes} from './test-utils.js';
+import {createMockReq} from './utils/mock-req.js';
+import {createMockRes} from './utils/mock-res.js';
 
 export default {
   'runs middleware in order and calls finalHandler': async ({pass, fail}) => {

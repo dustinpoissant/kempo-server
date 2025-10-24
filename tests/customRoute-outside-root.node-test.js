@@ -2,7 +2,10 @@ import router from '../src/router.js';
 import http from 'http';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
-import { randomPort, httpGet, withTempDir, write } from './test-utils.js';
+import {randomPort} from './utils/port.js';
+import {httpGet} from './utils/http.js';
+import {withTempDir} from './utils/temp-dir.js';
+import {write} from './utils/file-writer.js';
 
 /*
   This test verifies that a customRoute pointing outside the rootPath is served

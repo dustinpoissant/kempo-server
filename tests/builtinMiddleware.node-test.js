@@ -1,5 +1,9 @@
 import http from 'http';
-import {createMockReq, createMockRes, bigString, gzipSize, setEnv} from './test-utils.js';
+import {createMockReq} from './utils/mock-req.js';
+import {createMockRes} from './utils/mock-res.js';
+import {bigString} from './utils/string-utils.js';
+import {gzipSize} from './utils/compression.js';
+import {setEnv} from './utils/env.js';
 import {corsMiddleware, compressionMiddleware, rateLimitMiddleware, securityMiddleware, loggingMiddleware} from '../src/builtinMiddleware.js';
 
 export default {

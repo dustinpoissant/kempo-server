@@ -1,6 +1,9 @@
 import http from 'http';
 import path from 'path';
-import {withTempDir, write, randomPort, httpGet} from './test-utils.js';
+import {withTempDir} from './utils/temp-dir.js';
+import {write} from './utils/file-writer.js';
+import {randomPort} from './utils/port.js';
+import {httpGet} from './utils/http.js';
 import router from '../src/router.js';
 import getFlags from '../src/getFlags.js';
 
@@ -114,8 +117,8 @@ export default {
         if (response.res.statusCode !== 200) {
           return fail('custom mime type should be served');
         }
-        if (response.res.headers['content-type'] !== 'text/custom') {
-          return fail('should use custom mime type');
+        if (response.res.headers['content-type'] !== 'text/custom; charset=utf-8') {
+          return fail('should use custom mime type with charset');
         }
         pass('default config file usage');
       } finally {
@@ -153,8 +156,8 @@ export default {
         if (response.res.statusCode !== 200) {
           return fail('custom config should be loaded');
         }
-        if (response.res.headers['content-type'] !== 'text/special') {
-          return fail('should use custom config mime type');
+        if (response.res.headers['content-type'] !== 'text/special; charset=utf-8') {
+          return fail('should use custom config mime type with charset');
         }
         pass('relative path config file usage');
       } finally {
@@ -193,8 +196,8 @@ export default {
         if (response.res.statusCode !== 200) {
           return fail('absolute config path should work');
         }
-        if (response.res.headers['content-type'] !== 'text/absolute') {
-          return fail('should use absolute config mime type');
+        if (response.res.headers['content-type'] !== 'text/absolute; charset=utf-8') {
+          return fail('should use absolute config mime type with charset');
         }
         pass('absolute path config file usage');
       } finally {
@@ -308,8 +311,8 @@ export default {
         if (customResponse.res.statusCode !== 200) {
           return fail('custom mime type should work');
         }
-        if (customResponse.res.headers['content-type'] !== 'text/custom') {
-          return fail('should use custom mime type');
+        if (customResponse.res.headers['content-type'] !== 'text/custom; charset=utf-8') {
+          return fail('should use custom mime type with charset');
         }
         pass('config merging with defaults');
       } finally {

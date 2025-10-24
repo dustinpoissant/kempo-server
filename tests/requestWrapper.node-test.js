@@ -1,4 +1,4 @@
-import {createMockReq} from './test-utils.js';
+import {createMockReq} from './utils/mock-req.js';
 import createRequestWrapper from '../src/requestWrapper.js';
 
 export default {

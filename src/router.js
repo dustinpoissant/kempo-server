@@ -315,14 +315,19 @@ export default async (flags, log) => {
           let mimeType, encoding;
           if (typeof mimeConfig === 'string') {
             mimeType = mimeConfig;
-            encoding = undefined;
+            // Default to UTF-8 for text MIME types
+            encoding = mimeType.startsWith('text/') ? 'utf8' : undefined;
           } else {
             mimeType = mimeConfig?.mime || 'application/octet-stream';
             encoding = mimeConfig?.encoding === 'utf8' ? 'utf8' : undefined;
           }
           const fileContent = await readFile(customFilePath, encoding);
           log(`Serving custom file as ${mimeType} (${fileContent.length} bytes)`, 2);
-          res.writeHead(200, { 'Content-Type': mimeType });
+          // Add charset=utf-8 for text MIME types when using UTF-8 encoding
+          const contentType = encoding === 'utf8' && mimeType.startsWith('text/') 
+            ? `${mimeType}; charset=utf-8` 
+            : mimeType;
+          res.writeHead(200, { 'Content-Type': contentType });
           res.end(fileContent);
           return; // Successfully served custom route
         } catch (error) {
@@ -344,14 +349,19 @@ export default async (flags, log) => {
           let mimeType, encoding;
           if (typeof mimeConfig === 'string') {
             mimeType = mimeConfig;
-            encoding = undefined;
+            // Default to UTF-8 for text MIME types
+            encoding = mimeType.startsWith('text/') ? 'utf8' : undefined;
           } else {
             mimeType = mimeConfig?.mime || 'application/octet-stream';
             encoding = mimeConfig?.encoding === 'utf8' ? 'utf8' : undefined;
           }
           const fileContent = await readFile(resolvedFilePath, encoding);
           log(`Serving wildcard file as ${mimeType} (${fileContent.length} bytes)`, 4);
-          res.writeHead(200, { 'Content-Type': mimeType });
+          // Add charset=utf-8 for text MIME types when using UTF-8 encoding
+          const contentType = encoding === 'utf8' && mimeType.startsWith('text/') 
+            ? `${mimeType}; charset=utf-8` 
+            : mimeType;
+          res.writeHead(200, { 'Content-Type': contentType });
           res.end(fileContent);
           return; // Successfully served wildcard route
         } catch (error) {

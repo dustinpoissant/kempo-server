@@ -1,6 +1,8 @@
 import path from 'path';
 import url from 'url';
-import {createMockReq, createMockRes, setEnv} from './test-utils.js';
+import {createMockReq} from './utils/mock-req.js';
+import {createMockRes} from './utils/mock-res.js';
+import {setEnv} from './utils/env.js';
 
 // import the middleware module by file path to avoid executing index.js
 const examplePath = path.join(process.cwd(), 'tests', 'example-middleware.js');

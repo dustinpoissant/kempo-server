@@ -1,6 +1,10 @@
-import {startNode, randomPort, httpGet, withTempDir, write} from './test-utils.js';
+import {startNode} from './utils/process.js';
+import {randomPort} from './utils/port.js';
+import {httpGet} from './utils/http.js';
+import {withTempDir} from './utils/temp-dir.js';
+import {write} from './utils/file-writer.js';
 import path from 'path';
-import ensureBuild from './ensure-build.js';
+import ensureBuild from './utils/ensure-build.js';
 
 ensureBuild();
 
@@ -29,8 +33,8 @@ export default {
         if (res.statusCode !== 200) {
           return fail('server should serve file with default config');
         }
-        if (res.headers['content-type'] !== 'text/default') {
-          return fail('should use default config mime type');
+        if (res.headers['content-type'] !== 'text/default; charset=utf-8') {
+          return fail('should use default config mime type with charset');
         }
         if (body.toString() !== 'default config content') {
           return fail('should serve correct content');
@@ -73,8 +77,8 @@ export default {
         if (res.statusCode !== 200) {
           return fail('server should serve file with custom config');
         }
-        if (res.headers['content-type'] !== 'text/custom') {
-          return fail('should use custom config mime type');
+        if (res.headers['content-type'] !== 'text/custom; charset=utf-8') {
+          return fail('should use custom config mime type with charset');
         }
         if (body.toString() !== 'custom config content') {
           return fail('should serve correct content');
@@ -117,8 +121,8 @@ export default {
         if (res.statusCode !== 200) {
           return fail('server should serve file with short flag config');
         }
-        if (res.headers['content-type'] !== 'text/short') {
-          return fail('should use short flag config mime type');
+        if (res.headers['content-type'] !== 'text/short; charset=utf-8') {
+          return fail('should use short flag config mime type with charset');
         }
         if (body.toString() !== 'short flag content') {
           return fail('should serve correct content');
@@ -162,8 +166,8 @@ export default {
         if (res.statusCode !== 200) {
           return fail('server should serve file with absolute path config');
         }
-        if (res.headers['content-type'] !== 'text/absolute') {
-          return fail('should use absolute path config mime type');
+        if (res.headers['content-type'] !== 'text/absolute; charset=utf-8') {
+          return fail('should use absolute path config mime type with charset');
         }
         if (body.toString() !== 'absolute path content') {
           return fail('should serve correct content');
@@ -199,8 +203,8 @@ export default {
         if (res.statusCode !== 200) {
           return fail('server should start with missing config');
         }
-        if (res.headers['content-type'] !== 'text/html') {
-          return fail('should use default mime types');
+        if (res.headers['content-type'] !== 'text/html; charset=utf-8') {
+          return fail('should use default mime types with charset');
         }
         if (!body.toString().includes('<h1>Home</h1>')) {
           return fail('should serve HTML content');
@@ -246,8 +250,8 @@ export default {
         if (res.statusCode !== 200) {
           return fail('custom route should work with config flag');
         }
-        if (res.headers['content-type'] !== 'text/plain') {
-          return fail('should use config mime type');
+        if (res.headers['content-type'] !== 'text/plain; charset=utf-8') {
+          return fail('should use config mime type with charset');
         }
         if (body.toString() !== 'source file content') {
           return fail('should serve custom route content');
