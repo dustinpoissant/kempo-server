@@ -32,11 +32,10 @@ export default async (root, config, log) => {
   const isAllowedMimeType = (filePath) => {
     const ext = getExtension(filePath);
     const allowed = config.allowedMimes.hasOwnProperty(ext);
-    
+    // If you ever need the MIME type, use config.allowedMimes[ext]?.mime
     if (!allowed) {
       log(`Skipping file with disallowed extension: ${path.relative(root, filePath)} (.${ext})`, 4);
     }
-    
     return allowed;
   };
   

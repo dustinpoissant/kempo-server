@@ -91,8 +91,8 @@ export default {
       // Create a custom config file as .config.json (default name)
       const customConfig = {
         allowedMimes: {
-          html: "text/html",
-          custom: "text/custom"
+          html: { mime: "text/html", encoding: "utf8" },
+          custom: { mime: "text/custom", encoding: "utf8" }
         }
       };
       await write(dir, '.config.json', JSON.stringify(customConfig));
@@ -128,12 +128,12 @@ export default {
   'router uses custom config file with relative path': async ({pass, fail}) => {
     await withTempDir(async (dir) => {
       // Create a custom config file with different name
-      const customConfig = {
-        allowedMimes: {
-          html: "text/html",
-          special: "text/special"
-        }
-      };
+        const customConfig = {
+          allowedMimes: {
+            html: { mime: "text/html", encoding: "utf8" },
+            special: { mime: "text/special", encoding: "utf8" }
+          }
+        };
       await write(dir, 'dev.config.json', JSON.stringify(customConfig));
       await write(dir, 'test.special', 'special content');
       
@@ -168,12 +168,12 @@ export default {
     await withTempDir(async (dir) => {
       // Create a custom config file in different location
       const configDir = path.join(dir, 'configs');
-      const customConfig = {
-        allowedMimes: {
-          html: "text/html",
-          absolute: "text/absolute"
-        }
-      };
+        const customConfig = {
+          allowedMimes: {
+            html: { mime: "text/html", encoding: "utf8" },
+            absolute: { mime: "text/absolute", encoding: "utf8" }
+          }
+        };
       const configPath = await write(configDir, 'prod.config.json', JSON.stringify(customConfig));
       await write(dir, 'test.absolute', 'absolute content');
       
@@ -274,7 +274,7 @@ export default {
       // Create partial config that only overrides some settings
       const partialConfig = {
         allowedMimes: {
-          custom: "text/custom"
+            custom: { mime: "text/custom", encoding: "utf8" }
         },
         maxRescanAttempts: 5
       };

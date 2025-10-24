@@ -1,5 +1,8 @@
 import {startNode, randomPort, httpGet, withTempDir, write} from './test-utils.js';
 import path from 'path';
+import ensureBuild from './ensure-build.js';
+
+ensureBuild();
 
 export default {
   'CLI uses default config file when no --config flag provided': async ({pass, fail}) => {
@@ -7,8 +10,8 @@ export default {
       // Create default config and test file
       const defaultConfig = {
         allowedMimes: {
-          html: "text/html",
-          default: "text/default"
+          html: { mime: "text/html", encoding: "utf8" },
+          default: { mime: "text/default", encoding: "utf8" }
         }
       };
       await write(dir, '.config.json', JSON.stringify(defaultConfig));
@@ -45,8 +48,8 @@ export default {
       // Create custom config and test file
       const customConfig = {
         allowedMimes: {
-          html: "text/html",
-          custom: "text/custom"
+          html: { mime: "text/html", encoding: "utf8" },
+          custom: { mime: "text/custom", encoding: "utf8" }
         }
       };
       await write(dir, 'dev.config.json', JSON.stringify(customConfig));
@@ -89,8 +92,8 @@ export default {
       // Create custom config and test file
       const customConfig = {
         allowedMimes: {
-          html: "text/html",
-          short: "text/short"
+          html: { mime: "text/html", encoding: "utf8" },
+          short: { mime: "text/short", encoding: "utf8" }
         }
       };
       await write(dir, 'short.config.json', JSON.stringify(customConfig));
@@ -134,8 +137,8 @@ export default {
       const configDir = path.join(dir, 'configs');
       const customConfig = {
         allowedMimes: {
-          html: "text/html",
-          absolute: "text/absolute"
+          html: { mime: "text/html", encoding: "utf8" },
+          absolute: { mime: "text/absolute", encoding: "utf8" }
         }
       };
       const configPath = await write(configDir, 'prod.config.json', JSON.stringify(customConfig));

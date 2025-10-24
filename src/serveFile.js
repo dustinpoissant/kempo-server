@@ -79,13 +79,20 @@ export default async (files, rootPath, requestPath, method, config, req, res, lo
       return true; // Handled (even though it's an error)
     }
   } else {
-    // Serve the file content with appropriate MIME type
+    // Serve the file content with appropriate MIME type and encoding
     log(`Serving static file: ${fileName}`, 2);
     try {
-      const fileContent = await readFile(file);
       const fileExtension = path.extname(file).toLowerCase().slice(1);
-      const mimeType = config.allowedMimes[fileExtension] || 'application/octet-stream';
-      
+      const mimeConfig = config.allowedMimes[fileExtension];
+      let mimeType, encoding;
+      if (typeof mimeConfig === 'string') {
+        mimeType = mimeConfig;
+        encoding = undefined;
+      } else {
+        mimeType = mimeConfig?.mime || 'application/octet-stream';
+        encoding = mimeConfig?.encoding === 'utf8' ? 'utf8' : undefined;
+      }
+      const fileContent = await readFile(file, encoding);
       log(`Serving ${file} as ${mimeType} (${fileContent.length} bytes)`, 2);
       res.writeHead(200, { 'Content-Type': mimeType });
       res.end(fileContent);

@@ -32,8 +32,22 @@
     </ul>
 
     <h3 id="allowedMimes">allowedMimes</h3>
-    <p>An object mapping file extensions to their MIME types. Files with extensions not in this list will not be served.</p>
-    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"allowedMimes"</span>: {<br />    <span class="hljs-attr">"html"</span>: <span class="hljs-string">"text/html"</span>,<br />    <span class="hljs-attr">"css"</span>: <span class="hljs-string">"text/css"</span>,<br />    <span class="hljs-attr">"js"</span>: <span class="hljs-string">"application/javascript"</span>,<br />    <span class="hljs-attr">"json"</span>: <span class="hljs-string">"application/json"</span>,<br />    <span class="hljs-attr">"png"</span>: <span class="hljs-string">"image/png"</span>,<br />    <span class="hljs-attr">"jpg"</span>: <span class="hljs-string">"image/jpeg"</span>,<br />    <span class="hljs-attr">"jpeg"</span>: <span class="hljs-string">"image/jpeg"</span>,<br />    <span class="hljs-attr">"gif"</span>: <span class="hljs-string">"image/gif"</span>,<br />    <span class="hljs-attr">"svg"</span>: <span class="hljs-string">"image/svg+xml"</span>,<br />    <span class="hljs-attr">"woff"</span>: <span class="hljs-string">"font/woff"</span>,<br />    <span class="hljs-attr">"woff2"</span>: <span class="hljs-string">"font/woff2"</span><br />  }<br />}</code></pre>
+    <p>An object mapping file extensions to their MIME types and encoding. Each value is an object with <code>mime</code> and <code>encoding</code> properties. Files with extensions not in this list will not be served.</p>
+    <pre><code class="hljs json">{
+  "allowedMimes": {
+    "html": { "mime": "text/html", "encoding": "utf8" },
+    "css": { "mime": "text/css", "encoding": "utf8" },
+    "js": { "mime": "application/javascript", "encoding": "utf8" },
+    "json": { "mime": "application/json", "encoding": "utf8" },
+    "png": { "mime": "image/png", "encoding": "binary" },
+    "jpg": { "mime": "image/jpeg", "encoding": "binary" },
+    "jpeg": { "mime": "image/jpeg", "encoding": "binary" },
+    "gif": { "mime": "image/gif", "encoding": "binary" },
+    "svg": { "mime": "image/svg+xml", "encoding": "utf8" },
+    "woff": { "mime": "font/woff", "encoding": "binary" },
+    "woff2": { "mime": "font/woff2", "encoding": "binary" }
+  }
+}</code></pre>
 
     <h3 id="disallowedRegex">disallowedRegex</h3>
     <p>An array of regular expressions that match paths that should never be served. This provides security by preventing access to sensitive files.</p>
@@ -85,6 +99,62 @@
     <h3>Development Configuration</h3>
     <p>Create <code>.config.dev.json</code> for development:</p>
     <pre><code class="hljs json">{<br />  <span class="hljs-attr">"allowedMimes"</span>: {<br />    <span class="hljs-attr">"html"</span>: <span class="hljs-string">"text/html"</span>,<br />    <span class="hljs-attr">"css"</span>: <span class="hljs-string">"text/css"</span>,<br />    <span class="hljs-attr">"js"</span>: <span class="hljs-string">"application/javascript"</span>,<br />    <span class="hljs-attr">"json"</span>: <span class="hljs-string">"application/json"</span>,<br />    <span class="hljs-attr">"map"</span>: <span class="hljs-string">"application/json"</span><br />  },<br />  <span class="hljs-attr">"middleware"</span>: {<br />    <span class="hljs-attr">"cors"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"origin"</span>: <span class="hljs-string">"*"</span><br />    },<br />    <span class="hljs-attr">"compression"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">false</span><br />    }<br />  }<br />}</code></pre>
+    <pre><code class="hljs json">{
+  "allowedMimes": {
+    "html": { "mime": "text/html", "encoding": "utf8" },
+    "css": { "mime": "text/css", "encoding": "utf8" },
+    "js": { "mime": "application/javascript", "encoding": "utf8" },
+    "json": { "mime": "application/json", "encoding": "utf8" },
+    "map": { "mime": "application/json", "encoding": "utf8" }
+  },
+  "middleware": {
+    "cors": {
+      "enabled": true,
+      "origin": "*"
+    },
+    "compression": {
+      "enabled": false
+    }
+  }
+}</code></pre>
+    <pre><code class="hljs json">{
+  "allowedMimes": {
+    "html": { "mime": "text/html", "encoding": "utf8" },
+    "css": { "mime": "text/css", "encoding": "utf8" },
+    "js": { "mime": "application/javascript", "encoding": "utf8" },
+    "json": { "mime": "application/json", "encoding": "utf8" },
+    "png": { "mime": "image/png", "encoding": "binary" },
+    "jpg": { "mime": "image/jpeg", "encoding": "binary" }
+  },
+  "disallowedRegex": [
+    "^/\\..*",
+    "\\.env$",
+    "\\.config$",
+    "password",
+    "node_modules",
+    "\\.git",
+    "\\.map$"
+  ],
+  "middleware": {
+    "cors": {
+      "enabled": true,
+      "origin": "https://yourdomain.com"
+    },
+    "compression": {
+      "enabled": true,
+      "threshold": 1024
+    },
+    "security": {
+      "enabled": true,
+      "headers": {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "X-XSS-Protection": "1; mode=block",
+        "Strict-Transport-Security": "max-age=31536000; includeSubDomains"
+      }
+    }
+  }
+}</code></pre>
     <p>Use with: <code>kempo-server --root public --config .config.dev.json</code></p>
 
     <h3>Production Configuration</h3>

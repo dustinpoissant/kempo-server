@@ -1,5 +1,8 @@
 import {startNode, randomPort, httpGet, withTestDir, write} from './test-utils.js';
 import path from 'path';
+import ensureBuild from './ensure-build.js';
+
+ensureBuild();
 
 export default {
   'index.js CLI starts server and serves root': async ({pass, fail}) => {

@@ -310,9 +310,17 @@ export default async (flags, log) => {
             res.end('Custom route file not found');
             return;
           }
-          const fileContent = await readFile(customFilePath);
           const fileExtension = path.extname(customFilePath).toLowerCase().slice(1);
-          const mimeType = config.allowedMimes[fileExtension] || 'application/octet-stream';
+          const mimeConfig = config.allowedMimes[fileExtension];
+          let mimeType, encoding;
+          if (typeof mimeConfig === 'string') {
+            mimeType = mimeConfig;
+            encoding = undefined;
+          } else {
+            mimeType = mimeConfig?.mime || 'application/octet-stream';
+            encoding = mimeConfig?.encoding === 'utf8' ? 'utf8' : undefined;
+          }
+          const fileContent = await readFile(customFilePath, encoding);
           log(`Serving custom file as ${mimeType} (${fileContent.length} bytes)`, 2);
           res.writeHead(200, { 'Content-Type': mimeType });
           res.end(fileContent);
@@ -331,9 +339,17 @@ export default async (flags, log) => {
         const resolvedFilePath = resolveWildcardPath(wildcardMatch.filePath, wildcardMatch.matches);
         log(`Serving wildcard route: ${requestPath} -> ${resolvedFilePath}`, 3);
         try {
-          const fileContent = await readFile(resolvedFilePath);
           const fileExtension = path.extname(resolvedFilePath).toLowerCase().slice(1);
-          const mimeType = config.allowedMimes[fileExtension] || 'application/octet-stream';
+          const mimeConfig = config.allowedMimes[fileExtension];
+          let mimeType, encoding;
+          if (typeof mimeConfig === 'string') {
+            mimeType = mimeConfig;
+            encoding = undefined;
+          } else {
+            mimeType = mimeConfig?.mime || 'application/octet-stream';
+            encoding = mimeConfig?.encoding === 'utf8' ? 'utf8' : undefined;
+          }
+          const fileContent = await readFile(resolvedFilePath, encoding);
           log(`Serving wildcard file as ${mimeType} (${fileContent.length} bytes)`, 4);
           res.writeHead(200, { 'Content-Type': mimeType });
           res.end(fileContent);
