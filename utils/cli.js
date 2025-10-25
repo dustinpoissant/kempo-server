@@ -4,40 +4,51 @@ import readline from 'readline';
 /*
   Argument Parsing
 */
-export const getArgs = (mapping = {}) => {
+export const getArgs = (mapping = {}, argv = process.argv) => {
   const args = {};
-  let name = '';
+  let currentName = '';
   let values = [];
   
   const save = () => {
-    if(name){
+    if(currentName){
       if(values.length === 0){
-        args[name] = true;
+        args[currentName] = true;
       } else if(values.length === 1){
-        if(values[0] === 'false'){
-          args[name] = false;
+        const val = values[0];
+        if(val === 'false'){
+          args[currentName] = false;
+        } else if(val === 'true'){
+          args[currentName] = true;
         } else {
-          args[name] = values[0];
+          args[currentName] = val;
         }
       } else {
-        args[name] = values;
+        args[currentName] = values;
       }
     }
   };
 
-  for(let i = 2; i < process.argv.length; i++){
-    const arg = process.argv[i];
+  for(let i = 2; i < argv.length; i++){
+    const arg = argv[i];
     if(arg.startsWith('-')){
       save();
+      let name;
       if(arg.startsWith('--')){
         name = arg.slice(2);
       } else {
         name = arg.slice(1);
-        if(mapping[name]){
-          name = mapping[name];
-        }
       }
-      values = [];
+      if(name.includes('=')){
+        const [key, ...valParts] = name.split('=');
+        name = key;
+        values = [valParts.join('=')];
+      } else {
+        values = [];
+      }
+      if(mapping[name]){
+        name = mapping[name];
+      }
+      currentName = name;
     } else {
       values.push(arg);
     }

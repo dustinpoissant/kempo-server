@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en" theme="auto">
+<head>
+  <meta charset='utf-8'>
+  <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+  <title>CLI Utilities - Kempo Server</title>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <link rel="icon" type="image/png" sizes="48x48" href="./media/icon48.png">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="stylesheet" href="./kempo.min.css" />
+</head>
+<body>
+  <main>
+    <a href="./" class="btn">Home</a>
+    <h1>CLI Utilities</h1>
+    <p>The CLI utilities provide simple command-line argument parsing functionality for Node.js applications.</p>
+
+    <h2>Installation</h2>
+    <p>Import the utilities from the kempo-server package:</p>
+    <pre><code class="hljs javascript">import { getArgs } from 'kempo-server/utils/cli';</code></pre>
+
+    <h2>getArgs(mapping, argv)</h2>
+    <p>Parses command-line arguments into a key-value object.</p>
+
+    <h3>Parameters</h3>
+    <ul>
+      <li><code>mapping</code> (object, optional) - Maps short flag names to full names</li>
+      <li><code>argv</code> (array, optional) - Array of arguments to parse (defaults to <code>process.argv</code>)</li>
+    </ul>
+
+    <h3>Returns</h3>
+    <p>An object where keys are argument names and values are parsed argument values.</p>
+
+    <h3>Features</h3>
+    <ul>
+      <li>Supports both space-separated (<code>--flag value</code>) and equals-separated (<code>--flag=value</code>) formats</li>
+      <li>Automatically converts <code>"true"</code> and <code>"false"</code> strings to boolean values</li>
+      <li>Supports short flags with mapping (e.g., <code>-p</code> maps to <code>port</code>)</li>
+      <li>Handles multiple values for the same flag</li>
+      <li>Boolean flags without values are set to <code>true</code></li>
+    </ul>
+
+    <h3>Examples</h3>
+
+    <h4>Basic Usage</h4>
+    <pre><code class="hljs bash">node app.js --port 8080 --host localhost --verbose</code></pre>
+    <pre><code class="hljs javascript">const args = getArgs();
+// Result: { port: '8080', host: 'localhost', verbose: true }</code></pre>
+
+    <h4>With Short Flag Mapping</h4>
+    <pre><code class="hljs bash">node app.js -p 8080 -h localhost -v</code></pre>
+    <pre><code class="hljs javascript">const args = getArgs({
+  p: 'port',
+  h: 'host',
+  v: 'verbose'
+});
+// Result: { port: '8080', host: 'localhost', verbose: true }</code></pre>
+
+    <h4>Equals-Separated Values</h4>
+    <pre><code class="hljs bash">node app.js --port=8080 --enabled=true --disabled=false --name=John</code></pre>
+    <pre><code class="hljs javascript">const args = getArgs();
+// Result: { port: '8080', enabled: true, disabled: false, name: 'John' }</code></pre>
+
+    <h4>Mixed Formats</h4>
+    <pre><code class="hljs bash">node app.js --port=8080 -h localhost --verbose --config=prod.json</code></pre>
+    <pre><code class="hljs javascript">const args = getArgs({ h: 'host' });
+// Result: { port: '8080', host: 'localhost', verbose: true, config: 'prod.json' }</code></pre>
+
+    <h4>Values with Equals Signs</h4>
+    <pre><code class="hljs bash">node app.js --url=https://example.com?param=value</code></pre>
+    <pre><code class="hljs javascript">const args = getArgs();
+// Result: { url: 'https://example.com?param=value' }</code></pre>
+
+    <h2>Other Functions</h2>
+    <p>The CLI utilities module also exports other functions for running child processes and prompting users:</p>
+    <ul>
+      <li><code>runChildProcess(command)</code> - Run a shell command</li>
+      <li><code>runChildNodeProcess(scriptPath, argsObj)</code> - Run a Node.js script with arguments</li>
+      <li><code>runChildNodeProcessScript(scriptPath)</code> - Run a Node.js script</li>
+      <li><code>promptUser(query)</code> - Prompt user for input</li>
+      <li><code>promptYN(query, defaultValue)</code> - Prompt for yes/no with default</li>
+    </ul>
+  </main>
+  <div style="height:25vh"></div>
+</body>
+</html></content>
+<parameter name="filePath">c:\Users\dusti\dev\kempo-server\docs\cli-utils.html

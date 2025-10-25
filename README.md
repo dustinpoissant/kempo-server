@@ -364,6 +364,15 @@ https://github.com/dustinpoissant/kempo-testing-framework
 
 ## Documentation
 
+- **[Getting Started](./docs/getting-started.html)** - Installation and basic usage
+- **[Routing](./docs/routing.html)** - File-based routing system
+- **[Request & Response](./docs/request-response.html)** - Working with HTTP objects
+- **[Configuration](./docs/configuration.html)** - Server configuration options
+- **[Middleware](./docs/middleware.html)** - Built-in and custom middleware
+- **[Caching](./docs/caching.html)** - Cache configuration and management
+- **[CLI Utilities](./docs/cli-utils.html)** - Command-line argument parsing
+- **[File System Utilities](./docs/fs-utils.html)** - File and directory operations
+- **[Examples](./docs/examples.html)** - Interactive examples and demos
 - **[CONFIG.md](./CONFIG.md)** - Comprehensive server configuration guide
 - **[UTILS.md](./UTILS.md)** - Utility modules for Node.js projects
 

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en" theme="auto">
+<head>
+  <meta charset='utf-8'>
+  <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+  <title>File System Utilities - Kempo Server</title>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <link rel="icon" type="image/png" sizes="48x48" href="./media/icon48.png">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="stylesheet" href="./kempo.min.css" />
+</head>
+<body>
+  <main>
+    <a href="./" class="btn">Home</a>
+    <h1>File System Utilities</h1>
+    <p>The file system utilities provide common file and directory operations with Promise-based APIs for Node.js applications.</p>
+
+    <h2>Installation</h2>
+    <p>Import the utilities from the kempo-server package:</p>
+    <pre><code class="hljs javascript">import { ensureDir, copyDir, emptyDir } from 'kempo-server/utils/fs-utils';</code></pre>
+
+    <h2>ensureDir(dirPath)</h2>
+    <p>Ensures that a directory exists, creating it and any necessary parent directories if they don't exist. Similar to <code>mkdir -p</code>.</p>
+
+    <h3>Parameters</h3>
+    <ul>
+      <li><code>dirPath</code> (string) - The directory path to ensure exists</li>
+    </ul>
+
+    <h3>Returns</h3>
+    <p>Promise that resolves when the directory is confirmed to exist.</p>
+
+    <h3>Example</h3>
+    <pre><code class="hljs javascript">import { ensureDir } from 'kempo-server/utils/fs-utils';
+
+await ensureDir('./dist/assets');
+await ensureDir('./logs/app');
+// Creates ./dist/assets and ./logs/app directories if they don't exist</code></pre>
+
+    <h2>copyDir(srcPath, destPath)</h2>
+    <p>Recursively copies an entire directory structure from source to destination.</p>
+
+    <h3>Parameters</h3>
+    <ul>
+      <li><code>srcPath</code> (string) - The source directory to copy from</li>
+      <li><code>destPath</code> (string) - The destination directory to copy to</li>
+    </ul>
+
+    <h3>Returns</h3>
+    <p>Promise that resolves when the copy operation is complete.</p>
+
+    <h3>Example</h3>
+    <pre><code class="hljs javascript">import { copyDir } from 'kempo-server/utils/fs-utils';
+
+await copyDir('./src/assets', './dist/assets');
+await copyDir('./public', './dist');
+// Copies all files and subdirectories from src to dest</code></pre>
+
+    <h2>emptyDir(dirPath)</h2>
+    <p>Removes all contents of a directory without deleting the directory itself.</p>
+
+    <h3>Parameters</h3>
+    <ul>
+      <li><code>dirPath</code> (string) - The directory path to empty</li>
+    </ul>
+
+    <h3>Returns</h3>
+    <p>Promise that resolves when the directory has been emptied.</p>
+
+    <h3>Example</h3>
+    <pre><code class="hljs javascript">import { emptyDir } from 'kempo-server/utils/fs-utils';
+
+await emptyDir('./dist');
+await emptyDir('./temp');
+// Removes all files and subdirectories inside ./dist and ./temp</code></pre>
+
+    <h2>Common Use Cases</h2>
+
+    <h3>Build Script</h3>
+    <pre><code class="hljs javascript">import { ensureDir, copyDir, emptyDir } from 'kempo-server/utils/fs-utils';
+
+async function buildProject() {
+  // Clean previous build
+  await emptyDir('./dist');
+  
+  // Ensure build directories exist
+  await ensureDir('./dist/assets');
+  await ensureDir('./dist/components');
+  
+  // Copy static assets
+  await copyDir('./src/assets', './dist/assets');
+  await copyDir('./src/public', './dist');
+}</code></pre>
+
+    <h3>Backup Script</h3>
+    <pre><code class="hljs javascript">import { ensureDir, copyDir } from 'kempo-server/utils/fs-utils';
+
+async function backupProject() {
+  const timestamp = new Date().toISOString().slice(0, 10);
+  const backupPath = `./backups/${timestamp}`;
+  
+  await ensureDir(backupPath);
+  await copyDir('./src', `${backupPath}/src`);
+  await copyDir('./config', `${backupPath}/config`);
+}</code></pre>
+
+    <h2>Notes</h2>
+    <ul>
+      <li>All functions use Node.js's Promise-based fs APIs</li>
+      <li>Operations are asynchronous and should be awaited</li>
+      <li>Functions handle errors appropriately (e.g., ensureDir ignores EEXIST)</li>
+      <li>copyDir preserves directory structure recursively</li>
+    </ul>
+  </main>
+  <div style="height:25vh"></div>
+</body>
+</html></content>
+<parameter name="filePath">c:\Users\dusti\dev\kempo-server\docs\fs-utils.html
