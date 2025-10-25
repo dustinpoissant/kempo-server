@@ -103,7 +103,13 @@ export function createResponseWrapper(response) {
       } else if (typeof data === 'string') {
         // If Content-Type not set, default to text/html for strings
         if (!response.getHeader('Content-Type')) {
-          response.setHeader('Content-Type', 'text/html');
+          response.setHeader('Content-Type', 'text/html; charset=utf-8');
+        } else {
+          // If Content-Type is set and is a text type, add charset if not present
+          const contentType = response.getHeader('Content-Type');
+          if (contentType && contentType.startsWith('text/') && !contentType.includes('charset=')) {
+            response.setHeader('Content-Type', `${contentType}; charset=utf-8`);
+          }
         }
         response.end(data);
       } else if (Buffer.isBuffer(data)) {
@@ -112,7 +118,13 @@ export function createResponseWrapper(response) {
       } else {
         // Convert to string
         if (!response.getHeader('Content-Type')) {
-          response.setHeader('Content-Type', 'text/plain');
+          response.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        } else {
+          // If Content-Type is set and is a text type, add charset if not present
+          const contentType = response.getHeader('Content-Type');
+          if (contentType && contentType.startsWith('text/') && !contentType.includes('charset=')) {
+            response.setHeader('Content-Type', `${contentType}; charset=utf-8`);
+          }
         }
         response.end(String(data));
       }
@@ -127,7 +139,7 @@ export function createResponseWrapper(response) {
       }
       
       sent = true;
-      response.setHeader('Content-Type', 'text/html');
+      response.setHeader('Content-Type', 'text/html; charset=utf-8');
       response.end(htmlString);
       return enhancedResponse;
     },
@@ -139,7 +151,7 @@ export function createResponseWrapper(response) {
       }
       
       sent = true;
-      response.setHeader('Content-Type', 'text/plain');
+      response.setHeader('Content-Type', 'text/plain; charset=utf-8');
       response.end(String(textString));
       return enhancedResponse;
     },

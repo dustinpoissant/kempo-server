@@ -29,7 +29,7 @@ export default {
     const res1 = createMockRes();
     createResponseWrapper(res1).send('hello');
     // Content-Type defaults to text/html for string when not set
-    if(res1.getHeader('Content-Type') !== 'text/html') return fail('string content-type');
+    if(res1.getHeader('Content-Type') !== 'text/html; charset=utf-8') return fail('string content-type');
     if(res1.getBody().toString() !== 'hello') return fail('string body');
 
     const res2 = createMockRes();
@@ -51,11 +51,11 @@ export default {
   'html and text helpers': async ({pass, fail}) => {
     const r1 = createMockRes();
     createResponseWrapper(r1).html('<h1>Ok</h1>');
-    if(r1.getHeader('Content-Type') !== 'text/html') return fail('html type');
+    if(r1.getHeader('Content-Type') !== 'text/html; charset=utf-8') return fail('html type');
 
     const r2 = createMockRes();
     createResponseWrapper(r2).text('plain');
-    if(r2.getHeader('Content-Type') !== 'text/plain') return fail('text type');
+    if(r2.getHeader('Content-Type') !== 'text/plain; charset=utf-8') return fail('text type');
     
     pass('helpers');
   },
