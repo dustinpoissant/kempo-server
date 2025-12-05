@@ -6,9 +6,12 @@
   <meta name='viewport' content='width=device-width, initial-scale=1'>
   <link rel="icon" type="image/png" sizes="48x48" href="./media/icon48.png">
   <link rel="manifest" href="./manifest.json" />
-  <link rel="stylesheet" href="./kempo.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/kempo-css@1.3.2/dist/kempo.min.css" />
+  <link rel="stylesheet" href="./theme.css" />
+  <script>window.litDisableBundleWarning = true;</script>
 </head>
 <body>
+  <k-import src="./nav.inc.html"></k-import>
   <main>
     <h1 class="ta-center">Kempo Server</h1>
     <div class="ta-center">
@@ -80,5 +83,6 @@ npx kempo-server --root public</code></pre>
     </div>
   </main>
   <div style="height:25vh"></div>
+  <script type="module" src="https://cdn.jsdelivr.net/npm/kempo-ui@0.0.42/dist/components/Import.js"></script>
 </body>
 </html>

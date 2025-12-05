@@ -23,15 +23,11 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "essentialcss": "^2.0.1",
     "kempo-testing-framework": "^1.2.3",
     "terser": "^5.43.1"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/dustinpoissant/kempo-server"
-  },
-  "dependencies": {
-    "kempo-css": "^1.0.5"
   }
 }

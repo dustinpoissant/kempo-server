@@ -15,6 +15,9 @@
     <p>Customize Kempo Server's behavior with a simple JSON configuration file.</p>
 
     <h2>Configuration File</h2>
+    <div class="callout warning">
+      <strong>Important:</strong> The configuration file must be placed <strong>inside the server root directory</strong> (the folder specified by <code>--root</code>). For example, if you run <code>kempo-server --root public</code>, your config file should be at <code>public/.config.json</code> or <code>public/dev.config.json</code>, not in the project root.
+    </div>
     <p>To configure the server, create a configuration file (by default <code>.config.json</code>) within the root directory of your server (<code>public</code> in the start example). You can specify a different configuration file using the <code>--config</code> flag:</p>
     <pre><code class="hljs bash"># Use default .config.json<br />kempo-server --root public<br /><br /># Use custom config file<br />kempo-server --root public --config staging.config.json<br /><br /># Use absolute path<br />kempo-server --root public --config /etc/kempo/production.config.json</code></pre>
     <p>This json file can have any of the following properties. Any property not defined will use the default configuration.</p>
@@ -64,6 +67,14 @@
     <h3 id="customRoutes">customRoutes</h3>
     <p>An object mapping custom route paths to file paths. Useful for aliasing or serving files from outside the document root.</p>
     
+    <div class="callout info">
+      <strong>Path Resolution:</strong> All paths in <code>customRoutes</code> are resolved <strong>relative to the config file's location</strong> (which is the server root). To reference files outside the server root (like <code>node_modules</code> or a <code>src</code> folder), use <code>../</code> to navigate up to the project root.
+    </div>
+    
+    <div class="callout info">
+      <strong>Route Priority:</strong> Custom routes take priority over files that exist in the directory structure. If you have both <code>public/dist/app.js</code> and a custom route <code>"/dist/**": "../src/**"</code>, the custom route will be used and the file will be served from <code>src/</code>.
+    </div>
+    
     <h4>Basic Routes</h4>
     <p>Map specific paths to files:</p>
     <pre><code class="hljs json">{<br />  <span class="hljs-attr">"customRoutes"</span>: {<br />    <span class="hljs-attr">"/vendor/bootstrap.css"</span>: <span class="hljs-string">"./node_modules/bootstrap/dist/css/bootstrap.min.css"</span>,<br />    <span class="hljs-attr">"/api/status"</span>: <span class="hljs-string">"./status.js"</span>,<br />    <span class="hljs-attr">"/health"</span>: <span class="hljs-string">"./health-check.js"</span><br />  }<br />}</code></pre>
@@ -79,7 +90,32 @@
       <li><code>docs/readme.md</code> would serve <code>./documentation/readme.md</code></li>
       <li><code>lib/utils.js</code> would serve <code>./node_modules/my-library/build/utils.js</code></li>
     </ul>
-    <p>The <code>*</code> wildcard matches any single path segment (anything between <code>/</code> characters). Multiple wildcards can be used in a single route pattern.</p>
+    <h4>Wildcard Syntax</h4>
+    <ul>
+      <li><code>*</code> - Matches a single path segment (anything between <code>/</code> characters)</li>
+      <li><code>**</code> - Matches recursively (any depth of subdirectories)</li>
+    </ul>
+    <p>Use <code>**</code> when you want to redirect an entire directory tree. Multiple wildcards can be used in a single route pattern.</p>
+    
+    <h4>Common Use Case: Dev vs Production Builds</h4>
+    <p>A common pattern is to serve source files during development but built/minified files in production. Given this project structure:</p>
+    <pre><code class="hljs">project/
+├── src/                    # Source files
+│   └── app.js
+├── node_modules/
+├── public/                 # Server root (--root public)
+│   ├── dev.config.json     # Config lives HERE (inside server root)
+│   ├── dist/               # Built files
+│   │   └── app.js
+│   └── index.html</code></pre>
+    <p>Your <code>dev.config.json</code> can redirect <code>/dist/**</code> requests to serve from <code>src/</code> instead:</p>
+    <pre><code class="hljs json">{
+  "customRoutes": {
+    "/dist/**": "../src/**",
+    "/kempo-ui/**": "../node_modules/kempo-ui/**"
+  }
+}</code></pre>
+    <p>Now requests to <code>/dist/app.js</code> will serve <code>../src/app.js</code> (the unminified source), while production uses the actual <code>dist/</code> files.</p>
 
     <h3 id="maxRescanAttempts">maxRescanAttempts</h3>
     <p>The maximum number of times to attempt rescanning the file system when a file is not found. Defaults to 3.</p>

@@ -1,0 +1,41 @@
+<nav
+  class="d-f bg-primary fixed"
+>
+  <button
+    id="toggleNavSideMenu"
+    class="link"
+  >
+    <k-icon name="menu"></k-icon>
+  </button>
+  <a
+    href="./"
+    class="d-if ph"
+    style="align-items: center"
+  >
+    <img src="./media/icon32.png" alt="Kempo Server Icon" class="pr" />
+    Kempo Server
+  </a>
+  <div class="flex"></div>
+  <a href="https://github.com/dustinpoissant/kempo-ui?tab=License-1-ov-file#creative-commons-attribution-noncommercial-sharealike-20" target="_blank"><k-icon name="license"></k-icont></a>
+  <a href="https://github.com/dustinpoissant/kempo-ui" target="_blank"><k-icon name="github-mark"></k-icont></a>
+  <k-theme-switcher></k-theme-switcher>
+</nav>
+<div style="width: 100%; height: 4rem;"></div>
+<k-side-menu
+  id="navSideMenu"
+>
+  <menu>
+    <a href="./" class="ta-center bb mb r0">
+      <h1 class="tc-primary">Kempo Server</h1>
+      <img src="./media/icon128.png" alt="Kempo UI Icon" />
+    </a>
+    
+    <div class="pl mb">
+			<a href="./">Quick Start</a>
+		</div>
+  </menu>
+</k-side-menu>
+<script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.0.42/dist/components/SideMenu.js" type="module"></script>
+<script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.0.42/dist/components/Icon.js" type="module"></script>
+<script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.0.42/dist/components/ThemeSwitcher.js" type="module"></script>
+<script src="./nav.inc.js" type="module"></script>

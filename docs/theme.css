@@ -1,0 +1,9 @@
+:root {
+	--c_primary: rgb(153, 51, 255);
+	--c_primary__hover: rgb(119, 17, 221);
+	--c_secondary: rgb(51, 102, 255);
+	--c_secondary__hover: rgb(17, 68, 221);
+	--tc_primary: light-dark(#93f, rgb(187, 102, 255));
+	--tc_secondary: light-dark(#36f, rgb(138, 180, 248));
+	--c_highlight: light-dark(rgba(153, 51, 255, 0.25), rgba(153, 51, 255, 0.25));
+}

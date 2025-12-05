@@ -55,7 +55,6 @@ export default {
     "\\.bak$",
     "\\.sql$",
     "\\.ini$",
-    "password",
     "config\\.php$",
     "wp-config\\.php$",
     "\\.DS_Store$"

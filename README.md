@@ -215,10 +215,12 @@ Kempo Server can be customized with a simple JSON configuration file to control 
 
 For detailed configuration options and examples, see **[CONFIG.md](./CONFIG.md)**.
 
+**Important:** The config file must be placed **inside the server root directory** (the `--root` folder). All paths in the config (like `customRoutes`) are resolved relative to the config file location.
+
 Quick start:
 ```bash
-# Create a basic config file
-echo '{"cache": {"enabled": true}}' > .config.json
+# Create a config file INSIDE the server root
+echo '{"cache": {"enabled": true}}' > public/.config.json
 
 # Use different configs for different environments
 kempo-server --root public --config dev.config.json
