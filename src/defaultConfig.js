@@ -57,7 +57,9 @@ export default {
     "\\.ini$",
     "config\\.php$",
     "wp-config\\.php$",
-    "\\.DS_Store$"
+    "\\.DS_Store$",
+    "package\\.json$",
+    "package-lock\\.json$"
   ],
   routeFiles: [
     'GET.js',
