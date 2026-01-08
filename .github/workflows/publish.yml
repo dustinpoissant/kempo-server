@@ -1,11 +1,20 @@
-
-name: Publish Patch Version to npmjs
+name: Publish to npmjs
 
 on:
   push:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      version-type:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
 
 jobs:
   publish:
@@ -26,14 +35,24 @@ jobs:
 
       - run: npm ci
 
-      # Auto-increment patch version, commit, and push
-      - name: Bump patch version
+      # Determine version type: use input if manual trigger, otherwise default to patch
+      - name: Set version type
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "type=${{ inputs.version-type }}" >> $GITHUB_OUTPUT
+          else
+            echo "type=patch" >> $GITHUB_OUTPUT
+          fi
+
+      # Auto-increment version, commit, and push
+      - name: Bump ${{ steps.version.outputs.type }} version
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-          npm version patch --no-git-tag-version
+          npm version ${{ steps.version.outputs.type }} --no-git-tag-version
           git add package.json package-lock.json || true
-          git commit -m "ci: bump patch version [skip ci]" || echo "No changes to commit"
+          git commit -m "ci: bump ${{ steps.version.outputs.type }} version [skip ci]" || echo "No changes to commit"
           git push origin HEAD:main || echo "No changes to push"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
