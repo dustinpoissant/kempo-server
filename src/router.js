@@ -377,7 +377,6 @@ export default async (flags, log) => {
       
       // If not served and scan flag is enabled, try rescanning once (with blacklist check)
       if (!served && flags.scan && !shouldSkipRescan(requestPath)) {
-        trackRescanAttempt(requestPath);
         log('File not found, rescanning directory...', 1);
         files = await getFiles(rootPath, config, log);
         log(`Rescan found ${files.length} files`, 2);
@@ -386,9 +385,13 @@ export default async (flags, log) => {
         const reserved = await serveFile(files, rootPath, requestPath, req.method, config, req, res, log, moduleCache);
         
         if (!reserved) {
+          trackRescanAttempt(requestPath);
           log(`404 - File not found after rescan: ${requestPath}`, 1);
           res.writeHead(404, { 'Content-Type': 'text/plain' });
           res.end('Not Found');
+        } else {
+          // File was found after rescan, reset the attempt counter
+          rescanAttempts.delete(requestPath);
         }
       } else if (!served) {
         if (shouldSkipRescan(requestPath)) {
