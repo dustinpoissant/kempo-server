@@ -74,7 +74,7 @@ export default {
     'index.js'
   ],
   noRescanPaths: [
-    "^\\.well-known/",
+    "^/\\.well-known/",
     "/favicon\\.ico$",
     "/robots\\.txt$",
     "/sitemap\\.xml$",
