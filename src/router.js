@@ -254,7 +254,7 @@ export default async (flags, log) => {
     const newAttempts = currentAttempts + 1;
     rescanAttempts.set(requestPath, newAttempts);
     
-    if (newAttempts >= config.maxRescanAttempts) {
+    if (newAttempts > config.maxRescanAttempts) {
       dynamicNoRescanPaths.add(requestPath);
       log(`Path ${requestPath} added to dynamic blacklist after ${newAttempts} failed attempts`, 1);
     }
@@ -375,8 +375,8 @@ export default async (flags, log) => {
       // Try to serve the file normally
       const served = await serveFile(files, rootPath, requestPath, req.method, config, req, res, log, moduleCache);
       
-      // If not served and scan flag is enabled, try rescanning once (with blacklist check)
-      if (!served && flags.scan && !shouldSkipRescan(requestPath)) {
+      // If not served and rescan flag is enabled, try rescanning once (with blacklist check)
+      if (!served && flags.rescan && !shouldSkipRescan(requestPath)) {
         log('File not found, rescanning directory...', 1);
         files = await getFiles(rootPath, config, log);
         log(`Rescan found ${files.length} files`, 2);

@@ -13,7 +13,7 @@ export default {
     await withTestDir(async (dir) => {
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, scan: false};
+      const flags = {root: '.', logging: 0, rescan: false};
       const logFn = () => {};
       const handler = await router(flags, logFn);
       const server = http.createServer(handler);
@@ -44,7 +44,7 @@ export default {
     await withTestDir(async (dir) => {
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, scan: true};
+      const flags = {root: '.', logging: 0, rescan: true};
       const handler = await router(flags, log);
       const server = http.createServer(handler);
       const port = randomPort();
@@ -77,7 +77,7 @@ export default {
       const fileB = path.join(dir, 'b/1.txt');
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, scan: false};
+      const flags = {root: '.', logging: 0, rescan: false};
       const logFn = () => {};
       // write config before init
       await write(dir, '.config.json', JSON.stringify({
@@ -113,7 +113,7 @@ export default {
     await withTestDir(async (dir) => {
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, scan: false};
+      const flags = {root: '.', logging: 0, rescan: false};
       const logFn = () => {};
       const handler = await router(flags, logFn);
       const server = http.createServer(handler);

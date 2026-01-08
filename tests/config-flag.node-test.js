@@ -1,4 +1,4 @@
-import http from 'http';
+﻿import http from 'http';
 import path from 'path';
 import {withTempDir} from './utils/temp-dir.js';
 import {write} from './utils/file-writer.js';
@@ -14,13 +14,13 @@ export default {
       port: 3000,
       logging: 2,
       root: './',
-      scan: false,
+      rescan: false,
       config: '.config.json'
     }, {
       p: 'port',
       l: 'logging',
       r: 'root',
-      s: 'scan',
+      s: 'rescan',
       c: 'config'
     });
     
@@ -43,13 +43,13 @@ export default {
       port: 3000,
       logging: 2,
       root: './',
-      scan: false,
+      rescan: false,
       config: '.config.json'
     }, {
       p: 'port',
       l: 'logging',
       r: 'root',
-      s: 'scan',
+      s: 'rescan',
       c: 'config'
     });
     
@@ -69,13 +69,13 @@ export default {
       port: 3000,
       logging: 2,
       root: './',
-      scan: false,
+      rescan: false,
       config: '.config.json'
     }, {
       p: 'port',
       l: 'logging',
       r: 'root',
-      s: 'scan',
+      s: 'rescan',
       c: 'config'
     });
     
@@ -103,7 +103,7 @@ export default {
       
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, scan: false, config: '.config.json'};
+      const flags = {root: '.', logging: 0, rescan: false, config: '.config.json'};
       const logFn = () => {};
       const handler = await router(flags, logFn);
       const server = http.createServer(handler);
@@ -142,7 +142,7 @@ export default {
       
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, scan: false, config: 'dev.config.json'};
+      const flags = {root: '.', logging: 0, rescan: false, config: 'dev.config.json'};
       const logFn = () => {};
       const handler = await router(flags, logFn);
       const server = http.createServer(handler);
@@ -182,7 +182,7 @@ export default {
       
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, scan: false, config: configPath};
+      const flags = {root: '.', logging: 0, rescan: false, config: configPath};
       const logFn = () => {};
       const handler = await router(flags, logFn);
       const server = http.createServer(handler);
@@ -214,7 +214,7 @@ export default {
       const prev = process.cwd();
       process.chdir(dir);
       // Point to non-existent config file
-      const flags = {root: '.', logging: 0, scan: false, config: 'nonexistent.config.json'};
+      const flags = {root: '.', logging: 0, rescan: false, config: 'nonexistent.config.json'};
       const logFn = () => {};
       const handler = await router(flags, logFn);
       const server = http.createServer(handler);
@@ -247,7 +247,7 @@ export default {
       
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, scan: false, config: 'bad.config.json'};
+      const flags = {root: '.', logging: 0, rescan: false, config: 'bad.config.json'};
       const logFn = () => {};
       const handler = await router(flags, logFn);
       const server = http.createServer(handler);
@@ -287,7 +287,7 @@ export default {
       
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, scan: false, config: 'partial.config.json'};
+      const flags = {root: '.', logging: 0, rescan: false, config: 'partial.config.json'};
       const logFn = () => {};
       const handler = await router(flags, logFn);
       const server = http.createServer(handler);
@@ -336,7 +336,7 @@ export default {
       
       try {
         // Try to use config file outside server root with relative path
-        const flags = {root: '.', logging: 0, scan: false, config: '../config-outside-root/outside.config.json'};
+        const flags = {root: '.', logging: 0, rescan: false, config: '../config-outside-root/outside.config.json'};
         
         log('Test setup:');
         log('dir: ' + dir);

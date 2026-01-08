@@ -1,4 +1,4 @@
-import http from 'http';
+﻿import http from 'http';
 import path from 'path';
 import {withTempDir} from './utils/temp-dir.js';
 import {write} from './utils/file-writer.js';
@@ -23,7 +23,7 @@ export default {
         const prev = process.cwd();
         process.chdir(dir);
         
-        const flags = {root: 'docs', logging: 0, scan: false};
+        const flags = {root: 'docs', logging: 0, rescan: false};
         const logFn = () => {};
         
         // Configure double asterisk wildcard route
@@ -84,7 +84,7 @@ export default {
         const prev = process.cwd();
         process.chdir(dir);
         
-        const flags = {root: 'docs', logging: 0, scan: false};
+        const flags = {root: 'docs', logging: 0, rescan: false};
         const logFn = () => {};
         
         // Configure single asterisk wildcard route
@@ -138,7 +138,7 @@ export default {
         const prev = process.cwd();
         process.chdir(dir);
         
-        const flags = {root: 'docs', logging: 0, scan: false};
+        const flags = {root: 'docs', logging: 0, rescan: false};
         const logFn = () => {};
         
         // Configure wildcard route that overrides static file
@@ -188,7 +188,7 @@ export default {
         process.chdir(dir);
         
         // Server root is the current directory (dir)
-        const flags = {root: '.', logging: 0, scan: false};
+        const flags = {root: '.', logging: 0, rescan: false};
         const logFn = () => {};
         
         // Configure wildcard route to serve from ./src/**

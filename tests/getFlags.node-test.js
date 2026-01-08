@@ -2,20 +2,20 @@ import getFlags from '../src/getFlags.js';
 
 export default {
   'parses long flags with values and booleans': async ({pass, fail}) => {
-    const args = ['--port', '8080', '--scan'];
-    const flags = getFlags(args, {port: 3000, scan: false});
+    const args = ['--port', '8080', '--rescan'];
+    const flags = getFlags(args, {port: 3000, rescan: false});
     
     if(flags.port !== '8080') return fail('port not parsed');
-    if(flags.scan !== true) return fail('scan boolean not parsed');
+    if(flags.rescan !== true) return fail('rescan boolean not parsed');
     
     pass('parsed long flags');
   },
   'parses short flags using map and preserves defaults': async ({pass, fail}) => {
     const args = ['-p', '9090', '-s'];
-    const flags = getFlags(args, {port: 3000, scan: false}, {p: 'port', s: 'scan'});
+    const flags = getFlags(args, {port: 3000, rescan: false}, {p: 'port', s: 'rescan'});
     
     if(flags.port !== '9090') return fail('short mapped value failed');
-    if(flags.scan !== true) return fail('short mapped boolean failed');
+    if(flags.rescan !== true) return fail('short mapped boolean failed');
     
     pass('short flags parsed');
   },

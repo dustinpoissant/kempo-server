@@ -1,4 +1,4 @@
-import defaultConfig from '../src/defaultConfig.js';
+﻿import defaultConfig from '../src/defaultConfig.js';
 import router from '../src/router.js';
 import http from 'http';
 import { mkdtemp, writeFile, rm } from 'fs/promises';
@@ -49,7 +49,7 @@ export default {
   if(mergedConfig.js.mime !== 'text/javascript' || mergedConfig.js.encoding !== 'utf8') return fail('js mime/encoding merge failed');
   if(mergedConfig.css.mime !== 'text/css' || mergedConfig.css.encoding !== 'utf8') return fail('css mime/encoding merge failed');
       
-      const flags = {root: dir, logging: 0, scan: false, config: '.config.json'};
+      const flags = {root: dir, logging: 0, rescan: false, config: '.config.json'};
       const logFn = () => {};
       const handler = await router(flags, logFn);
       const server = http.createServer(handler);
@@ -103,7 +103,7 @@ export default {
       await write(dir, 'test.js', 'console.log("test");');
       await write(dir, 'test.custom', 'custom content');
       
-      const flags = {root: dir, logging: 0, scan: false, config: '.config.json'};
+      const flags = {root: dir, logging: 0, rescan: false, config: '.config.json'};
       const logFn = () => {};
       const handler = await router(flags, logFn);
       const server = http.createServer(handler);
@@ -151,7 +151,7 @@ export default {
       await write(dir, 'test.png', 'fake png');
       await write(dir, 'test.custom', 'custom');
       
-      const flags = {root: dir, logging: 0, scan: false, config: '.config.json'};
+      const flags = {root: dir, logging: 0, rescan: false, config: '.config.json'};
       const logFn = () => {};
       const handler = await router(flags, logFn);
       const server = http.createServer(handler);

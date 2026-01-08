@@ -336,10 +336,11 @@ Kempo Server supports several command line options to customize its behavior:
 - `--port <number>` - Set the port number (default: 3000)
 - `--host <address>` - Set the host address (default: localhost)
 - `--config <path>` - Set the configuration file path (default: `.config.json`)
+- `--rescan` - Enable automatic rescanning for new files on 404 (useful for development)
 - `--verbose` - Enable verbose logging
 
 ```bash
-kempo-server --root public --port 8080 --host 0.0.0.0 --verbose
+kempo-server --root public --port 8080 --host 0.0.0.0 --rescan --verbose
 ```
 
 ## Testing

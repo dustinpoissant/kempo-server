@@ -10,7 +10,7 @@ export default {
     await withTestDir(async (dir) => {
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, scan: true};
+      const flags = {root: '.', logging: 0, rescan: true};
       const logFn = () => {};
       
       await write(dir, '.config.json', JSON.stringify({
@@ -55,7 +55,7 @@ export default {
     await withTestDir(async (dir) => {
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, scan: true};
+      const flags = {root: '.', logging: 0, rescan: true};
       const logFn = () => {};
       
       await write(dir, '.config.json', JSON.stringify({
@@ -103,7 +103,7 @@ export default {
     await withTestDir(async (dir) => {
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, scan: true};
+      const flags = {root: '.', logging: 0, rescan: true};
       const logFn = () => {};
       
       await write(dir, '.config.json', JSON.stringify({
@@ -144,7 +144,7 @@ export default {
     await withTestDir(async (dir) => {
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, scan: true};
+      const flags = {root: '.', logging: 0, rescan: true};
       const logFn = () => {};
       
       await write(dir, '.config.json', JSON.stringify({
@@ -206,7 +206,7 @@ export default {
     await withTestDir(async (dir) => {
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, scan: true};
+      const flags = {root: '.', logging: 0, rescan: true};
       const logFn = () => {};
       
       await write(dir, '.config.json', JSON.stringify({
@@ -242,11 +242,11 @@ export default {
     pass('respects noRescanPaths patterns');
   },
 
-  'scan flag disabled prevents rescanning': async ({pass, fail}) => {
+  'rescan flag disabled prevents rescanning': async ({pass, fail}) => {
     await withTestDir(async (dir) => {
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, scan: false};
+      const flags = {root: '.', logging: 0, rescan: false};
       const logFn = () => {};
       
       const handler = await router(flags, logFn);
@@ -268,12 +268,12 @@ export default {
       if(stillMiss.res.statusCode !== 404) {
         server.close();
         process.chdir(prev);
-        return fail('should not rescan when scan flag is disabled');
+        return fail('should not rescan when rescan flag is disabled');
       }
       
       server.close();
       process.chdir(prev);
     });
-    pass('scan disabled prevents rescan');
+    pass('rescan disabled prevents rescan');
   }
 };
