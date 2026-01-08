@@ -27,11 +27,10 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # Setup Node and create an .npmrc that uses the token from NODE_AUTH_TOKEN
+      # Setup Node for OIDC authentication (no registry-url needed for Trusted Publisher)
       - uses: actions/setup-node@v4
         with:
           node-version: '20.x'
-          registry-url: 'https://registry.npmjs.org'
 
       - run: npm ci
 
