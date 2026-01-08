@@ -14,13 +14,11 @@ export default {
       port: 3000,
       logging: 2,
       root: './',
-      rescan: false,
       config: '.config.json'
     }, {
       p: 'port',
       l: 'logging',
       r: 'root',
-      s: 'rescan',
       c: 'config'
     });
     
@@ -43,13 +41,11 @@ export default {
       port: 3000,
       logging: 2,
       root: './',
-      rescan: false,
       config: '.config.json'
     }, {
       p: 'port',
       l: 'logging',
       r: 'root',
-      s: 'rescan',
       c: 'config'
     });
     
@@ -69,13 +65,11 @@ export default {
       port: 3000,
       logging: 2,
       root: './',
-      rescan: false,
       config: '.config.json'
     }, {
       p: 'port',
       l: 'logging',
       r: 'root',
-      s: 'rescan',
       c: 'config'
     });
     

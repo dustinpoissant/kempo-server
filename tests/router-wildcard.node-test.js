@@ -23,7 +23,7 @@ export default {
         const prev = process.cwd();
         process.chdir(dir);
         
-        const flags = {root: 'docs', logging: 0, rescan: false};
+        const flags = {root: 'docs', logging: 0};
         const logFn = () => {};
         
         // Configure double asterisk wildcard route
@@ -84,7 +84,7 @@ export default {
         const prev = process.cwd();
         process.chdir(dir);
         
-        const flags = {root: 'docs', logging: 0, rescan: false};
+        const flags = {root: 'docs', logging: 0};
         const logFn = () => {};
         
         // Configure single asterisk wildcard route
@@ -138,7 +138,7 @@ export default {
         const prev = process.cwd();
         process.chdir(dir);
         
-        const flags = {root: 'docs', logging: 0, rescan: false};
+        const flags = {root: 'docs', logging: 0};
         const logFn = () => {};
         
         // Configure wildcard route that overrides static file

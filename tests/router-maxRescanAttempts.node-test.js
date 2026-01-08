@@ -1,4 +1,4 @@
-import http from 'http';
+﻿import http from 'http';
 import {withTestDir} from './utils/test-dir.js';
 import {write} from './utils/file-writer.js';
 import {randomPort} from './utils/port.js';
@@ -10,7 +10,7 @@ export default {
     await withTestDir(async (dir) => {
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, rescan: true};
+      const flags = {root: '.', logging: 0};
       const logFn = () => {};
       
       await write(dir, '.config.json', JSON.stringify({
@@ -55,7 +55,7 @@ export default {
     await withTestDir(async (dir) => {
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, rescan: true};
+      const flags = {root: '.', logging: 0};
       const logFn = () => {};
       
       await write(dir, '.config.json', JSON.stringify({
@@ -103,7 +103,7 @@ export default {
     await withTestDir(async (dir) => {
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, rescan: true};
+      const flags = {root: '.', logging: 0};
       const logFn = () => {};
       
       await write(dir, '.config.json', JSON.stringify({
@@ -144,7 +144,7 @@ export default {
     await withTestDir(async (dir) => {
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, rescan: true};
+      const flags = {root: '.', logging: 0};
       const logFn = () => {};
       
       await write(dir, '.config.json', JSON.stringify({
@@ -206,7 +206,7 @@ export default {
     await withTestDir(async (dir) => {
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, rescan: true};
+      const flags = {root: '.', logging: 0};
       const logFn = () => {};
       
       await write(dir, '.config.json', JSON.stringify({
@@ -242,12 +242,16 @@ export default {
     pass('respects noRescanPaths patterns');
   },
 
-  'rescan flag disabled prevents rescanning': async ({pass, fail}) => {
+  'maxRescanAttempts set to 0 disables rescanning': async ({pass, fail}) => {
     await withTestDir(async (dir) => {
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, rescan: false};
+      const flags = {root: '.', logging: 0};
       const logFn = () => {};
+      
+      await write(dir, '.config.json', JSON.stringify({
+        maxRescanAttempts: 0
+      }));
       
       const handler = await router(flags, logFn);
       const server = http.createServer(handler);
@@ -268,12 +272,12 @@ export default {
       if(stillMiss.res.statusCode !== 404) {
         server.close();
         process.chdir(prev);
-        return fail('should not rescan when rescan flag is disabled');
+        return fail('should not rescan when maxRescanAttempts is 0');
       }
       
       server.close();
       process.chdir(prev);
     });
-    pass('rescan disabled prevents rescan');
+    pass('maxRescanAttempts: 0 disables rescan');
   }
 };

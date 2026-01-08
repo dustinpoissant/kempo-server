@@ -375,8 +375,8 @@ export default async (flags, log) => {
       // Try to serve the file normally
       const served = await serveFile(files, rootPath, requestPath, req.method, config, req, res, log, moduleCache);
       
-      // If not served and rescan flag is enabled, try rescanning once (with blacklist check)
-      if (!served && flags.rescan && !shouldSkipRescan(requestPath)) {
+      // If not served and rescanning is enabled (maxRescanAttempts > 0), try rescanning (with blacklist check)
+      if (!served && config.maxRescanAttempts > 0 && !shouldSkipRescan(requestPath)) {
         log('File not found, rescanning directory...', 1);
         files = await getFiles(rootPath, config, log);
         log(`Rescan found ${files.length} files`, 2);
