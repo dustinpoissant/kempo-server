@@ -11,6 +11,17 @@ export function createRequestWrapper(request, params = {}) {
   const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
   const query = Object.fromEntries(url.searchParams);
   
+  const parseCookies = () => {
+    const cookieHeader = request.headers.cookie || request.headers.Cookie;
+    if(!cookieHeader) return {};
+    
+    return cookieHeader.split(';').reduce((cookies, cookie) => {
+      const [name, ...rest] = cookie.trim().split('=');
+      if(name) cookies[name] = rest.join('=');
+      return cookies;
+    }, {});
+  };
+  
   // Create the enhanced request object
   const enhancedRequest = {
     // Original request properties and methods
@@ -24,6 +35,7 @@ export function createRequestWrapper(request, params = {}) {
     params,
     query,
     path: url.pathname,
+    cookies: parseCookies(),
     
     // Body parsing methods
     async body() {
