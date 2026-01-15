@@ -15,6 +15,7 @@ export function createRequestWrapper(request, params = {}) {
   const enhancedRequest = {
     // Original request properties and methods
     ...request,
+    _originalRequest: request,
     method: request.method,
     url: request.url,
     headers: request.headers,

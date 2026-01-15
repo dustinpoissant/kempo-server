@@ -7,6 +7,8 @@ import findFile from './findFile.js';
 import serveFile from './serveFile.js';
 import MiddlewareRunner from './middlewareRunner.js';
 import ModuleCache from './moduleCache.js';
+import createRequestWrapper from './requestWrapper.js';
+import createResponseWrapper from './responseWrapper.js';
 import { 
   corsMiddleware, 
   compressionMiddleware, 
@@ -128,8 +130,9 @@ export default async (flags, log) => {
     
     for (const middlewarePath of config.middleware.custom) {
       try {
-        const resolvedPath = path.resolve(middlewarePath);
-        const middlewareModule = await import(pathToFileURL(resolvedPath));
+        const resolvedPath = path.isAbsolute(middlewarePath) ? middlewarePath : path.resolve(rootPath, middlewarePath);
+        const middlewareUrl = pathToFileURL(resolvedPath).href + `?t=${Date.now()}`;
+        const middlewareModule = await import(middlewareUrl);
         const customMiddleware = middlewareModule.default;
         
         if (typeof customMiddleware === 'function') {
@@ -264,9 +267,13 @@ export default async (flags, log) => {
   };
   
   const requestHandler = async (req, res) => {
-    await middlewareRunner.run(req, res, async () => {
-      const requestPath = req.url.split('?')[0];
-      log(`${req.method} ${requestPath}`, 4);
+    // Create enhanced request and response wrappers before middleware
+    const enhancedRequest = createRequestWrapper(req, {});
+    const enhancedResponse = createResponseWrapper(res);
+    
+    await middlewareRunner.run(enhancedRequest, enhancedResponse, async () => {
+      const requestPath = enhancedRequest.url.split('?')[0];
+      log(`${enhancedRequest.method} ${requestPath}`, 4);
       
 
       // Check custom routes first (allow outside rootPath)
@@ -365,10 +372,16 @@ export default async (flags, log) => {
           res.end(fileContent);
           return; // Successfully served wildcard route
         } catch (error) {
-          log(`Error serving wildcard route ${requestPath}: ${error.message}`, 1);
-          res.writeHead(500, { 'Content-Type': 'text/plain' });
-          res.end('Internal Server Error');
-          return;
+          // Check if it's a file not found error
+          if (error.code === 'ENOENT') {
+            log(`Wildcard route file not found: ${requestPath}`, 2);
+            // Let it fall through to normal 404 handling
+          } else {
+            log(`Error serving wildcard route ${requestPath}: ${error.message}`, 1);
+            enhancedResponse.writeHead(500, { 'Content-Type': 'text/plain' });
+            enhancedResponse.end('Internal Server Error');
+            return;
+          }
         }
       }
       
@@ -382,13 +395,13 @@ export default async (flags, log) => {
         log(`Rescan found ${files.length} files`, 2);
         
         // Try to serve again after rescan
-        const reserved = await serveFile(files, rootPath, requestPath, req.method, config, req, res, log, moduleCache);
+        const reserved = await serveFile(files, rootPath, requestPath, enhancedRequest.method, config, enhancedRequest, enhancedResponse, log, moduleCache);
         
         if (!reserved) {
           trackRescanAttempt(requestPath);
           log(`404 - File not found after rescan: ${requestPath}`, 1);
-          res.writeHead(404, { 'Content-Type': 'text/plain' });
-          res.end('Not Found');
+          enhancedResponse.writeHead(404, { 'Content-Type': 'text/plain' });
+          enhancedResponse.end('Not Found');
         } else {
           // File was found after rescan, reset the attempt counter
           rescanAttempts.delete(requestPath);
@@ -399,8 +412,8 @@ export default async (flags, log) => {
         } else {
           log(`404 - File not found: ${requestPath}`, 1);
         }
-        res.writeHead(404, { 'Content-Type': 'text/plain' });
-        res.end('Not Found');
+        enhancedResponse.writeHead(404, { 'Content-Type': 'text/plain' });
+        enhancedResponse.end('Not Found');
       }
     });
   };

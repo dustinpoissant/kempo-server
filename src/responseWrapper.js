@@ -11,6 +11,14 @@ export function createResponseWrapper(response) {
   const enhancedResponse = {
     // Original response properties and methods
     ...response,
+    _originalResponse: response,
+    
+    // Explicitly expose core response methods for middleware compatibility
+    setHeader: response.setHeader.bind(response),
+    getHeader: response.getHeader.bind(response),
+    writeHead: response.writeHead.bind(response),
+    write: response.write.bind(response),
+    end: response.end.bind(response),
     
     // Status code management
     status(code) {

@@ -34,16 +34,19 @@ export const compressionMiddleware = (config) => {
       return await next();
     }
     
-    const originalEnd = res.end;
-    const originalWrite = res.write;
+    // Use original response for internal operations
+    const originalRes = res._originalResponse || res;
+    
+    const originalEnd = originalRes.end;
+    const originalWrite = originalRes.write;
     const chunks = [];
     
-    res.write = function(chunk) {
+    originalRes.write = function(chunk) {
       if (chunk) chunks.push(Buffer.from(chunk));
       return true;
     };
     
-    res.end = function(chunk) {
+    originalRes.end = function(chunk) {
       if (chunk) chunks.push(Buffer.from(chunk));
       
       const buffer = Buffer.concat(chunks);
@@ -52,15 +55,15 @@ export const compressionMiddleware = (config) => {
       if (buffer.length >= config.threshold) {
         zlib.gzip(buffer, (err, compressed) => {
           if (!err && compressed.length < buffer.length) {
-            res.setHeader('Content-Encoding', 'gzip');
-            res.setHeader('Content-Length', compressed.length);
-            originalEnd.call(res, compressed);
+            originalRes.setHeader('Content-Encoding', 'gzip');
+            originalRes.setHeader('Content-Length', compressed.length);
+            originalEnd.call(originalRes, compressed);
           } else {
-            originalEnd.call(res, buffer);
+            originalEnd.call(originalRes, buffer);
           }
         });
       } else {
-        originalEnd.call(res, buffer);
+        originalEnd.call(originalRes, buffer);
       }
     };
     
@@ -73,7 +76,8 @@ export const rateLimitMiddleware = (config) => {
   const requestCounts = new Map();
   
   return async (req, res, next) => {
-    const clientId = req.socket.remoteAddress;
+    const originalReq = req._originalRequest || req;
+    const clientId = originalReq.socket.remoteAddress;
     const now = Date.now();
     const windowStart = now - config.windowMs;
     
@@ -113,9 +117,12 @@ export const loggingMiddleware = (config, log) => {
     const startTime = Date.now();
     const userAgent = config.includeUserAgent ? req.headers['user-agent'] : '';
     
+    // Use original response for wrapping
+    const originalRes = res._originalResponse || res;
+    
     // Store original end to capture response
-    const originalEnd = res.end;
-    res.end = function(...args) {
+    const originalEnd = originalRes.end;
+    originalRes.end = function(...args) {
       const responseTime = Date.now() - startTime;
       let logMessage = `${req.method} ${req.url}`;
       
@@ -128,7 +135,7 @@ export const loggingMiddleware = (config, log) => {
       }
       
       log(logMessage, 1);
-      originalEnd.apply(res, args);
+      originalEnd.apply(originalRes, args);
     };
     
     await next();
