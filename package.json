@@ -15,15 +15,15 @@
   "scripts": {
     "build": "node scripts/build.js",
     "docs": "node dist/index.js -r ./docs",
-    "tests": "npx kempo-test",
-    "tests:gui": "npx kempo-test --gui",
-    "tests:browser": "npx kempo-test -b",
-    "tests:node": "npx kempo-test -n"
+    "test": "npx kempo-test",
+    "test:gui": "npx kempo-test --gui",
+    "test:browser": "npx kempo-test -b",
+    "test:node": "npx kempo-test -n"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "kempo-testing-framework": "^1.2.3",
+    "kempo-testing-framework": "^1.4.4",
     "terser": "^5.43.1"
   },
   "repository": {

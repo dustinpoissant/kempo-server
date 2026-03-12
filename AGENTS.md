@@ -1,4 +1,4 @@
-# Code Contribution Guidelines
+# AGENTS
 
 ## Coding Style Guidelines
 
@@ -80,17 +80,3 @@ Do not prefix identifiers with underscores.
   - Never use leading underscores (`_`) for variable, property, method, or function names.
   - Use clear, descriptive names without prefixes.
   - When true privacy is needed inside classes, prefer native JavaScript private fields (e.g., `#myField`) instead of simulated privacy via underscores.
-
-## Lit Components
-
-### Component Architecture and Communication
-
-- Use methods to cause actions; do not emit events to trigger logic. Events are for notifying that something already happened.
-  - Prefer `el.closest('ktf-test-framework')?.enqueueSuite({...})` over firing an `enqueue` event.
-
-- Wrap dependent GUI components inside a parent `ktf-test-framework` element. Children find it via `closest('ktf-test-framework')` and call its methods. The framework can query its subtree to orchestrate children.
-
-- Avoid `window` globals and global custom events for coordination. If broadcast is needed, scope events to the framework element; reserve window events for global, non-visual concerns (e.g., settings changes).
-
-- Queued status must show the `scheduled` icon. Running may apply `animation="spin"`.
-
