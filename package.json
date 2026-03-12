@@ -15,6 +15,7 @@
   "scripts": {
     "build": "node scripts/build.js",
     "docs": "node dist/index.js -r ./docs",
+    "spa": "node dist/index.js -r ./spa",
     "test": "npx kempo-test",
     "test:gui": "npx kempo-test --gui",
     "test:browser": "npx kempo-test -b",

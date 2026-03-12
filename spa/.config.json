@@ -1,0 +1,15 @@
+{
+  "customRoutes": {
+    "/kempo.css": "../node_modules/kempo-css/dist/kempo.min.css",
+    "/*.html": "./app.html",
+    "/": "./app.html"
+  },
+  "middleware": {
+    "security": {
+      "enabled": true,
+      "headers": {
+        "Cache-Control": "public, max-age=3600"
+      }
+    }
+  }
+}

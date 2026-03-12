@@ -366,6 +366,12 @@ npm run tests:gui     # Start the GUI test runner
 For advanced usage (filters, flags, GUI options), see:
 https://github.com/dustinpoissant/kempo-testing-framework
 
+## Single-Page Applications
+
+Kempo Server makes it easy to serve SPAs by using `customRoutes` to redirect all HTML requests to your shell page while still serving individual page fragments from a `pages/` directory.
+
+See **[SPA.md](./SPA.md)** for a full walkthrough.
+
 ## Documentation
 
 - **[Getting Started](./docs/getting-started.html)** - Installation and basic usage
