@@ -1,7 +1,7 @@
 {
   "name": "kempo-server",
   "type": "module",
-  "version": "1.10.4",
+  "version": "1.10.5",
   "description": "A lightweight, zero-dependency, file based routing server.",
   "main": "dist/index.js",
   "exports": {
