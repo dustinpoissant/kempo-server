@@ -3,9 +3,7 @@
   "type": "module",
   "version": "1.10.6",
   "description": "A lightweight, zero-dependency, file based routing server.",
-  "main": "dist/index.js",
   "exports": {
-    ".": "./dist/index.js",
     "./utils/cli": "./dist/utils/cli.js",
     "./utils/fs-utils": "./dist/utils/fs-utils.js"
   },

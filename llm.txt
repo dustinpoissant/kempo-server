@@ -1,0 +1,140 @@
+# kempo-server
+
+Zero-dependency, file-based routing Node.js HTTP server.
+
+## Install & Run
+
+```
+npm install kempo-server
+npx kempo-server -r ./my-root -p 3000
+```
+
+Flags: `--root`/`-r` (default `./`), `--port`/`-p` (default `3000`), `--logging`/`-l` (0-4 or silent/minimal/verbose/debug, default 2), `--config`/`-c` path to config file (default `.config.json`).
+
+## File-Based Routing
+
+Files inside the root directory map directly to URL paths.
+
+| File | URL |
+|------|-----|
+| `index.html` | `/` |
+| `about.html` | `/about` or `/about.html` |
+| `api/GET.js` | `GET /api` |
+| `api/POST.js` | `POST /api` |
+| `users/[id]/GET.js` | `GET /users/:id` |
+
+Route files checked in order for a directory request: `METHOD.js`, `METHOD.html`, `index.js`, `index.html`.
+
+Allowed route file names: `GET.js POST.js PUT.js DELETE.js HEAD.js OPTIONS.js PATCH.js CONNECT.js TRACE.js index.js`
+
+## Route Files
+
+A route file exports a default async function:
+
+```js
+export default async (req, res) => {
+  res.json({ id: req.params.id, search: req.query.q });
+};
+```
+
+## Request Object
+
+| Property/Method | Description |
+|-----------------|-------------|
+| `req.params` | Dynamic path params from `[param]` segments |
+| `req.query` | Parsed query string as plain object |
+| `req.path` | URL path string |
+| `req.cookies` | Parsed cookies as plain object |
+| `req.body()` | Promise→string of request body |
+| `req.json()` | Promise→parsed JSON body |
+| `req.text()` | Alias for `body()` |
+| `req.buffer()` | Promise→Buffer of request body |
+| `req.get(name)` | Get request header (case-insensitive) |
+| `req.is(type)` | Check Content-Type (e.g. `'json'`) |
+
+## Response Object
+
+| Method | Description |
+|--------|-------------|
+| `res.status(code)` | Set status code, chainable |
+| `res.set(field, value)` | Set header(s), chainable; accepts object |
+| `res.get(field)` | Get response header |
+| `res.type(t)` | Set Content-Type; shortcuts: html/json/xml/text/css/js |
+| `res.json(obj)` | Send JSON response |
+| `res.send(data)` | Auto-detect: Buffer/object→json, string→text |
+| `res.html(str)` | Send HTML response |
+| `res.text(str)` | Send plain text response |
+| `res.redirect(url, code=302)` | Redirect |
+| `res.cookie(name, val, opts)` | Set cookie; opts: maxAge, domain, path, secure, httpOnly, sameSite |
+| `res.clearCookie(name, opts)` | Clear cookie |
+
+## Configuration (.config.json)
+
+```json
+{
+  "allowedMimes": { ".ext": { "mime": "type/subtype", "encoding": "utf8" } },
+  "disallowedRegex": ["pattern"],
+  "customRoutes": { "/old": "/new", "/spa/*": "/app.html" },
+  "routeFiles": ["GET.js", "index.js"],
+  "noRescanPaths": ["pattern"],
+  "maxRescanAttempts": 3,
+  "middleware": {
+    "cors": { "enabled": false, "origin": "*", "methods": "GET,POST", "headers": "*" },
+    "compression": { "enabled": false, "threshold": 1024 },
+    "rateLimit": { "enabled": false, "windowMs": 60000, "max": 100 },
+    "security": { "enabled": true, "headers": { "X-Frame-Options": "DENY" } },
+    "logging": { "enabled": true },
+    "custom": ["/middleware/auth.js"]
+  },
+  "cache": {
+    "enabled": false,
+    "maxSize": 500,
+    "maxMemoryMB": 256,
+    "ttlMs": 300000,
+    "watchFiles": true
+  }
+}
+```
+
+`customRoutes` values: exact path string (redirect) or `{ "file": "/path.js", "params": {} }` (custom handler file). `*` matches one path segment; `**` matches multiple.
+
+## Custom Middleware
+
+Middleware files export a default factory:
+
+```js
+export default config => async (req, res, next) => {
+  // req/res are the enhanced wrappers
+  await next();
+};
+```
+
+## Dynamic Routes
+
+Use `[param]` in directory names:
+
+```
+users/[id]/GET.js     → GET /users/123      (req.params.id === '123')
+posts/[slug]/index.js  → /posts/my-title   (req.params.slug === 'my-title')
+```
+
+## SPA Mode
+
+Use `customRoutes` to redirect all page paths to the SPA entry:
+
+```json
+"customRoutes": {
+  "/": "/app.html",
+  "/*.html": "/app.html"
+}
+```
+
+## Utility Modules
+
+```js
+import { getArgs } from 'kempo-server/utils/cli';
+// getArgs(mapping?) → parsed argv object
+
+import { ensureDir, copyDir, emptyDir } from 'kempo-server/utils/fs-utils';
+```
+
