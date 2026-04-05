@@ -96,7 +96,7 @@ export default async (req, res) => {
 }
 ```
 
-`customRoutes` values: exact path string (redirect) or `{ "file": "/path.js", "params": {} }` (custom handler file). `*` matches one path segment; `**` matches multiple.
+`customRoutes` values: exact path string or wildcard pattern mapped to a file or directory path. `*` matches one path segment; `**` matches multiple. When a route resolves to a directory, the server looks for route files inside it using the same priority as normal routing: `METHOD.js`, `METHOD.html`, `index.js`, `index.html`.
 
 ## Custom Middleware
 

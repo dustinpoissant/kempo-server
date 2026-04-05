@@ -2,6 +2,20 @@
 
 All notable changes to `kempo-server` are documented in this file.
 
+## [2.1.0] - 2026-04-05
+
+### Added
+
+- Custom routes (`customRoutes`) now support file-based routing when the resolved path is a directory. The server looks for route files (`GET.js`, `POST.js`, etc.) and index files (`index.html`) inside directories, matching the same behavior as normal file-based routing.
+- `httpRequest` test utility for making HTTP requests with arbitrary methods.
+
+### Fixed
+
+- Wildcard routes resolving to a directory no longer return `500 EISDIR`. The server now correctly resolves route files or index files within the directory.
+- Exact custom routes pointing to a directory now resolve `index.html` correctly (e.g. `/admin` mapping to a directory containing `index.html`).
+
+---
+
 ## [2.0.0] - 2026-04-04
 
 ### Breaking Changes

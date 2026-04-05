@@ -1,5 +1,5 @@
 import path from 'path';
-import { readFile } from 'fs/promises';
+import { readFile, stat } from 'fs/promises';
 import { pathToFileURL } from 'url';
 import defaultConfig from './defaultConfig.js';
 import getFiles from './getFiles.js';
@@ -225,6 +225,108 @@ export default async (flags, log) => {
     return null;
   };
 
+  /*
+    Custom Route Helpers
+  */
+  const serveStaticCustomFile = async (filePath, res) => {
+    const fileExtension = path.extname(filePath).toLowerCase().slice(1);
+    const mimeConfig = config.allowedMimes[fileExtension];
+    let mimeType, encoding;
+    if(typeof mimeConfig === 'string') {
+      mimeType = mimeConfig;
+      encoding = mimeType.startsWith('text/') ? 'utf8' : undefined;
+    } else {
+      mimeType = mimeConfig?.mime || 'application/octet-stream';
+      encoding = mimeConfig?.encoding === 'utf8' ? 'utf8' : undefined;
+    }
+    const fileContent = await readFile(filePath, encoding);
+    log(`Serving custom file as ${mimeType} (${fileContent.length} bytes)`, 2);
+    const contentType = encoding === 'utf8' && mimeType.startsWith('text/')
+      ? `${mimeType}; charset=utf-8`
+      : mimeType;
+    res.writeHead(200, { 'Content-Type': contentType });
+    res.end(fileContent);
+  };
+
+  const executeRouteModule = async (filePath, req, res) => {
+    let module;
+    if(moduleCache && config.cache?.enabled) {
+      const fileStats = await stat(filePath);
+      module = moduleCache.get(filePath, fileStats);
+      if(!module) {
+        const fileUrl = pathToFileURL(filePath).href + `?t=${Date.now()}`;
+        module = await import(fileUrl);
+        const estimatedSizeKB = fileStats.size / 1024;
+        moduleCache.set(filePath, module, fileStats, estimatedSizeKB);
+      }
+    } else {
+      const fileUrl = pathToFileURL(filePath).href + `?t=${Date.now()}`;
+      module = await import(fileUrl);
+    }
+    if(typeof module.default !== 'function') {
+      log(`Route file does not export a function: ${filePath}`, 0);
+      res.writeHead(500, { 'Content-Type': 'text/plain' });
+      res.end('Route file does not export a function');
+      return;
+    }
+    const enhancedReq = createRequestWrapper(req, {});
+    const enhancedRes = createResponseWrapper(res);
+    const rawBody = await readRawBody(req);
+    enhancedReq._rawBody = rawBody;
+    enhancedReq.body = parseBody(rawBody, req.headers['content-type']);
+    if(moduleCache) enhancedReq._kempoCache = moduleCache;
+    await module.default(enhancedReq, enhancedRes);
+  };
+
+  // Resolves a custom route path that may be a file or directory.
+  // Returns true if handled, null if path not found.
+  const serveCustomRoutePath = async (resolvedFilePath, req, res) => {
+    let fileStat;
+    try {
+      fileStat = await stat(resolvedFilePath);
+    } catch(e) {
+      if(e.code === 'ENOENT') return null;
+      throw e;
+    }
+
+    if(fileStat.isDirectory()) {
+      const methodUpper = req.method.toUpperCase();
+      const candidates = [
+        `${methodUpper}.js`,
+        `${methodUpper}.html`,
+        'index.js',
+        'index.html',
+        'index.htm'
+      ];
+      for(const candidate of candidates) {
+        const candidatePath = path.join(resolvedFilePath, candidate);
+        try {
+          await stat(candidatePath);
+        } catch {
+          continue;
+        }
+        if(config.routeFiles.includes(candidate)) {
+          log(`Executing route file: ${candidatePath}`, 2);
+          await executeRouteModule(candidatePath, req, res);
+          return true;
+        }
+        log(`Serving index file: ${candidatePath}`, 2);
+        await serveStaticCustomFile(candidatePath, res);
+        return true;
+      }
+      return null;
+    }
+
+    const fileName = path.basename(resolvedFilePath);
+    if(config.routeFiles.includes(fileName)) {
+      log(`Executing route file: ${resolvedFilePath}`, 2);
+      await executeRouteModule(resolvedFilePath, req, res);
+      return true;
+    }
+    await serveStaticCustomFile(resolvedFilePath, res);
+    return true;
+  };
+
   // Track 404 attempts to avoid unnecessary rescans
   const rescanAttempts = new Map(); // path -> attempt count
   const dynamicNoRescanPaths = new Set(); // paths that have exceeded max attempts
@@ -346,37 +448,13 @@ export default async (flags, log) => {
         const customFilePath = customRoutes.get(matchedKey);
         log(`Serving custom route: ${normalizedRequestPath} -> ${customFilePath}`, 3);
         try {
-          const { stat } = await import('fs/promises');
-          try {
-            await stat(customFilePath);
-            log(`Custom route file exists: ${customFilePath}`, 4);
-          } catch (e) {
-            log(`Custom route file does NOT exist: ${customFilePath}`, 1);
-            res.writeHead(404, { 'Content-Type': 'text/plain' });
-            res.end('Custom route file not found');
-            return;
-          }
-          const fileExtension = path.extname(customFilePath).toLowerCase().slice(1);
-          const mimeConfig = config.allowedMimes[fileExtension];
-          let mimeType, encoding;
-          if (typeof mimeConfig === 'string') {
-            mimeType = mimeConfig;
-            // Default to UTF-8 for text MIME types
-            encoding = mimeType.startsWith('text/') ? 'utf8' : undefined;
-          } else {
-            mimeType = mimeConfig?.mime || 'application/octet-stream';
-            encoding = mimeConfig?.encoding === 'utf8' ? 'utf8' : undefined;
-          }
-          const fileContent = await readFile(customFilePath, encoding);
-          log(`Serving custom file as ${mimeType} (${fileContent.length} bytes)`, 2);
-          // Add charset=utf-8 for text MIME types when using UTF-8 encoding
-          const contentType = encoding === 'utf8' && mimeType.startsWith('text/') 
-            ? `${mimeType}; charset=utf-8` 
-            : mimeType;
-          res.writeHead(200, { 'Content-Type': contentType });
-          res.end(fileContent);
-          return; // Successfully served custom route
-        } catch (error) {
+          const result = await serveCustomRoutePath(customFilePath, req, res);
+          if(result) return;
+          log(`Custom route path not found: ${customFilePath}`, 1);
+          res.writeHead(404, { 'Content-Type': 'text/plain' });
+          res.end('Custom route file not found');
+          return;
+        } catch(error) {
           log(`Error serving custom route ${normalizedRequestPath}: ${error.message}`, 1);
           res.writeHead(500, { 'Content-Type': 'text/plain' });
           res.end('Internal Server Error');
@@ -386,41 +464,18 @@ export default async (flags, log) => {
 
       // Check wildcard routes (allow outside rootPath)
       const wildcardMatch = findWildcardRoute(requestPath);
-      if (wildcardMatch) {
+      if(wildcardMatch) {
         const resolvedFilePath = resolveWildcardPath(wildcardMatch.filePath, wildcardMatch.matches);
         log(`Serving wildcard route: ${requestPath} -> ${resolvedFilePath}`, 3);
         try {
-          const fileExtension = path.extname(resolvedFilePath).toLowerCase().slice(1);
-          const mimeConfig = config.allowedMimes[fileExtension];
-          let mimeType, encoding;
-          if (typeof mimeConfig === 'string') {
-            mimeType = mimeConfig;
-            // Default to UTF-8 for text MIME types
-            encoding = mimeType.startsWith('text/') ? 'utf8' : undefined;
-          } else {
-            mimeType = mimeConfig?.mime || 'application/octet-stream';
-            encoding = mimeConfig?.encoding === 'utf8' ? 'utf8' : undefined;
-          }
-          const fileContent = await readFile(resolvedFilePath, encoding);
-          log(`Serving wildcard file as ${mimeType} (${fileContent.length} bytes)`, 4);
-          // Add charset=utf-8 for text MIME types when using UTF-8 encoding
-          const contentType = encoding === 'utf8' && mimeType.startsWith('text/') 
-            ? `${mimeType}; charset=utf-8` 
-            : mimeType;
-          res.writeHead(200, { 'Content-Type': contentType });
-          res.end(fileContent);
-          return; // Successfully served wildcard route
-        } catch (error) {
-          // Check if it's a file not found error
-          if (error.code === 'ENOENT') {
-            log(`Wildcard route file not found: ${requestPath}`, 2);
-            // Let it fall through to normal 404 handling
-          } else {
-            log(`Error serving wildcard route ${requestPath}: ${error.message}`, 1);
-            enhancedResponse.writeHead(500, { 'Content-Type': 'text/plain' });
-            enhancedResponse.end('Internal Server Error');
-            return;
-          }
+          const result = await serveCustomRoutePath(resolvedFilePath, req, res);
+          if(result) return;
+          log(`Wildcard route path not found: ${requestPath}`, 2);
+        } catch(error) {
+          log(`Error serving wildcard route ${requestPath}: ${error.message}`, 1);
+          enhancedResponse.writeHead(500, { 'Content-Type': 'text/plain' });
+          enhancedResponse.end('Internal Server Error');
+          return;
         }
       }
       

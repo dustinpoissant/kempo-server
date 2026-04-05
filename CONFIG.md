@@ -382,6 +382,18 @@ The `*` wildcard matches any single path segment (anything between `/` character
 The `**` wildcard matches any number of path segments, allowing you to map entire directory trees.
 Multiple wildcards can be used in a single route pattern.
 
+**Directory Resolution:**
+When a custom route (basic or wildcard) resolves to a directory, the server looks for files inside it using the same priority as normal file-based routing:
+
+1. `METHOD.js` (e.g. `GET.js`, `POST.js`) — executed as a route module
+2. `METHOD.html` (e.g. `GET.html`) — served as a static file
+3. `index.js` — executed as a route module
+4. `index.html` / `index.htm` — served as a static file
+
+This means wildcard routes like `"/api/**": "../api/**"` fully support API directories containing route files (`GET.js`, `POST.js`, etc.), not just static files.
+
+If the resolved path is a file whose name matches `routeFiles` (e.g. `GET.js`), it will be executed as a route module rather than served as static content.
+
 ### maxRescanAttempts
 
 The maximum number of times to attempt rescanning the file system when a file is not found. Defaults to 3.

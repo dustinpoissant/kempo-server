@@ -71,6 +71,16 @@
 
     <p>Example static file structure:</p>
     <pre><code class="hljs markdown">public/<br />├─ index.html         # Served at /<br />├─ styles.css         # Served at /styles.css<br />├─ script.js          # Served at /script.js<br />├─ images/<br />│  ├─ logo.png        # Served at /images/logo.png<br />├─ api/               # Routes directory<br />│  ├─ hello/GET.js    # Route handler<br /></code></pre>
+
+    <h2>Custom Route Directory Resolution</h2>
+    <p>When using <code>customRoutes</code> (see <a href="configuration.html#customRoutes">Configuration</a>), routes that resolve to a directory support full file-based routing. The server checks for route files and index files inside the directory using the same priority order as normal routing:</p>
+    <ol>
+      <li><code>METHOD.js</code> (e.g. <code>GET.js</code>, <code>POST.js</code>) &mdash; executed as a route module</li>
+      <li><code>METHOD.html</code> (e.g. <code>GET.html</code>) &mdash; served as static</li>
+      <li><code>index.js</code> &mdash; executed as a route module</li>
+      <li><code>index.html</code> / <code>index.htm</code> &mdash; served as static</li>
+    </ol>
+    <p>This applies to both exact and wildcard custom routes. For example, with a wildcard route <code>"/api/**": "../api/**"</code>, a request to <code>/api/auth/session</code> resolves to the <code>../api/auth/session/</code> directory and executes the appropriate route file (e.g. <code>GET.js</code> for GET requests).</p>
   </main>
   <div style="height:25vh"></div>
 </body>

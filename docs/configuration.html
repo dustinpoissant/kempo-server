@@ -118,6 +118,17 @@
 }</code></pre>
     <p>Now requests to <code>/dist/app.js</code> will serve <code>../src/app.js</code> (the unminified source), while production uses the actual <code>dist/</code> files.</p>
 
+    <h4>Directory Resolution</h4>
+    <p>When a custom route (basic or wildcard) resolves to a directory, the server looks for files inside it using the same priority as normal file-based routing:</p>
+    <ol>
+      <li><code>METHOD.js</code> (e.g. <code>GET.js</code>, <code>POST.js</code>) &mdash; executed as a route module</li>
+      <li><code>METHOD.html</code> (e.g. <code>GET.html</code>) &mdash; served as a static file</li>
+      <li><code>index.js</code> &mdash; executed as a route module</li>
+      <li><code>index.html</code> / <code>index.htm</code> &mdash; served as a static file</li>
+    </ol>
+    <p>This means wildcard routes like <code>"/api/**": "../api/**"</code> fully support API directories containing route files (<code>GET.js</code>, <code>POST.js</code>, etc.), not just static files.</p>
+    <p>If the resolved path is a file whose name matches <code>routeFiles</code> (e.g. <code>GET.js</code>), it will be executed as a route module rather than served as static content.</p>
+
     <h3 id="maxRescanAttempts">maxRescanAttempts</h3>
     <p>The maximum number of times to attempt rescanning the file system when a file is not found. Defaults to 3.</p>
     <pre><code class="hljs json">{<br />  <span class="hljs-attr">"maxRescanAttempts"</span>: <span class="hljs-number">3</span><br />}</code></pre>
