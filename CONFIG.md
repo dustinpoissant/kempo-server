@@ -35,6 +35,7 @@ This json file can have any of the following properties, any property not define
 - [routeFiles](#routefiles)
 - [noRescanPaths](#norescanpaths)
 - [maxRescanAttempts](#maxrescanattempts)
+- [maxBodySize](#maxbodysize)
 - [cache](#cache)
 - [middleware](#middleware)
 
@@ -388,6 +389,16 @@ The maximum number of times to attempt rescanning the file system when a file is
 ```json
 {
   "maxRescanAttempts": 3
+}
+```
+
+### maxBodySize
+
+Maximum allowed request body size in bytes. If a request body exceeds this limit, the server responds with `413 Payload Too Large` before the route handler runs. Defaults to `1048576` (1 MB).
+
+```json
+{
+  "maxBodySize": 1048576
 }
 ```
 

@@ -21,6 +21,7 @@
     <ul>
       <li><code>request.params</code> - Route parameters from dynamic routes (e.g., <code>{ id: "123", info: "info" }</code>)</li>
       <li><code>request.query</code> - Query string parameters as an object (e.g., <code>{ page: "1", limit: "10" }</code>)</li>
+      <li><code>request.body</code> - Pre-parsed request body (see <a href="#body-parsing">Body Parsing</a> below)</li>
       <li><code>request.path</code> - The pathname of the request URL</li>
       <li><code>request.method</code> - HTTP method (GET, POST, etc.)</li>
       <li><code>request.headers</code> - Request headers object</li>
@@ -29,13 +30,27 @@
     
     <h3>Methods</h3>
     <ul>
-      <li><code>await request.json()</code> - Parse request body as JSON</li>
-      <li><code>await request.text()</code> - Get request body as text</li>
-      <li><code>await request.body()</code> - Get raw request body as string</li>
-      <li><code>await request.buffer()</code> - Get request body as Buffer</li>
+      <li><code>await request.json()</code> - Parse cached body as JSON</li>
+      <li><code>await request.text()</code> - Get cached body as text</li>
+      <li><code>await request.buffer()</code> - Get cached body as Buffer</li>
       <li><code>request.get(headerName)</code> - Get specific header value</li>
       <li><code>request.is(type)</code> - Check if content-type contains specified type</li>
     </ul>
+
+    <h3 id="body-parsing">Body Parsing</h3>
+    <p><code>request.body</code> is eagerly parsed before your route handler runs. The parsing strategy depends on the <code>Content-Type</code> header:</p>
+    <table>
+      <thead>
+        <tr><th>Content-Type</th><th><code>request.body</code> value</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>application/json</code></td><td>Parsed object via <code>JSON.parse()</code>. If parsing fails, <code>null</code>.</td></tr>
+        <tr><td><code>application/x-www-form-urlencoded</code></td><td>Parsed object via <code>URLSearchParams</code></td></tr>
+        <tr><td>No body (GET, HEAD, Content-Length: 0)</td><td><code>null</code></td></tr>
+        <tr><td>Any other Content-Type</td><td>Raw string</td></tr>
+      </tbody>
+    </table>
+    <p>The convenience methods <code>request.json()</code>, <code>request.text()</code>, and <code>request.buffer()</code> still exist and return promises for backward compatibility, but they resolve immediately from the cached body.</p>
 
     <h2>Response Object</h2>
     <p>Kempo Server also provides a response object that makes sending responses easier:</p>
@@ -60,10 +75,10 @@
     <pre><code class="hljs javascript"><span class="hljs-comment">// api/user/[id]/GET.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">const</span> { id } = request.params;<br />  <span class="hljs-keyword">const</span> { includeDetails } = request.query;<br />  <br />  <span class="hljs-comment">// Fetch user data from database</span><br />  <span class="hljs-keyword">const</span> userData = <span class="hljs-keyword">await</span> getUserById(id);<br />  <br />  <span class="hljs-keyword">if</span> (!userData) {<br />    <span class="hljs-keyword">return</span> response.status(<span class="hljs-number">404</span>).json({ error: <span class="hljs-string">'User not found'</span> });<br />  }<br />  <br />  response.json(userData);<br />}</code></pre>
 
     <h3>Handling JSON Data</h3>
-    <pre><code class="hljs javascript"><span class="hljs-comment">// api/user/[id]/POST.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">const</span> { id } = request.params;<br />  <br />  <span class="hljs-keyword">try</span> {<br />    <span class="hljs-keyword">const</span> updateData = <span class="hljs-keyword">await</span> request.json();<br />    <br />    <span class="hljs-comment">// Update user in database</span><br />    <span class="hljs-keyword">const</span> updatedUser = <span class="hljs-keyword">await</span> updateUser(id, updateData);<br />    <br />    response.json(updatedUser);<br />  } <span class="hljs-keyword">catch</span> (error) {<br />    response.status(<span class="hljs-number">400</span>).json({ error: <span class="hljs-string">'Invalid JSON'</span> });<br />  }<br />}</code></pre>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// api/user/[id]/POST.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">const</span> { id } = request.params;<br />  <span class="hljs-keyword">const</span> { name, email } = request.body;<br />  <br />  <span class="hljs-comment">// request.body is already parsed from JSON</span><br />  <span class="hljs-keyword">const</span> updatedUser = <span class="hljs-keyword">await</span> updateUser(id, { name, email });<br />  <br />  response.json(updatedUser);<br />}</code></pre>
 
     <h3>Working with Form Data</h3>
-    <pre><code class="hljs javascript"><span class="hljs-comment">// contact/POST.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">try</span> {<br />    <span class="hljs-keyword">const</span> body = <span class="hljs-keyword">await</span> request.text();<br />    <span class="hljs-keyword">const</span> formData = <span class="hljs-keyword">new</span> URLSearchParams(body);<br />    <span class="hljs-keyword">const</span> name = formData.get(<span class="hljs-string">'name'</span>);<br />    <span class="hljs-keyword">const</span> email = formData.get(<span class="hljs-string">'email'</span>);<br />    <span class="hljs-keyword">const</span> message = formData.get(<span class="hljs-string">'message'</span>);<br />    <br />    <span class="hljs-comment">// Process form data...</span><br />    <span class="hljs-keyword">await</span> sendContactEmail({ name, email, message });<br />    <br />    response.html(<span class="hljs-string">'&lt;h1&gt;Thank you for your message!&lt;/h1&gt;'</span>);<br />  } <span class="hljs-keyword">catch</span> (error) {<br />    response.status(<span class="hljs-number">400</span>).html(<span class="hljs-string">'&lt;h1&gt;Error processing form&lt;/h1&gt;'</span>);<br />  }<br />}</code></pre>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// contact/POST.js</span><br /><span class="hljs-comment">// With Content-Type: application/x-www-form-urlencoded,</span><br /><span class="hljs-comment">// request.body is automatically parsed into an object</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">const</span> { name, email, message } = request.body;<br />  <br />  <span class="hljs-keyword">await</span> sendContactEmail({ name, email, message });<br />  <br />  response.html(<span class="hljs-string">'&lt;h1&gt;Thank you for your message!&lt;/h1&gt;'</span>);<br />}</code></pre>
 
     <h3>Checking Headers</h3>
     <pre><code class="hljs javascript"><span class="hljs-comment">// api/upload/POST.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-comment">// Check if request contains JSON data</span><br />  <span class="hljs-keyword">if</span> (request.is(<span class="hljs-string">'application/json'</span>)) {<br />    <span class="hljs-keyword">const</span> data = <span class="hljs-keyword">await</span> request.json();<br />    <span class="hljs-comment">// Handle JSON data</span><br />  }<br />  <br />  <span class="hljs-comment">// Check specific headers</span><br />  <span class="hljs-keyword">const</span> authHeader = request.get(<span class="hljs-string">'authorization'</span>);<br />  <span class="hljs-keyword">const</span> userAgent = request.get(<span class="hljs-string">'user-agent'</span>);<br />  <br />  <span class="hljs-comment">// Check request method</span><br />  <span class="hljs-keyword">if</span> (request.method === <span class="hljs-string">'POST'</span>) {<br />    <span class="hljs-comment">// Handle POST request</span><br />  }<br />  <br />  response.json({ success: <span class="hljs-literal">true</span> });<br />}</code></pre>

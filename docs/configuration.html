@@ -30,6 +30,7 @@
       <li><a href="#routeFiles">routeFiles</a> - Files that should be treated as route handlers</li>
       <li><a href="#noRescanPaths">noRescanPaths</a> - Paths that should not trigger file system rescans</li>
       <li><a href="#maxRescanAttempts">maxRescanAttempts</a> - Maximum number of rescan attempts</li>
+      <li><a href="#maxBodySize">maxBodySize</a> - Maximum request body size in bytes</li>
       <li><a href="#cache">cache</a> - Module caching configuration</li>
       <li><a href="#middleware">middleware</a> - Middleware configuration</li>
     </ul>
@@ -120,6 +121,10 @@
     <h3 id="maxRescanAttempts">maxRescanAttempts</h3>
     <p>The maximum number of times to attempt rescanning the file system when a file is not found. Defaults to 3.</p>
     <pre><code class="hljs json">{<br />  <span class="hljs-attr">"maxRescanAttempts"</span>: <span class="hljs-number">3</span><br />}</code></pre>
+
+    <h3 id="maxBodySize">maxBodySize</h3>
+    <p>Maximum allowed request body size in bytes. If a request body exceeds this limit, the server responds with <code>413 Payload Too Large</code> before the route handler runs. Defaults to <code>1048576</code> (1 MB).</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"maxBodySize"</span>: <span class="hljs-number">1048576</span><br />}</code></pre>
 
     <h3 id="middleware">middleware</h3>
     <p>Configuration for built-in and custom middleware. Middleware runs before your route handlers and can modify requests, responses, or handle requests entirely.</p>

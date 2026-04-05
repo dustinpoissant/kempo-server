@@ -29,7 +29,9 @@ export default {
         const cfg = JSON.parse(JSON.stringify(defaultConfig));
         const files = [path.join(dir, 'api/GET.js')];
         const res = createMockRes();
-        const ok = await serveFile(files, dir, '/api', 'GET', cfg, createMockReq(), res, log);
+        const req = createMockReq();
+        req._bufferedBody = '';
+        const ok = await serveFile(files, dir, '/api', 'GET', cfg, req, res, log);
         if(ok !== true) return fail('served route');
         if(res.statusCode !== 201) return fail('route status');
         if(!res.getBody().toString().includes('ok')) return fail('body contains ok');
@@ -43,7 +45,9 @@ export default {
         const cfg = JSON.parse(JSON.stringify(defaultConfig));
         const files = [path.join(dir, 'api/no-default.js')];
         const res = createMockRes();
-        const ok = await serveFile(files, dir, '/api', 'GET', cfg, createMockReq(), res, log);
+        const req = createMockReq();
+        req._bufferedBody = '';
+        const ok = await serveFile(files, dir, '/api', 'GET', cfg, req, res, log);
         if(ok !== true) return fail('handled');
         if(res.statusCode !== 500) return fail('500');
       });

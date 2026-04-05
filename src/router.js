@@ -7,7 +7,7 @@ import findFile from './findFile.js';
 import serveFile from './serveFile.js';
 import MiddlewareRunner from './middlewareRunner.js';
 import ModuleCache from './moduleCache.js';
-import createRequestWrapper from './requestWrapper.js';
+import createRequestWrapper, { readRawBody, parseBody } from './requestWrapper.js';
 import createResponseWrapper from './responseWrapper.js';
 import { 
   corsMiddleware, 
@@ -267,9 +267,48 @@ export default async (flags, log) => {
   };
   
   const requestHandler = async (req, res) => {
+    // Buffer body once early so both middleware and route handlers can access it
+    const contentLength = parseInt(req.headers['content-length'] || '0', 10);
+    if(contentLength > config.maxBodySize) {
+      res.writeHead(413, { 'Content-Type': 'text/plain' });
+      res.end('Payload Too Large');
+      return;
+    }
+
+    const rawBody = await new Promise((resolve, reject) => {
+      const noBody = ['GET', 'HEAD'].includes(req.method) && !req.headers['content-length'];
+      if(noBody) return resolve('');
+      let body = '';
+      let size = 0;
+      req.on('data', chunk => {
+        size += chunk.length;
+        if(size > config.maxBodySize) {
+          req.destroy();
+          reject(new Error('Payload Too Large'));
+          return;
+        }
+        body += chunk.toString();
+      });
+      req.on('end', () => resolve(body));
+      req.on('error', reject);
+    }).catch(err => {
+      if(err.message === 'Payload Too Large') {
+        res.writeHead(413, { 'Content-Type': 'text/plain' });
+        res.end('Payload Too Large');
+        return null;
+      }
+      throw err;
+    });
+    if(rawBody === null) return;
+    req._bufferedBody = rawBody;
+
     // Create enhanced request and response wrappers before middleware
     const enhancedRequest = createRequestWrapper(req, {});
     const enhancedResponse = createResponseWrapper(res);
+
+    // Populate body from buffered data
+    enhancedRequest._rawBody = rawBody;
+    enhancedRequest.body = parseBody(rawBody, req.headers['content-type']);
     
     await middlewareRunner.run(enhancedRequest, enhancedResponse, async () => {
       const requestPath = enhancedRequest.url.split('?')[0];
@@ -395,7 +434,7 @@ export default async (flags, log) => {
         log(`Rescan found ${files.length} files`, 2);
         
         // Try to serve again after rescan
-        const reserved = await serveFile(files, rootPath, requestPath, enhancedRequest.method, config, enhancedRequest, enhancedResponse, log, moduleCache);
+        const reserved = await serveFile(files, rootPath, requestPath, req.method, config, req, res, log, moduleCache);
         
         if (!reserved) {
           trackRescanAttempt(requestPath);

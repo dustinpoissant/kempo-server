@@ -128,6 +128,7 @@ export default {
       // Example: "./middleware/auth.js"
     ]
   },
+  maxBodySize: 1048576,              // 1MB default max body size
   cache: {
     enabled: false,                  // Disabled by default - opt-in for performance  
     maxSize: 100,                    // Maximum number of cached modules

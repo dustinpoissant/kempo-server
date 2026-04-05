@@ -114,11 +114,12 @@ Kempo Server provides a request object that makes working with HTTP requests eas
 - `request.headers` - Request headers object
 - `request.url` - Full request URL
 
+- `request.body` - Pre-parsed request body (JSON → object, form-urlencoded → object, other → raw string, no body → `null`)
+
 ### Methods
-- `await request.json()` - Parse request body as JSON
-- `await request.text()` - Get request body as text
-- `await request.body()` - Get raw request body as string
-- `await request.buffer()` - Get request body as Buffer
+- `await request.json()` - Get cached body parsed as JSON
+- `await request.text()` - Get cached body as text
+- `await request.buffer()` - Get cached body as Buffer
 - `request.get(headerName)` - Get specific header value
 - `request.is(type)` - Check if content-type contains specified type
 
@@ -149,17 +150,12 @@ export default async function(request, response) {
 // api/user/[id]/POST.js
 export default async function(request, response) {
   const { id } = request.params;
+  const { name, email } = request.body;
   
-  try {
-    const updateData = await request.json();
-    
-    // Update user in database
-    const updatedUser = await updateUser(id, updateData);
-    
-    response.json(updatedUser);
-  } catch (error) {
-    response.status(400).json({ error: 'Invalid JSON' });
-  }
+  // request.body is already parsed from JSON
+  const updatedUser = await updateUser(id, { name, email });
+  
+  response.json(updatedUser);
 }
 ```
 
@@ -291,20 +287,14 @@ export default async function(request, response) {
 export default async function(request, response) {
   const { id } = request.params;
   
-  try {
-    const userData = await request.json(); // Parse JSON body easily
-    
-    // Update user in database
-    const updatedUser = {
-      id: id,
-      ...userData,
-      updatedAt: new Date().toISOString()
-    };
-    
-    response.json(updatedUser);
-  } catch (error) {
-    response.status(400).json({ error: 'Invalid JSON' });
-  }
+  // request.body is pre-parsed based on Content-Type
+  const updatedUser = {
+    id: id,
+    ...request.body,
+    updatedAt: new Date().toISOString()
+  };
+  
+  response.json(updatedUser);
 }
 ```
 
@@ -312,19 +302,14 @@ export default async function(request, response) {
 
 ```javascript
 // contact/POST.js
+// With Content-Type: application/x-www-form-urlencoded,
+// request.body is automatically parsed into an object
 export default async function(request, response) {
-  try {
-    const body = await request.text(); // Get raw text body
-    const formData = new URLSearchParams(body);
-    const name = formData.get('name');
-    const email = formData.get('email');
-    
-    // Process form data...
-    
-    response.html('<h1>Thank you for your message!</h1>');
-  } catch (error) {
-    response.status(400).html('<h1>Error processing form</h1>');
-  }
+  const { name, email } = request.body;
+  
+  // Process form data...
+  
+  response.html('<h1>Thank you for your message!</h1>');
 }
 ```
 

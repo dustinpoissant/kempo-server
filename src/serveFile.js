@@ -2,7 +2,7 @@ import path from 'path';
 import { readFile, stat } from 'fs/promises';
 import { pathToFileURL } from 'url';
 import findFile from './findFile.js';
-import createRequestWrapper from './requestWrapper.js';
+import createRequestWrapper, { readRawBody, parseBody } from './requestWrapper.js';
 import createResponseWrapper from './responseWrapper.js';
 
 export default async (files, rootPath, requestPath, method, config, req, res, log, moduleCache = null) => {
@@ -57,6 +57,11 @@ export default async (files, rootPath, requestPath, method, config, req, res, lo
         // Create enhanced request and response wrappers
         const enhancedRequest = createRequestWrapper(req, params);
         const enhancedResponse = createResponseWrapper(res);
+
+        // Populate body from buffered data
+        const rawBody = await readRawBody(req);
+        enhancedRequest._rawBody = rawBody;
+        enhancedRequest.body = parseBody(rawBody, req.headers['content-type']);
         
         // Make module cache accessible for admin endpoints
         if (moduleCache) {
