@@ -315,5 +315,126 @@ export default {
     } catch(e) {
       fail(e.message);
     }
+  },
+
+  'wildcard route supports [param] directory segments': async ({pass, fail, log}) => {
+    try {
+      await withTempDir(async (dir) => {
+        await write(dir, 'api/users/[id]/GET.js',
+          `export default (req, res) => { res.writeHead(200, {'Content-Type':'application/json'}); res.end(JSON.stringify({id: req.params.id})); };`
+        );
+        await write(dir, 'docs/index.html', '<html></html>');
+        await write(dir, 'docs/.config.json', JSON.stringify({
+          customRoutes: { '/api/**': '../api/**' }
+        }));
+
+        const prev = process.cwd();
+        process.chdir(dir);
+        const handler = await router({root: 'docs', logging: 0}, () => {});
+        const server = http.createServer(handler);
+        const port = randomPort();
+        await new Promise(r => server.listen(port, r));
+        await new Promise(r => setTimeout(r, 50));
+
+        try {
+          const r1 = await httpGet(`http://localhost:${port}/api/users/abc123`);
+          log('status: ' + r1.res.statusCode);
+          if(r1.res.statusCode !== 200) throw new Error('expected 200, got ' + r1.res.statusCode);
+          const body = JSON.parse(r1.body.toString());
+          if(body.id !== 'abc123') throw new Error('expected id=abc123, got: ' + r1.body.toString());
+        } finally {
+          server.close();
+          process.chdir(prev);
+        }
+      });
+      pass('wildcard route supports [param] directory segments');
+    } catch(e) {
+      fail(e.message);
+    }
+  },
+
+  'wildcard route supports multiple [param] segments': async ({pass, fail, log}) => {
+    try {
+      await withTempDir(async (dir) => {
+        await write(dir, 'api/[org]/[repo]/GET.js',
+          `export default (req, res) => { res.writeHead(200, {'Content-Type':'application/json'}); res.end(JSON.stringify({org: req.params.org, repo: req.params.repo})); };`
+        );
+        await write(dir, 'docs/index.html', '<html></html>');
+        await write(dir, 'docs/.config.json', JSON.stringify({
+          customRoutes: { '/api/**': '../api/**' }
+        }));
+
+        const prev = process.cwd();
+        process.chdir(dir);
+        const handler = await router({root: 'docs', logging: 0}, () => {});
+        const server = http.createServer(handler);
+        const port = randomPort();
+        await new Promise(r => server.listen(port, r));
+        await new Promise(r => setTimeout(r, 50));
+
+        try {
+          const r1 = await httpGet(`http://localhost:${port}/api/acme/myrepo`);
+          log('status: ' + r1.res.statusCode);
+          if(r1.res.statusCode !== 200) throw new Error('expected 200, got ' + r1.res.statusCode);
+          const body = JSON.parse(r1.body.toString());
+          if(body.org !== 'acme') throw new Error('wrong org: ' + body.org);
+          if(body.repo !== 'myrepo') throw new Error('wrong repo: ' + body.repo);
+        } finally {
+          server.close();
+          process.chdir(prev);
+        }
+      });
+      pass('wildcard route supports multiple [param] segments');
+    } catch(e) {
+      fail(e.message);
+    }
+  },
+
+  'wildcard route [param] exact match takes priority over [param]': async ({pass, fail, log}) => {
+    try {
+      await withTempDir(async (dir) => {
+        // Both a literal and [param] directory exist
+        await write(dir, 'api/users/me/GET.js',
+          `export default (req, res) => { res.writeHead(200, {'Content-Type':'application/json'}); res.end('{"who":"me"}'); };`
+        );
+        await write(dir, 'api/users/[id]/GET.js',
+          `export default (req, res) => { res.writeHead(200, {'Content-Type':'application/json'}); res.end(JSON.stringify({id: req.params.id})); };`
+        );
+        await write(dir, 'docs/index.html', '<html></html>');
+        await write(dir, 'docs/.config.json', JSON.stringify({
+          customRoutes: { '/api/**': '../api/**' }
+        }));
+
+        const prev = process.cwd();
+        process.chdir(dir);
+        const handler = await router({root: 'docs', logging: 0}, () => {});
+        const server = http.createServer(handler);
+        const port = randomPort();
+        await new Promise(r => server.listen(port, r));
+        await new Promise(r => setTimeout(r, 50));
+
+        try {
+          // Literal 'me' should win over [id]
+          const r1 = await httpGet(`http://localhost:${port}/api/users/me`);
+          log('me status: ' + r1.res.statusCode);
+          if(r1.res.statusCode !== 200) throw new Error('expected 200');
+          const b1 = JSON.parse(r1.body.toString());
+          if(b1.who !== 'me') throw new Error('literal match should win: ' + r1.body.toString());
+
+          // Dynamic [id] still works for other values
+          const r2 = await httpGet(`http://localhost:${port}/api/users/456`);
+          log('dynamic status: ' + r2.res.statusCode);
+          if(r2.res.statusCode !== 200) throw new Error('expected 200 for dynamic');
+          const b2 = JSON.parse(r2.body.toString());
+          if(b2.id !== '456') throw new Error('dynamic param wrong: ' + r2.body.toString());
+        } finally {
+          server.close();
+          process.chdir(prev);
+        }
+      });
+      pass('wildcard route [param] exact match takes priority over [param]');
+    } catch(e) {
+      fail(e.message);
+    }
   }
 };

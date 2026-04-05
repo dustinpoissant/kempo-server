@@ -1,5 +1,5 @@
 import path from 'path';
-import { readFile, stat } from 'fs/promises';
+import { readFile, stat, readdir } from 'fs/promises';
 import { pathToFileURL } from 'url';
 import defaultConfig from './defaultConfig.js';
 import getFiles from './getFiles.js';
@@ -248,7 +248,7 @@ export default async (flags, log) => {
     res.end(fileContent);
   };
 
-  const executeRouteModule = async (filePath, req, res) => {
+  const executeRouteModule = async (filePath, req, res, params = {}) => {
     let module;
     if(moduleCache && config.cache?.enabled) {
       const fileStats = await stat(filePath);
@@ -269,7 +269,7 @@ export default async (flags, log) => {
       res.end('Route file does not export a function');
       return;
     }
-    const enhancedReq = createRequestWrapper(req, {});
+    const enhancedReq = createRequestWrapper(req, params);
     const enhancedRes = createResponseWrapper(res);
     const rawBody = await readRawBody(req);
     enhancedReq._rawBody = rawBody;
@@ -278,17 +278,42 @@ export default async (flags, log) => {
     await module.default(enhancedReq, enhancedRes);
   };
 
-  // Resolves a custom route path that may be a file or directory.
-  // Returns true if handled, null if path not found.
-  const serveCustomRoutePath = async (resolvedFilePath, req, res) => {
-    let fileStat;
+  // Traverse a directory tree supporting [param] directory names.
+  // Returns { filePath, params } or null.
+  const walkDynamic = async (base, segments) => {
+    if(segments.length === 0) return { filePath: base, params: {} };
+
+    const [head, ...rest] = segments;
+    let entries;
     try {
-      fileStat = await stat(resolvedFilePath);
-    } catch(e) {
-      if(e.code === 'ENOENT') return null;
-      throw e;
+      entries = await readdir(base, { withFileTypes: true });
+    } catch { return null; }
+
+    // Exact match first
+    for(const entry of entries) {
+      if(entry.name !== head) continue;
+      if(entry.isDirectory()) {
+        const result = await walkDynamic(path.join(base, head), rest);
+        if(result) return result;
+      } else if(entry.isFile() && rest.length === 0) {
+        return { filePath: path.join(base, head), params: {} };
+      }
     }
 
+    // [param] directory match
+    for(const entry of entries) {
+      if(!entry.isDirectory() || !entry.name.startsWith('[') || !entry.name.endsWith(']')) continue;
+      const paramName = entry.name.slice(1, -1);
+      const result = await walkDynamic(path.join(base, entry.name), rest);
+      if(result) return { filePath: result.filePath, params: { [paramName]: head, ...result.params } };
+    }
+
+    return null;
+  };
+
+  // Serve a resolved file or directory (fileStat already known).
+  // Returns true if handled, null if directory has no matching route/index file.
+  const serveResolvedPath = async (filePath, fileStat, params, req, res) => {
     if(fileStat.isDirectory()) {
       const methodUpper = req.method.toUpperCase();
       const candidates = [
@@ -299,15 +324,11 @@ export default async (flags, log) => {
         'index.htm'
       ];
       for(const candidate of candidates) {
-        const candidatePath = path.join(resolvedFilePath, candidate);
-        try {
-          await stat(candidatePath);
-        } catch {
-          continue;
-        }
+        const candidatePath = path.join(filePath, candidate);
+        try { await stat(candidatePath); } catch { continue; }
         if(config.routeFiles.includes(candidate)) {
           log(`Executing route file: ${candidatePath}`, 2);
-          await executeRouteModule(candidatePath, req, res);
+          await executeRouteModule(candidatePath, req, res, params);
           return true;
         }
         log(`Serving index file: ${candidatePath}`, 2);
@@ -317,14 +338,46 @@ export default async (flags, log) => {
       return null;
     }
 
-    const fileName = path.basename(resolvedFilePath);
+    const fileName = path.basename(filePath);
     if(config.routeFiles.includes(fileName)) {
-      log(`Executing route file: ${resolvedFilePath}`, 2);
-      await executeRouteModule(resolvedFilePath, req, res);
+      log(`Executing route file: ${filePath}`, 2);
+      await executeRouteModule(filePath, req, res, params);
       return true;
     }
-    await serveStaticCustomFile(resolvedFilePath, res);
+    await serveStaticCustomFile(filePath, res);
     return true;
+  };
+
+  // Resolves a custom route path supporting files, directories, and [param] segments.
+  // Returns true if handled, null if path not found.
+  const serveCustomRoutePath = async (resolvedFilePath, req, res) => {
+    let fileStat;
+    try {
+      fileStat = await stat(resolvedFilePath);
+      return await serveResolvedPath(resolvedFilePath, fileStat, {}, req, res);
+    } catch(e) {
+      if(e.code !== 'ENOENT') throw e;
+    }
+
+    // Path doesn't exist literally — walk backwards to find the nearest existing
+    // ancestor directory, then traverse forward with [param] support.
+    let current = resolvedFilePath;
+    const remaining = [];
+    while(current !== path.dirname(current)) {
+      remaining.unshift(path.basename(current));
+      current = path.dirname(current);
+      try {
+        const s = await stat(current);
+        if(!s.isDirectory()) break;
+        const result = await walkDynamic(current, remaining);
+        if(!result) return null;
+        const resolvedStat = await stat(result.filePath);
+        return await serveResolvedPath(result.filePath, resolvedStat, result.params, req, res);
+      } catch(e2) {
+        if(e2.code !== 'ENOENT') throw e2;
+      }
+    }
+    return null;
   };
 
   // Track 404 attempts to avoid unnecessary rescans
