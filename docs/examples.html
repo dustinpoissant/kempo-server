@@ -6,11 +6,13 @@
   <meta name='viewport' content='width=device-width, initial-scale=1'>
   <link rel="icon" type="image/png" sizes="48x48" href="./media/icon48.png">
   <link rel="manifest" href="./manifest.json" />
-  <link rel="stylesheet" href="./kempo.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/kempo-css@2.1.3/dist/kempo.min.css" />
+  <link rel="stylesheet" href="./theme.css" />
+  <script src="./init.js"></script>
 </head>
 <body>
-  <main>
-    <a href="./" class="btn">Home</a>
+  <k-import src="./nav.inc.html"></k-import>
+  <k-main>
     <h1>Examples & Demos</h1>
     <p>Explore practical examples and try interactive demos of Kempo Server features.</p>
 
@@ -129,6 +131,11 @@
     <h3>Production Configuration</h3>
     <pre><code class="hljs json">{<br />  <span class="hljs-attr">"allowedMimes"</span>: {<br />    <span class="hljs-attr">"html"</span>: <span class="hljs-string">"text/html"</span>,<br />    <span class="hljs-attr">"css"</span>: <span class="hljs-string">"text/css"</span>,<br />    <span class="hljs-attr">"js"</span>: <span class="hljs-string">"application/javascript"</span>,<br />    <span class="hljs-attr">"json"</span>: <span class="hljs-string">"application/json"</span>,<br />    <span class="hljs-attr">"png"</span>: <span class="hljs-string">"image/png"</span>,<br />    <span class="hljs-attr">"jpg"</span>: <span class="hljs-string">"image/jpeg"</span>,<br />    <span class="hljs-attr">"svg"</span>: <span class="hljs-string">"image/svg+xml"</span>,<br />    <span class="hljs-attr">"woff"</span>: <span class="hljs-string">"font/woff"</span>,<br />    <span class="hljs-attr">"woff2"</span>: <span class="hljs-string">"font/woff2"</span><br />  },<br />  <span class="hljs-attr">"disallowedRegex"</span>: [<br />    <span class="hljs-string">"^/\\..*"</span>,<br />    <span class="hljs-string">"\\.env$"</span>,<br />    <span class="hljs-string">"\\.config$"</span>,<br />    <span class="hljs-string">"password"</span>,<br />    <span class="hljs-string">"secret"</span>,<br />    <span class="hljs-string">"node_modules"</span>,<br />    <span class="hljs-string">"\\.git"</span>,<br />    <span class="hljs-string">"\\.map$"</span><br />  ],<br />  <span class="hljs-attr">"middleware"</span>: {<br />    <span class="hljs-attr">"cors"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"origin"</span>: <span class="hljs-string">"https://yourdomain.com"</span>,<br />      <span class="hljs-attr">"credentials"</span>: <span class="hljs-literal">true</span><br />    },<br />    <span class="hljs-attr">"compression"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"threshold"</span>: <span class="hljs-number">1024</span><br />    },<br />    <span class="hljs-attr">"security"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"headers"</span>: {<br />        <span class="hljs-attr">"X-Content-Type-Options"</span>: <span class="hljs-string">"nosniff"</span>,<br />        <span class="hljs-attr">"X-Frame-Options"</span>: <span class="hljs-string">"DENY"</span>,<br />        <span class="hljs-attr">"X-XSS-Protection"</span>: <span class="hljs-string">"1; mode=block"</span>,<br />        <span class="hljs-attr">"Strict-Transport-Security"</span>: <span class="hljs-string">"max-age=31536000; includeSubDomains"</span><br />      }<br />    },<br />    <span class="hljs-attr">"rateLimit"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"maxRequests"</span>: <span class="hljs-number">100</span>,<br />      <span class="hljs-attr">"windowMs"</span>: <span class="hljs-number">60000</span><br />    },<br />    <span class="hljs-attr">"custom"</span>: [<br />      <span class="hljs-string">"./middleware/auth.js"</span>,<br />      <span class="hljs-string">"./middleware/logging.js"</span>,<br />      <span class="hljs-string">"./middleware/analytics.js"</span><br />    ]<br />  }<br />}</code></pre>
 
+    <h3>Programmatic File Rescan</h3>
+    <p>When your code creates or removes files at runtime (e.g., a CMS generating static pages), you can trigger a file rescan without restarting the server. Import the <code>rescan</code> function from anywhere in the same Node process:</p>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// api/pages/POST.js</span><br /><span class="hljs-keyword">import</span> { writeFile } <span class="hljs-keyword">from</span> <span class="hljs-string">'fs/promises'</span>;<br /><span class="hljs-keyword">import</span> rescan <span class="hljs-keyword">from</span> <span class="hljs-string">'kempo-server/rescan'</span>;<br /><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> (req, res) =&gt; {<br />  <span class="hljs-keyword">const</span> { slug, html } = req.body;<br />  <span class="hljs-keyword">await</span> writeFile(<span class="hljs-string">`./pages/${slug}.html`</span>, html);<br />  <span class="hljs-keyword">const</span> fileCount = <span class="hljs-keyword">await</span> rescan();<br />  res.json({ published: <span class="hljs-literal">true</span>, fileCount });<br />};</code></pre>
+    <p>The <code>rescan()</code> function returns a promise that resolves with the number of files found. It works from route handlers, middleware, file watchers, scheduled tasks, or any other code running in the same Node process.</p>
+
     <script>
       async function fetchUser() {
         const userId = document.getElementById('userId').value || 'john';
@@ -195,7 +202,8 @@
         }
       }
     </script>
-  </main>
+  </k-main>
   <div style="height:25vh"></div>
+  <script type="module" src="https://cdn.jsdelivr.net/npm/kempo-ui@0.0.42/dist/components/Import.js"></script>
 </body>
 </html>

@@ -238,6 +238,7 @@ kempo-server --root public --config dev.config.json
 - **Configurable** - Customize behavior with a simple JSON config file
 - **Security** - Built-in protection against serving sensitive files plus security headers middleware
 - **Performance** - Smart file system caching, rescan optimization, and optional compression
+- **Programmatic Rescan** - Trigger a file rescan from anywhere in the Node process without restarting
 
 ## Examples
 
@@ -313,6 +314,30 @@ export default async function(request, response) {
 }
 ```
 
+## Programmatic File Rescan
+
+When files are added or removed at runtime (e.g., by a CMS generating static pages), you can trigger a file rescan without restarting the server:
+
+```javascript
+import rescan from 'kempo-server/rescan';
+
+// Returns a promise that resolves with the new file count
+const fileCount = await rescan();
+```
+
+This works from anywhere in the same Node process — route handlers, middleware, background tasks, file watchers, or any other code running alongside the server.
+
+```javascript
+// Example: CMS generates a page and makes it immediately available
+import { writeFile } from 'fs/promises';
+import rescan from 'kempo-server/rescan';
+
+const html = buildPage(theme, template, content);
+await writeFile('./public/new-page.html', html);
+await rescan();
+// New page is now live
+```
+
 ## Command Line Options
 
 Kempo Server supports several command line options to customize its behavior:
@@ -367,6 +392,7 @@ See **[SPA.md](./SPA.md)** for a full walkthrough.
 - **[Caching](./docs/caching.html)** - Cache configuration and management
 - **[CLI Utilities](./docs/cli-utils.html)** - Command-line argument parsing
 - **[File System Utilities](./docs/fs-utils.html)** - File and directory operations
+- **[UTILS.md](./UTILS.md)** - Utility modules including rescan, CLI, and file system helpers
 - **[Examples](./docs/examples.html)** - Interactive examples and demos
 - **[CONFIG.md](./CONFIG.md)** - Comprehensive server configuration guide
 - **[UTILS.md](./UTILS.md)** - Utility modules for Node.js projects

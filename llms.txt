@@ -132,6 +132,10 @@ Use `customRoutes` to redirect all page paths to the SPA entry:
 ## Utility Modules
 
 ```js
+import rescan from 'kempo-server/rescan';
+// rescan() → Promise<number> — triggers a file rescan on the running server, returns new file count
+// Works from anywhere in the same Node process: route handlers, middleware, file watchers, scheduled tasks
+
 import { getArgs } from 'kempo-server/utils/cli';
 // getArgs(mapping?) → parsed argv object
 

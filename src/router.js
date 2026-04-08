@@ -16,6 +16,7 @@ import {
   securityMiddleware, 
   loggingMiddleware 
 } from './builtinMiddleware.js';
+import { onRescan } from './rescan.js';
 
 export default async (flags, log) => {
   log('Initializing router', 3);
@@ -94,7 +95,18 @@ export default async (flags, log) => {
   
   let files = await getFiles(rootPath, config, log);
   log(`Initial scan found ${files.length} files`, 2);
-  
+
+  onRescan(async done => {
+    try {
+      files = await getFiles(rootPath, config, log);
+      log(`Rescan found ${files.length} files`, 2);
+      done(null, files.length);
+    } catch(error) {
+      log(`Rescan failed: ${error.message}`, 1);
+      done(error);
+    }
+  });
+
   // Initialize middleware runner
   const middlewareRunner = new MiddlewareRunner();
   

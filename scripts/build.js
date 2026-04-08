@@ -79,19 +79,6 @@ const build = async () => {
       await processJsFile(join(utilsDir, file), join(distDir, 'utils', file));
     }
     
-    console.log('Copying kempo.min.css to docs...');
-    
-    // Copy kempo.min.css to docs directory
-    const cssSource = join(rootDir, 'node_modules', 'kempo-css', 'dist', 'kempo.min.css');
-    const cssTarget = join(docsDir, 'kempo.min.css');
-    
-    try {
-      await copyFile(cssSource, cssTarget);
-      console.log('✓ Copied kempo.min.css to docs');
-    } catch (error) {
-      console.warn('⚠ Could not copy kempo.min.css:', error.message);
-    }
-    
     console.log('Build completed successfully!');
     
   } catch (error) {

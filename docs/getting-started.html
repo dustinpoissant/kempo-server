@@ -6,11 +6,13 @@
   <meta name='viewport' content='width=device-width, initial-scale=1'>
   <link rel="icon" type="image/png" sizes="48x48" href="./media/icon48.png">
   <link rel="manifest" href="./manifest.json" />
-  <link rel="stylesheet" href="./kempo.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/kempo-css@2.1.3/dist/kempo.min.css" />
+  <link rel="stylesheet" href="./theme.css" />
+  <script src="./init.js"></script>
 </head>
 <body>
-  <main>
-    <a href="./" class="btn">Home</a>
+  <k-import src="./nav.inc.html"></k-import>
+  <k-main>
     <h1>Getting Started</h1>
     <p>Get up and running with Kempo Server in just a few steps.</p>
 
@@ -71,7 +73,8 @@
       <li><a href="middleware.html">Middleware</a> - Add authentication, logging, CORS, and more</li>
       <li><a href="examples.html">Examples & Demos</a> - See real-world examples in action</li>
     </ul>
-  </main>
+  </k-main>
   <div style="height:25vh"></div>
+  <script type="module" src="https://cdn.jsdelivr.net/npm/kempo-ui@0.0.42/dist/components/Import.js"></script>
 </body>
 </html>

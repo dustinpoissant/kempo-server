@@ -111,6 +111,44 @@ async function backupProject() {
 }
 ```
 
+## Rescan
+
+The rescan utility lets you programmatically trigger a file rescan on the running server without restarting. This is useful when files are created or removed at runtime, such as a CMS generating static HTML pages.
+
+### Usage
+
+```javascript
+import rescan from 'kempo-server/rescan';
+
+const fileCount = await rescan();
+console.log(`Server now serving ${fileCount} files`);
+```
+
+The function returns a promise that resolves with the total number of files found in the new scan. It works from anywhere in the same Node process as the server — route handlers, middleware, scheduled tasks, file watchers, or any other code.
+
+### Example: CMS Page Generation
+
+```javascript
+import { writeFile } from 'fs/promises';
+import rescan from 'kempo-server/rescan';
+
+async function publishPage(theme, template, content, slug) {
+  const html = buildPage(theme, template, content);
+  await writeFile(`./public/${slug}.html`, html);
+  await rescan();
+  // Page is immediately available at /{slug}
+}
+```
+
+### Example: File Watcher
+
+```javascript
+import { watch } from 'fs';
+import rescan from 'kempo-server/rescan';
+
+watch('./content', { recursive: true }, () => rescan());
+```
+
 ## Installation and Build
 
 These utilities are automatically built when you install kempo-server. They're available through the package's exports:
@@ -118,6 +156,7 @@ These utilities are automatically built when you install kempo-server. They're a
 ```json
 {
   "exports": {
+    "./rescan": "./dist/rescan.js",
     "./utils/cli": "./dist/utils/cli.js",
     "./utils/fs-utils": "./dist/utils/fs-utils.js"
   }
