@@ -2,6 +2,49 @@
 
 All notable changes to `kempo-server` are documented in this file.
 
+## [3.0.0] - 2026-04-09
+
+### Breaking Changes
+
+- **Config file format changed from `.config.json` to `.config.js`.** The server now looks for `.config.js` (ES module with a default export) by default, with `.config.json` as a fallback.
+- **Templating file extensions are now disallowed from being served.** Files ending in `.template.html`, `.fragment.html`, and `.page.html` are blocked by default via `disallowedRegex`.
+- **`.config` disallowed pattern replaced** with more specific `.config.js` and `.config.json` patterns.
+
+**Migration:**
+```javascript
+// Before (.config.json)
+{ "port": 3000 }
+
+// After (.config.js)
+export default { port: 3000 };
+```
+
+### Added
+
+- **Templating system** with support for templates (`.template.html`), pages (`.page.html`), and fragments (`.fragment.html`). Includes slot-based composition, nested fragment inclusion, and variable interpolation.
+- `templating` config section with `preRender`, `ssr`, `ssrPriority`, `globals`, `state`, and `maxFragmentDepth` options.
+- `kempo-server-render` CLI command for pre-rendering templated pages.
+- `kempo-server/templating` module export.
+- Wildcard route patterns now normalize leading slashes for consistent matching.
+
+---
+
+## [2.2.0] - 2026-04-08
+
+### Added
+
+- `rescan` utility module (`kempo-server/rescan`) that exposes a programmatic API to trigger file rescans. Provides `onRescan` for listening and a default export function that returns a promise resolving with the new file count.
+
+---
+
+## [2.1.1] - 2026-04-05
+
+### Fixed
+
+- Dynamic custom routes with `[param]` directory segments now resolve correctly. A new `walkDynamic` traversal walks the directory tree matching literal and `[param]` directories, passing extracted params through to route handlers.
+
+---
+
 ## [2.1.0] - 2026-04-05
 
 ### Added
