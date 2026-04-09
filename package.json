@@ -1,7 +1,7 @@
 {
   "name": "kempo-server",
   "type": "module",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "description": "A lightweight, zero-dependency, file based routing server.",
   "exports": {
     "./rescan": "./dist/rescan.js",
