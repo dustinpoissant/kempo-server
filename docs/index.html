@@ -98,7 +98,7 @@
 		<h1 class="ta-center">Kempo Server</h1>
 		
 		<div class="ta-center">
-			<p class="mb0">
+			<p>
 				<a
 					href="https://github.com/dustinpoissant/kempo-server"
 					class="btn primary mr"
@@ -110,8 +110,9 @@
 					target="_blank"
 				>NPM</a>
 			</p>
+			<p>A lightweight, zero-dependency, file based routing server.</p>
+			<p>Current Version: <code id="version">unknown</code></p>
 		</div>
-		<p>A lightweight, zero-dependency, file based routing server.</p>
 
 		<nav class="b r mb p">
 			<div class="row -mx">
@@ -179,5 +180,10 @@
 		type="module"
 		src="https://cdn.jsdelivr.net/npm/kempo-ui@0.0.42/dist/components/Import.js"
 	></script>
+	
+		<script type="module">
+			document.getElementById('version').innerHTML = (await(await fetch('https://raw.githubusercontent.com/dustinpoissant/kempo-server/refs/heads/main/package.json')).json()).version;
+		</script>
+	
 </body>
 </html>

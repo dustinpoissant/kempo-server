@@ -1,7 +1,7 @@
 <page pageName="Kempo Server" title="Kempo Server">
 	<content>
 		<div class="ta-center">
-			<p class="mb0">
+			<p>
 				<a
 					href="https://github.com/dustinpoissant/kempo-server"
 					class="btn primary mr"
@@ -13,8 +13,9 @@
 					target="_blank"
 				>NPM</a>
 			</p>
+			<p>A lightweight, zero-dependency, file based routing server.</p>
+			<p>Current Version: <code id="version">unknown</code></p>
 		</div>
-		<p>A lightweight, zero-dependency, file based routing server.</p>
 
 		<nav class="b r mb p">
 			<div class="row -mx">
@@ -75,5 +76,10 @@
 				</div>
 			</div>
 		</div>
+	</content>
+	<content location="scripts">
+		<script type="module">
+			document.getElementById('version').innerHTML = (await(await fetch('https://raw.githubusercontent.com/dustinpoissant/kempo-server/refs/heads/main/package.json')).json()).version;
+		</script>
 	</content>
 </page>
