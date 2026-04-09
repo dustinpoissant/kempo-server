@@ -95,8 +95,8 @@ const build = async () => {
     
     // Render docs
     console.log('Rendering docs...');
-    const docsSrcDir = join(rootDir, 'docs', 'src');
-    const docsDistDir = join(rootDir, 'docs', 'dist');
+    const docsSrcDir = join(rootDir, 'docs-src');
+    const docsDistDir = join(rootDir, 'docs');
     const docsCount = await renderDir(docsSrcDir, docsDistDir);
     console.log(`✓ Rendered ${docsCount} doc pages`);
 
