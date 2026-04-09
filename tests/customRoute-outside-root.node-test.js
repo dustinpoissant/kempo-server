@@ -44,7 +44,7 @@ export default {
             '/src/file.txt': '../src/file.txt'
           }
         };
-        await writeFile(path.join(rootDir, '.config.json'), JSON.stringify(config));
+        await writeFile(path.join(rootDir, '.config.js'), `export default ${JSON.stringify(config)}`);
         log('Config written: ' + JSON.stringify(config));
 
   // Set working directory to temp dir so relative paths resolve correctly

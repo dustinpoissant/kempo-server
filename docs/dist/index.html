@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta
+		name="viewport"
+		content="width=device-width, initial-scale=1.0"
+	/>
+	<title>Kempo Server</title>
+	<link rel="icon" type="image/svg+xml" href="./media/icon.svg" />
+	<link rel="icon" type="image/png" sizes="32x32" href="./media/icon32.png" />
+	<link rel="manifest" href="./manifest.json" />
+	<link
+		rel="stylesheet"
+		href="https://cdn.jsdelivr.net/npm/kempo-css@2/dist/kempo.min.css"
+	/>
+	<link rel="stylesheet" href="./theme.css" />
+	<script>
+		window.litDisableBundleWarning = true;
+		window.kempo = { pathsToIcons: ['https://cdn.jsdelivr.net/npm/kempo-ui@0.0.42/icons/'] };
+	</script>
+</head>
+<body>
+	
+  <k-nav
+    fixed
+    class="bg-primary"
+  >
+    <button
+      id="toggleNavSideMenu"
+      class="link"
+    >
+      <k-icon name="menu"></k-icon>
+    </button>
+    <a
+      href="./"
+      class="d-if ph"
+      style="align-items: center"
+    >
+      <img src="./media/icon32.png" alt="Kempo Server Icon" class="pr" />
+      Kempo Server
+    </a>
+    <div class="flex"></div>
+    <a href="https://github.com/dustinpoissant/kempo-ui?tab=License-1-ov-file#creative-commons-attribution-noncommercial-sharealike-20" target="_blank"><k-icon name="license"></k-icont></a>
+    <a href="https://github.com/dustinpoissant/kempo-ui" target="_blank"><k-icon name="github-mark"></k-icont></a>
+    <k-theme-switcher></k-theme-switcher>
+  </k-nav>
+  <div style="width: 100%; height: 4rem;"></div>
+  <k-aside
+    id="navSideMenu"
+    state="offscreen"
+  >
+    <menu>
+      <a href="./" class="ta-center bb mb r0">
+        <h1 class="tc-primary">Kempo Server</h1>
+        <img src="./media/icon128.png" alt="Kempo UI Icon" />
+      </a>
+        <h3>Getting Started</h3>
+        <a href="./" class="d-b pq pl">Quick Start</a>
+        <a href="./routing.html" class="d-b pq pl">Routing</a>
+        <a href="./request-response.html" class="d-b pq pl">Request & Response</a>
+        <br /><br />
+        <h3>Advanced Features</h3>
+        <a href="configuration.html" class="d-b pq pl">Configuration</a>
+        <a href="templating.html" class="d-b pq pl">Templating</a>
+        <a href="middleware.html" class="d-b pq pl">Middleware</a>
+        <a href="caching.html" class="d-b pq pl">Module Caching</a>
+        <a href="cli-utils.html" class="d-b pq pl">CLI Utilities</a>
+        <a href="fs-utils.html" class="d-b pq pl">File System Utilities</a>
+        <a href="examples.html" class="d-b pq pl">Examples & Demos</a>
+    </menu>
+  </k-aside>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Aside.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Main.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Nav.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Icon.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/ThemeSwitcher.js" type="module"></script>
+  <script>
+    document.getElementById('toggleNavSideMenu').addEventListener('click', async () => {
+      await window.customElements.whenDefined('k-aside');
+      document.getElementById('navSideMenu').toggle();
+    });
+    document.addEventListener('click', function(e) {
+      if (e.target.matches('a[href^="#"]')) {
+        e.preventDefault();
+        const targetId = e.target.getAttribute('href').replace('#', '');
+        const target = document.getElementById(targetId);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth' });
+          const url = window.location.pathname + window.location.search + '#' + targetId;
+          history.replaceState(null, '', url);
+        }
+      }
+    });
+  </script>
+
+	<main>
+		<h1 class="ta-center">Kempo Server</h1>
+		
+		<div class="ta-center">
+			<p class="mb0">
+				<a
+					href="https://github.com/dustinpoissant/kempo-server"
+					class="btn primary mr"
+					target="_blank"
+				>GitHub</a>
+				<a
+					href="https://www.npmjs.com/package/kempo-server"
+					class="btn"
+					target="_blank"
+				>NPM</a>
+			</p>
+		</div>
+		<p>A lightweight, zero-dependency, file based routing server.</p>
+
+		<nav class="b r mb p">
+			<div class="row -mx">
+				<div class="col m-span-12 d-span-6 px">
+					<h4 class="mt0">Getting Started</h4>
+					<ul>
+						<li><a href="getting-started.html">Getting Started</a></li>
+						<li><a href="routing.html">Routing</a></li>
+						<li><a href="request-response.html">Request & Response</a></li>
+					</ul>
+				</div>
+				<div class="col m-span-12 d-span-6 px">
+					<h4 class="mt0">Advanced Features</h4>
+					<ul>
+						<li><a href="configuration.html">Configuration</a></li>
+						<li><a href="templating.html">Templating</a></li>
+						<li><a href="middleware.html">Middleware</a></li>
+						<li><a href="caching.html">Module Caching</a></li>
+						<li><a href="cli-utils.html">CLI Utilities</a></li>
+						<li><a href="fs-utils.html">File System Utilities</a></li>
+						<li><a href="examples.html">Examples & Demos</a></li>
+					</ul>
+				</div>
+			</div>
+		</nav>
+
+		<div class="b r mb p">
+			<h3 class="mt0">Quick Start</h3>
+			<p>Install and run Kempo Server in seconds:</p>
+			<pre><code>npm install kempo-server<br />npx kempo-server --root public</code></pre>
+		</div>
+
+		<div class="row -mx mb">
+			<div class="col m-span-12 d-span-6 px">
+				<div class="b r p">
+					<h4 class="mt0">Features</h4>
+					<ul>
+						<li><strong>Zero Dependencies</strong> - No external dependencies</li>
+						<li><strong>File-based Routing</strong> - Directory structure defines routes</li>
+						<li><strong>Dynamic Routes</strong> - Parameterized routes with [brackets]</li>
+						<li><strong>Wildcard Routes</strong> - Map directories with * patterns</li>
+						<li><strong>Middleware System</strong> - Authentication, CORS, logging, and more</li>
+						<li><strong>Request/Response Objects</strong> - Enhanced request handling</li>
+					</ul>
+				</div>
+			</div>
+			<div class="col m-span-12 d-span-6 px">
+				<div class="b r p">
+					<h4 class="mt0">Built-in Middleware</h4>
+					<ul>
+						<li><strong>CORS</strong> - Cross-origin resource sharing</li>
+						<li><strong>Compression</strong> - Automatic gzip compression</li>
+						<li><strong>Rate Limiting</strong> - Request throttling</li>
+						<li><strong>Security Headers</strong> - Security best practices</li>
+						<li><strong>Request Logging</strong> - Configurable logging</li>
+						<li><strong>Custom Middleware</strong> - Load your own middleware</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+	
+	</main>
+	<div style="height:25vh"></div>
+	<script
+		type="module"
+		src="https://cdn.jsdelivr.net/npm/kempo-ui@0.0.42/dist/components/Import.js"
+	></script>
+</body>
+</html>

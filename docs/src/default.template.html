@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta
+		name="viewport"
+		content="width=device-width, initial-scale=1.0"
+	/>
+	<title>{{title}}</title>
+	<link rel="icon" type="image/svg+xml" href="./media/icon.svg" />
+	<link rel="icon" type="image/png" sizes="32x32" href="./media/icon32.png" />
+	<link rel="manifest" href="./manifest.json" />
+	<link
+		rel="stylesheet"
+		href="https://cdn.jsdelivr.net/npm/kempo-css@2/dist/kempo.min.css"
+	/>
+	<link rel="stylesheet" href="./theme.css" />
+	<script>
+		window.litDisableBundleWarning = true;
+		window.kempo = { pathsToIcons: ['https://cdn.jsdelivr.net/npm/kempo-ui@0.0.42/icons/'] };
+	</script>
+</head>
+<body>
+	<fragment name="nav" />
+	<main>
+		<h1 class="ta-center">{{pageName}}</h1>
+		<location />
+	</main>
+	<div style="height:25vh"></div>
+	<script
+		type="module"
+		src="https://cdn.jsdelivr.net/npm/kempo-ui@0.0.42/dist/components/Import.js"
+	></script>
+</body>
+</html>

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta
+		name="viewport"
+		content="width=device-width, initial-scale=1.0"
+	/>
+	<title>File System Utilities - Kempo Server</title>
+	<link rel="icon" type="image/svg+xml" href="./media/icon.svg" />
+	<link rel="icon" type="image/png" sizes="32x32" href="./media/icon32.png" />
+	<link rel="manifest" href="./manifest.json" />
+	<link
+		rel="stylesheet"
+		href="https://cdn.jsdelivr.net/npm/kempo-css@2/dist/kempo.min.css"
+	/>
+	<link rel="stylesheet" href="./theme.css" />
+	<script>
+		window.litDisableBundleWarning = true;
+		window.kempo = { pathsToIcons: ['https://cdn.jsdelivr.net/npm/kempo-ui@0.0.42/icons/'] };
+	</script>
+</head>
+<body>
+	
+  <k-nav
+    fixed
+    class="bg-primary"
+  >
+    <button
+      id="toggleNavSideMenu"
+      class="link"
+    >
+      <k-icon name="menu"></k-icon>
+    </button>
+    <a
+      href="./"
+      class="d-if ph"
+      style="align-items: center"
+    >
+      <img src="./media/icon32.png" alt="Kempo Server Icon" class="pr" />
+      Kempo Server
+    </a>
+    <div class="flex"></div>
+    <a href="https://github.com/dustinpoissant/kempo-ui?tab=License-1-ov-file#creative-commons-attribution-noncommercial-sharealike-20" target="_blank"><k-icon name="license"></k-icont></a>
+    <a href="https://github.com/dustinpoissant/kempo-ui" target="_blank"><k-icon name="github-mark"></k-icont></a>
+    <k-theme-switcher></k-theme-switcher>
+  </k-nav>
+  <div style="width: 100%; height: 4rem;"></div>
+  <k-aside
+    id="navSideMenu"
+    state="offscreen"
+  >
+    <menu>
+      <a href="./" class="ta-center bb mb r0">
+        <h1 class="tc-primary">Kempo Server</h1>
+        <img src="./media/icon128.png" alt="Kempo UI Icon" />
+      </a>
+        <h3>Getting Started</h3>
+        <a href="./" class="d-b pq pl">Quick Start</a>
+        <a href="./routing.html" class="d-b pq pl">Routing</a>
+        <a href="./request-response.html" class="d-b pq pl">Request & Response</a>
+        <br /><br />
+        <h3>Advanced Features</h3>
+        <a href="configuration.html" class="d-b pq pl">Configuration</a>
+        <a href="templating.html" class="d-b pq pl">Templating</a>
+        <a href="middleware.html" class="d-b pq pl">Middleware</a>
+        <a href="caching.html" class="d-b pq pl">Module Caching</a>
+        <a href="cli-utils.html" class="d-b pq pl">CLI Utilities</a>
+        <a href="fs-utils.html" class="d-b pq pl">File System Utilities</a>
+        <a href="examples.html" class="d-b pq pl">Examples & Demos</a>
+    </menu>
+  </k-aside>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Aside.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Main.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Nav.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Icon.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/ThemeSwitcher.js" type="module"></script>
+  <script>
+    document.getElementById('toggleNavSideMenu').addEventListener('click', async () => {
+      await window.customElements.whenDefined('k-aside');
+      document.getElementById('navSideMenu').toggle();
+    });
+    document.addEventListener('click', function(e) {
+      if (e.target.matches('a[href^="#"]')) {
+        e.preventDefault();
+        const targetId = e.target.getAttribute('href').replace('#', '');
+        const target = document.getElementById(targetId);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth' });
+          const url = window.location.pathname + window.location.search + '#' + targetId;
+          history.replaceState(null, '', url);
+        }
+      }
+    });
+  </script>
+
+	<main>
+		<h1 class="ta-center">File System Utilities</h1>
+		
+    <p>The file system utilities provide common file and directory operations with Promise-based APIs for Node.js applications.</p>
+
+    <h2>Installation</h2>
+    <p>Import the utilities from the kempo-server package:</p>
+    <pre><code class="hljs javascript">import { ensureDir, copyDir, emptyDir } from 'kempo-server/utils/fs-utils';</code></pre>
+
+    <h2>ensureDir(dirPath)</h2>
+    <p>Ensures that a directory exists, creating it and any necessary parent directories if they don't exist. Similar to <code>mkdir -p</code>.</p>
+
+    <h3>Parameters</h3>
+    <ul>
+      <li><code>dirPath</code> (string) - The directory path to ensure exists</li>
+    </ul>
+
+    <h3>Returns</h3>
+    <p>Promise that resolves when the directory is confirmed to exist.</p>
+
+    <h3>Example</h3>
+    <pre><code class="hljs javascript">import { ensureDir } from 'kempo-server/utils/fs-utils';
+
+await ensureDir('./dist/assets');
+await ensureDir('./logs/app');
+// Creates ./dist/assets and ./logs/app directories if they don't exist</code></pre>
+
+    <h2>copyDir(srcPath, destPath)</h2>
+    <p>Recursively copies an entire directory structure from source to destination.</p>
+
+    <h3>Parameters</h3>
+    <ul>
+      <li><code>srcPath</code> (string) - The source directory to copy from</li>
+      <li><code>destPath</code> (string) - The destination directory to copy to</li>
+    </ul>
+
+    <h3>Returns</h3>
+    <p>Promise that resolves when the copy operation is complete.</p>
+
+    <h3>Example</h3>
+    <pre><code class="hljs javascript">import { copyDir } from 'kempo-server/utils/fs-utils';
+
+await copyDir('./src/assets', './dist/assets');
+await copyDir('./public', './dist');
+// Copies all files and subdirectories from src to dest</code></pre>
+
+    <h2>emptyDir(dirPath)</h2>
+    <p>Removes all contents of a directory without deleting the directory itself.</p>
+
+    <h3>Parameters</h3>
+    <ul>
+      <li><code>dirPath</code> (string) - The directory path to empty</li>
+    </ul>
+
+    <h3>Returns</h3>
+    <p>Promise that resolves when the directory has been emptied.</p>
+
+    <h3>Example</h3>
+    <pre><code class="hljs javascript">import { emptyDir } from 'kempo-server/utils/fs-utils';
+
+await emptyDir('./dist');
+await emptyDir('./temp');
+// Removes all files and subdirectories inside ./dist and ./temp</code></pre>
+
+    <h2>Common Use Cases</h2>
+
+    <h3>Build Script</h3>
+    <pre><code class="hljs javascript">import { ensureDir, copyDir, emptyDir } from 'kempo-server/utils/fs-utils';
+
+async function buildProject() {
+  // Clean previous build
+  await emptyDir('./dist');
+  
+  // Ensure build directories exist
+  await ensureDir('./dist/assets');
+  await ensureDir('./dist/components');
+  
+  // Copy static assets
+  await copyDir('./src/assets', './dist/assets');
+  await copyDir('./src/public', './dist');
+}</code></pre>
+
+    <h3>Backup Script</h3>
+    <pre><code class="hljs javascript">import { ensureDir, copyDir } from 'kempo-server/utils/fs-utils';
+
+async function backupProject() {
+  const timestamp = new Date().toISOString().slice(0, 10);
+  const backupPath = `./backups/${timestamp}`;
+  
+  await ensureDir(backupPath);
+  await copyDir('./src', `${backupPath}/src`);
+  await copyDir('./config', `${backupPath}/config`);
+}</code></pre>
+
+    <h2>Notes</h2>
+    <ul>
+      <li>All functions use Node.js's Promise-based fs APIs</li>
+      <li>Operations are asynchronous and should be awaited</li>
+      <li>Functions handle errors appropriately (e.g., ensureDir ignores EEXIST)</li>
+      <li>copyDir preserves directory structure recursively</li>
+    </ul>
+	
+	</main>
+	<div style="height:25vh"></div>
+	<script
+		type="module"
+		src="https://cdn.jsdelivr.net/npm/kempo-ui@0.0.42/dist/components/Import.js"
+	></script>
+</body>
+</html>

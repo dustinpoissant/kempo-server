@@ -14,7 +14,7 @@ export default {
       port: 3000,
       logging: 2,
       root: './',
-      config: '.config.json'
+      config: '.config.js'
     }, {
       p: 'port',
       l: 'logging',
@@ -22,8 +22,8 @@ export default {
       c: 'config'
     });
     
-    if (flags.config !== '.config.json') {
-      return fail('default config should be .config.json');
+    if (flags.config !== '.config.js') {
+      return fail('default config should be .config.js');
     }
     if (flags.port !== '8080') {
       return fail('other flags should still work');
@@ -36,12 +36,12 @@ export default {
   },
 
   'getFlags parses custom config flag with long form': async ({pass, fail}) => {
-    const args = ['--root', 'public', '--config', 'dev.config.json'];
+    const args = ['--root', 'public', '--config', 'dev.config.js'];
     const flags = getFlags(args, {
       port: 3000,
       logging: 2,
       root: './',
-      config: '.config.json'
+      config: '.config.js'
     }, {
       p: 'port',
       l: 'logging',
@@ -49,7 +49,7 @@ export default {
       c: 'config'
     });
     
-    if (flags.config !== 'dev.config.json') {
+    if (flags.config !== 'dev.config.js') {
       return fail('should parse custom config file');
     }
     if (flags.root !== 'public') {
@@ -60,12 +60,12 @@ export default {
   },
 
   'getFlags parses custom config flag with short form': async ({pass, fail}) => {
-    const args = ['--root', 'public', '-c', 'production.config.json'];
+    const args = ['--root', 'public', '-c', 'production.config.js'];
     const flags = getFlags(args, {
       port: 3000,
       logging: 2,
       root: './',
-      config: '.config.json'
+      config: '.config.js'
     }, {
       p: 'port',
       l: 'logging',
@@ -73,7 +73,7 @@ export default {
       c: 'config'
     });
     
-    if (flags.config !== 'production.config.json') {
+    if (flags.config !== 'production.config.js') {
       return fail('should parse short form config flag');
     }
     if (flags.root !== 'public') {
@@ -85,19 +85,19 @@ export default {
 
   'router uses default config file when none specified': async ({pass, fail}) => {
     await withTempDir(async (dir) => {
-      // Create a custom config file as .config.json (default name)
+      // Create a custom config file as .config.js (default name)
       const customConfig = {
         allowedMimes: {
           html: { mime: "text/html", encoding: "utf8" },
           custom: { mime: "text/custom", encoding: "utf8" }
         }
       };
-      await write(dir, '.config.json', JSON.stringify(customConfig));
+      await write(dir, '.config.js', `export default ${JSON.stringify(customConfig)}`);
       await write(dir, 'test.custom', 'custom content');
       
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, rescan: false, config: '.config.json'};
+      const flags = {root: '.', logging: 0, rescan: false, config: '.config.js'};
       const logFn = () => {};
       const handler = await router(flags, logFn);
       const server = http.createServer(handler);
@@ -131,12 +131,12 @@ export default {
             special: { mime: "text/special", encoding: "utf8" }
           }
         };
-      await write(dir, 'dev.config.json', JSON.stringify(customConfig));
+      await write(dir, 'dev.config.js', `export default ${JSON.stringify(customConfig)}`);
       await write(dir, 'test.special', 'special content');
       
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, rescan: false, config: 'dev.config.json'};
+      const flags = {root: '.', logging: 0, rescan: false, config: 'dev.config.js'};
       const logFn = () => {};
       const handler = await router(flags, logFn);
       const server = http.createServer(handler);
@@ -171,7 +171,7 @@ export default {
             absolute: { mime: "text/absolute", encoding: "utf8" }
           }
         };
-      const configPath = await write(configDir, 'prod.config.json', JSON.stringify(customConfig));
+      const configPath = await write(configDir, 'prod.config.js', `export default ${JSON.stringify(customConfig)}`);
       await write(dir, 'test.absolute', 'absolute content');
       
       const prev = process.cwd();
@@ -201,14 +201,51 @@ export default {
     });
   },
 
-  'router falls back to default config when custom config file missing': async ({pass, fail}) => {
+  'router falls back to .config.json when .config.js is missing': async ({pass, fail}) => {
+    await withTempDir(async (dir) => {
+      const customConfig = {
+        allowedMimes: {
+          html: { mime: "text/html", encoding: "utf8" },
+          jsononly: { mime: "text/jsononly", encoding: "utf8" }
+        }
+      };
+      await write(dir, '.config.json', JSON.stringify(customConfig));
+      await write(dir, 'test.jsononly', 'json fallback content');
+      
+      const prev = process.cwd();
+      process.chdir(dir);
+      const flags = {root: '.', logging: 0, rescan: false, config: '.config.js'};
+      const logFn = () => {};
+      const handler = await router(flags, logFn);
+      const server = http.createServer(handler);
+      const port = randomPort();
+      
+      await new Promise(r => server.listen(port, r));
+      await new Promise(r => setTimeout(r, 50));
+      
+      try {
+        const response = await httpGet(`http://localhost:${port}/test.jsononly`);
+        if (response.res.statusCode !== 200) {
+          return fail('should fall back to .config.json and serve custom mime');
+        }
+        if (response.res.headers['content-type'] !== 'text/jsononly; charset=utf-8') {
+          return fail('should use config from JSON fallback');
+        }
+        pass('falls back to .config.json when .config.js missing');
+      } finally {
+        server.close();
+        process.chdir(prev);
+      }
+    });
+  },
+
+  'router falls back to default config when no config file exists': async ({pass, fail}) => {
     await withTempDir(async (dir) => {
       await write(dir, 'index.html', '<h1>Home</h1>');
       
       const prev = process.cwd();
       process.chdir(dir);
-      // Point to non-existent config file
-      const flags = {root: '.', logging: 0, rescan: false, config: 'nonexistent.config.json'};
+      const flags = {root: '.', logging: 0, rescan: false, config: 'nonexistent.config.js'};
       const logFn = () => {};
       const handler = await router(flags, logFn);
       const server = http.createServer(handler);
@@ -235,13 +272,12 @@ export default {
 
   'router handles malformed config file gracefully': async ({pass, fail}) => {
     await withTempDir(async (dir) => {
-      // Create malformed JSON config
-      await write(dir, 'bad.config.json', '{ invalid json }');
+      await write(dir, 'bad.config.js', 'this is not valid javascript export default {');
       await write(dir, 'index.html', '<h1>Home</h1>');
       
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, rescan: false, config: 'bad.config.json'};
+      const flags = {root: '.', logging: 0, rescan: false, config: 'bad.config.js'};
       const logFn = () => {};
       const handler = await router(flags, logFn);
       const server = http.createServer(handler);
@@ -275,13 +311,13 @@ export default {
         },
         maxRescanAttempts: 5
       };
-      await write(dir, 'partial.config.json', JSON.stringify(partialConfig));
+      await write(dir, 'partial.config.js', `export default ${JSON.stringify(partialConfig)}`);
       await write(dir, 'test.js', 'console.log("test");'); // JS should still work from default config
       await write(dir, 'test.custom', 'custom content');
       
       const prev = process.cwd();
       process.chdir(dir);
-      const flags = {root: '.', logging: 0, rescan: false, config: 'partial.config.json'};
+      const flags = {root: '.', logging: 0, rescan: false, config: 'partial.config.js'};
       const logFn = () => {};
       const handler = await router(flags, logFn);
       const server = http.createServer(handler);
@@ -320,7 +356,7 @@ export default {
     await withTempDir(async (dir) => {
       // Create a config file outside the server root
       const configDir = path.join(dir, '..', 'config-outside-root');
-      const configFilePath = await write(configDir, 'outside.config.json', '{"allowedMimes": {"test": "application/test"}}');
+      const configFilePath = await write(configDir, 'outside.config.js', `export default {allowedMimes: {test: "application/test"}}`);
       
       // Create a file in the server root to verify it doesn't start
       await write(dir, 'index.html', '<h1>Home</h1>');
@@ -330,7 +366,7 @@ export default {
       
       try {
         // Try to use config file outside server root with relative path
-        const flags = {root: '.', logging: 0, rescan: false, config: '../config-outside-root/outside.config.json'};
+        const flags = {root: '.', logging: 0, rescan: false, config: '../config-outside-root/outside.config.js'};
         
         log('Test setup:');
         log('dir: ' + dir);

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta
+		name="viewport"
+		content="width=device-width, initial-scale=1.0"
+	/>
+	<title>CLI Utilities - Kempo Server</title>
+	<link rel="icon" type="image/svg+xml" href="./media/icon.svg" />
+	<link rel="icon" type="image/png" sizes="32x32" href="./media/icon32.png" />
+	<link rel="manifest" href="./manifest.json" />
+	<link
+		rel="stylesheet"
+		href="https://cdn.jsdelivr.net/npm/kempo-css@2/dist/kempo.min.css"
+	/>
+	<link rel="stylesheet" href="./theme.css" />
+	<script>
+		window.litDisableBundleWarning = true;
+		window.kempo = { pathsToIcons: ['https://cdn.jsdelivr.net/npm/kempo-ui@0.0.42/icons/'] };
+	</script>
+</head>
+<body>
+	
+  <k-nav
+    fixed
+    class="bg-primary"
+  >
+    <button
+      id="toggleNavSideMenu"
+      class="link"
+    >
+      <k-icon name="menu"></k-icon>
+    </button>
+    <a
+      href="./"
+      class="d-if ph"
+      style="align-items: center"
+    >
+      <img src="./media/icon32.png" alt="Kempo Server Icon" class="pr" />
+      Kempo Server
+    </a>
+    <div class="flex"></div>
+    <a href="https://github.com/dustinpoissant/kempo-ui?tab=License-1-ov-file#creative-commons-attribution-noncommercial-sharealike-20" target="_blank"><k-icon name="license"></k-icont></a>
+    <a href="https://github.com/dustinpoissant/kempo-ui" target="_blank"><k-icon name="github-mark"></k-icont></a>
+    <k-theme-switcher></k-theme-switcher>
+  </k-nav>
+  <div style="width: 100%; height: 4rem;"></div>
+  <k-aside
+    id="navSideMenu"
+    state="offscreen"
+  >
+    <menu>
+      <a href="./" class="ta-center bb mb r0">
+        <h1 class="tc-primary">Kempo Server</h1>
+        <img src="./media/icon128.png" alt="Kempo UI Icon" />
+      </a>
+        <h3>Getting Started</h3>
+        <a href="./" class="d-b pq pl">Quick Start</a>
+        <a href="./routing.html" class="d-b pq pl">Routing</a>
+        <a href="./request-response.html" class="d-b pq pl">Request & Response</a>
+        <br /><br />
+        <h3>Advanced Features</h3>
+        <a href="configuration.html" class="d-b pq pl">Configuration</a>
+        <a href="templating.html" class="d-b pq pl">Templating</a>
+        <a href="middleware.html" class="d-b pq pl">Middleware</a>
+        <a href="caching.html" class="d-b pq pl">Module Caching</a>
+        <a href="cli-utils.html" class="d-b pq pl">CLI Utilities</a>
+        <a href="fs-utils.html" class="d-b pq pl">File System Utilities</a>
+        <a href="examples.html" class="d-b pq pl">Examples & Demos</a>
+    </menu>
+  </k-aside>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Aside.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Main.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Nav.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Icon.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/ThemeSwitcher.js" type="module"></script>
+  <script>
+    document.getElementById('toggleNavSideMenu').addEventListener('click', async () => {
+      await window.customElements.whenDefined('k-aside');
+      document.getElementById('navSideMenu').toggle();
+    });
+    document.addEventListener('click', function(e) {
+      if (e.target.matches('a[href^="#"]')) {
+        e.preventDefault();
+        const targetId = e.target.getAttribute('href').replace('#', '');
+        const target = document.getElementById(targetId);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth' });
+          const url = window.location.pathname + window.location.search + '#' + targetId;
+          history.replaceState(null, '', url);
+        }
+      }
+    });
+  </script>
+
+	<main>
+		<h1 class="ta-center">CLI Utilities</h1>
+		
+    <p>The CLI utilities provide simple command-line argument parsing functionality for Node.js applications.</p>
+
+    <h2>Installation</h2>
+    <p>Import the utilities from the kempo-server package:</p>
+    <pre><code class="hljs javascript">import { getArgs } from 'kempo-server/utils/cli';</code></pre>
+
+    <h2>getArgs(mapping, argv)</h2>
+    <p>Parses command-line arguments into a key-value object.</p>
+
+    <h3>Parameters</h3>
+    <ul>
+      <li><code>mapping</code> (object, optional) - Maps short flag names to full names</li>
+      <li><code>argv</code> (array, optional) - Array of arguments to parse (defaults to <code>process.argv</code>)</li>
+    </ul>
+
+    <h3>Returns</h3>
+    <p>An object where keys are argument names and values are parsed argument values.</p>
+
+    <h3>Features</h3>
+    <ul>
+      <li>Supports both space-separated (<code>--flag value</code>) and equals-separated (<code>--flag=value</code>) formats</li>
+      <li>Automatically converts <code>"true"</code> and <code>"false"</code> strings to boolean values</li>
+      <li>Supports short flags with mapping (e.g., <code>-p</code> maps to <code>port</code>)</li>
+      <li>Handles multiple values for the same flag</li>
+      <li>Boolean flags without values are set to <code>true</code></li>
+    </ul>
+
+    <h3>Examples</h3>
+
+    <h4>Basic Usage</h4>
+    <pre><code class="hljs bash">node app.js --port 8080 --host localhost --verbose</code></pre>
+    <pre><code class="hljs javascript">const args = getArgs();
+// Result: { port: '8080', host: 'localhost', verbose: true }</code></pre>
+
+    <h4>With Short Flag Mapping</h4>
+    <pre><code class="hljs bash">node app.js -p 8080 -h localhost -v</code></pre>
+    <pre><code class="hljs javascript">const args = getArgs({
+  p: 'port',
+  h: 'host',
+  v: 'verbose'
+});
+// Result: { port: '8080', host: 'localhost', verbose: true }</code></pre>
+
+    <h4>Equals-Separated Values</h4>
+    <pre><code class="hljs bash">node app.js --port=8080 --enabled=true --disabled=false --name=John</code></pre>
+    <pre><code class="hljs javascript">const args = getArgs();
+// Result: { port: '8080', enabled: true, disabled: false, name: 'John' }</code></pre>
+
+    <h4>Mixed Formats</h4>
+    <pre><code class="hljs bash">node app.js --port=8080 -h localhost --verbose --config=prod.json</code></pre>
+    <pre><code class="hljs javascript">const args = getArgs({ h: 'host' });
+// Result: { port: '8080', host: 'localhost', verbose: true, config: 'prod.json' }</code></pre>
+
+    <h4>Values with Equals Signs</h4>
+    <pre><code class="hljs bash">node app.js --url=https://example.com?param=value</code></pre>
+    <pre><code class="hljs javascript">const args = getArgs();
+// Result: { url: 'https://example.com?param=value' }</code></pre>
+
+    <h2>Other Functions</h2>
+    <p>The CLI utilities module also exports other functions for running child processes and prompting users:</p>
+    <ul>
+      <li><code>runChildProcess(command)</code> - Run a shell command</li>
+      <li><code>runChildNodeProcess(scriptPath, argsObj)</code> - Run a Node.js script with arguments</li>
+      <li><code>runChildNodeProcessScript(scriptPath)</code> - Run a Node.js script</li>
+      <li><code>promptUser(query)</code> - Prompt user for input</li>
+      <li><code>promptYN(query, defaultValue)</code> - Prompt for yes/no with default</li>
+    </ul>
+	
+	</main>
+	<div style="height:25vh"></div>
+	<script
+		type="module"
+		src="https://cdn.jsdelivr.net/npm/kempo-ui@0.0.42/dist/components/Import.js"
+	></script>
+</body>
+</html>

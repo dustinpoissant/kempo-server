@@ -16,7 +16,7 @@ Requests to `/pages/*.html` are **not** redirected, so the fragments are still s
 
 ```
 spa/
-├─ .config.json       ← server config (routes + caching)
+├─ .config.js         ← server config (routes + caching)
 ├─ app.html           ← shell page (loaded for every route)
 ├─ spa.js             ← client-side routing logic
 └─ pages/
@@ -29,24 +29,24 @@ spa/
 
 ## Configuration
 
-Create a `.config.json` in your SPA root:
+Create a `.config.js` in your SPA root:
 
-```json
-{
-  "customRoutes": {
-    "/kempo.css": "../node_modules/kempo-css/dist/kempo.min.css",
-    "/*.html": "./app.html",
-    "/": "./app.html"
+```javascript
+export default {
+  customRoutes: {
+    '/kempo.css': '../node_modules/kempo-css/dist/kempo.min.css',
+    '/*.html': './app.html',
+    '/': './app.html'
   },
-  "middleware": {
-    "security": {
-      "enabled": true,
-      "headers": {
-        "Cache-Control": "public, max-age=3600"
+  middleware: {
+    security: {
+      enabled: true,
+      headers: {
+        'Cache-Control': 'public, max-age=3600'
       }
     }
   }
-}
+};
 ```
 
 - `"/*.html": "./app.html"` — the `*` wildcard matches a single path segment, so it catches `/about.html` but not `/pages/about.html`.

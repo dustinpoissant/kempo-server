@@ -207,7 +207,7 @@ export default async function(request, response) {
 
 ## Configuration
 
-Kempo Server can be customized with a simple JSON configuration file to control caching, middleware, security, routing, and more.
+Kempo Server can be customized with a `.config.js` file (or `.config.json` as fallback) to control caching, middleware, security, routing, templating, and more.
 
 For detailed configuration options and examples, see **[CONFIG.md](./CONFIG.md)**.
 
@@ -216,10 +216,10 @@ For detailed configuration options and examples, see **[CONFIG.md](./CONFIG.md)*
 Quick start:
 ```bash
 # Create a config file INSIDE the server root
-echo '{"cache": {"enabled": true}}' > public/.config.json
+echo 'export default { cache: { enabled: true } };' > public/.config.js
 
 # Use different configs for different environments
-kempo-server --root public --config dev.config.json
+kempo-server --root public --config dev.config.js
 ```
 
 ## Features
@@ -235,10 +235,11 @@ kempo-server --root public --config dev.config.json
 - **Static File Serving** - Automatically serves static files with proper MIME types
 - **HTML Routes** - Support for both JavaScript and HTML route handlers
 - **Query Parameters** - Easy access to URL query parameters
-- **Configurable** - Customize behavior with a simple JSON config file
+- **Configurable** - Customize behavior with a `.config.js` file
 - **Security** - Built-in protection against serving sensitive files plus security headers middleware
 - **Performance** - Smart file system caching, rescan optimization, and optional compression
 - **Programmatic Rescan** - Trigger a file rescan from anywhere in the Node process without restarting
+- **Templating** - XML-based templating with templates, pages, fragments, variables, conditionals, and loops
 
 ## Examples
 

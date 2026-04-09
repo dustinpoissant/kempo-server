@@ -9,8 +9,8 @@ const createTempConfig = async (config) => {
   const tempDir = path.join(process.cwd(), 'tests', 'temp-config-test');
   await mkdir(tempDir, { recursive: true });
   
-  const configPath = path.join(tempDir, 'test.config.json');
-  await writeFile(configPath, JSON.stringify(config, null, 2));
+  const configPath = path.join(tempDir, 'test.config.js');
+  await writeFile(configPath, `export default ${JSON.stringify(config, null, 2)}`);
   
   return { tempDir, configPath };
 };

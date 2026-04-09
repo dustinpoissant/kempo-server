@@ -4,12 +4,39 @@ import { pathToFileURL } from 'url';
 import findFile from './findFile.js';
 import createRequestWrapper, { readRawBody, parseBody } from './requestWrapper.js';
 import createResponseWrapper from './responseWrapper.js';
+import { renderPage } from './templating/index.js';
+
+const trySSR = async (rootPath, requestPath, config, res, log) => {
+  const htmlPath = requestPath.endsWith('/') ? requestPath + 'index' : requestPath;
+  const pagePath = path.join(rootPath, htmlPath.replace(/\.html$/, '') + '.page.html');
+  try {
+    await stat(pagePath);
+    const {globals, state, maxFragmentDepth} = config.templating;
+    const html = await renderPage(pagePath, rootPath, globals, state, maxFragmentDepth);
+    res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
+    res.end(html);
+    log(`SSR rendered: ${pagePath}`, 2);
+    return true;
+  } catch(e){
+    log(`SSR error for ${requestPath}: ${e.message}`, 3);
+    return false;
+  }
+};
 
 export default async (files, rootPath, requestPath, method, config, req, res, log, moduleCache = null) => {
   log(`Attempting to serve: ${requestPath}`, 3);
+
+  if(config.templating?.ssr && config.templating?.ssrPriority){
+    if(await trySSR(rootPath, requestPath, config, res, log)) return true;
+  }
+
   const [file, params] = await findFile(files, rootPath, requestPath, method, log);
   
   if (!file) {
+    if(config.templating?.ssr){
+      if(await trySSR(rootPath, requestPath, config, res, log)) return true;
+      log(`SSR fallback not available for: ${requestPath}`, 3);
+    }
     log(`No file found for: ${requestPath}`, 3);
     return false; // Could not find file
   }

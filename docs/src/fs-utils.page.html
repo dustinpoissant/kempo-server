@@ -1,20 +1,5 @@
-<!DOCTYPE html>
-<html lang="en" theme="auto">
-<head>
-  <meta charset='utf-8'>
-  <meta http-equiv='X-UA-Compatible' content='IE=edge'>
-  <title>File System Utilities - Kempo Server</title>
-  <meta name='viewport' content='width=device-width, initial-scale=1'>
-  <link rel="icon" type="image/png" sizes="48x48" href="./media/icon48.png">
-  <link rel="manifest" href="./manifest.json" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/kempo-css@2.1.3/dist/kempo.min.css" />
-  <link rel="stylesheet" href="./theme.css" />
-  <script src="./init.js"></script>
-</head>
-<body>
-  <k-import src="./nav.inc.html"></k-import>
-  <k-main>
-    <h1>File System Utilities</h1>
+<page pageName="File System Utilities" title="File System Utilities - Kempo Server">
+	<content>
     <p>The file system utilities provide common file and directory operations with Promise-based APIs for Node.js applications.</p>
 
     <h2>Installation</h2>
@@ -113,8 +98,5 @@ async function backupProject() {
       <li>Functions handle errors appropriately (e.g., ensureDir ignores EEXIST)</li>
       <li>copyDir preserves directory structure recursively</li>
     </ul>
-  </k-main>
-  <div style="height:25vh"></div>
-  <script type="module" src="https://cdn.jsdelivr.net/npm/kempo-ui@0.0.42/dist/components/Import.js"></script>
-</body>
-</html>
+	</content>
+</page>

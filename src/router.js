@@ -17,6 +17,7 @@ import {
   loggingMiddleware 
 } from './builtinMiddleware.js';
 import { onRescan } from './rescan.js';
+import { renderDir } from './templating/index.js';
 
 export default async (flags, log) => {
   log('Initializing router', 3);
@@ -25,8 +26,7 @@ export default async (flags, log) => {
   
   let config = defaultConfig;
   try {
-    // Use the provided config path or fallback to .config.json in rootPath
-    const configFileName = flags.config || '.config.json';
+    const configFileName = flags.config || '.config.js';
     const configPath = path.isAbsolute(configFileName) 
       ? configFileName 
       : path.join(rootPath, configFileName);
@@ -50,12 +50,19 @@ export default async (flags, log) => {
     }
     
     log(`Loading config from: ${configPath}`, 3);
-    const configContent = await readFile(configPath, 'utf8');
-    const userConfig = JSON.parse(configContent);
+    let userConfig;
+    if(configPath.endsWith('.js')){
+      const configUrl = pathToFileURL(configPath).href + `?t=${Date.now()}`;
+      const configModule = await import(configUrl);
+      userConfig = configModule.default;
+    } else {
+      const configContent = await readFile(configPath, 'utf8');
+      userConfig = JSON.parse(configContent);
+    }
+    if(!userConfig) throw new Error('Config file is empty or has no default export');
     config = {
       ...defaultConfig,
       ...userConfig,
-      // Deep merge nested objects
       allowedMimes: {
         ...defaultConfig.allowedMimes,
         ...(userConfig.allowedMimes || {})
@@ -71,16 +78,59 @@ export default async (flags, log) => {
       cache: {
         ...defaultConfig.cache,
         ...(userConfig.cache || {})
+      },
+      templating: {
+        ...defaultConfig.templating,
+        ...(userConfig.templating || {})
       }
     };
     log('User config loaded and merged with defaults', 3);
   } catch (e){
-    // Only fall back to default config for file reading/parsing errors
-    // Let validation errors propagate up
     if (e.message.includes('Config file must be within the server root directory')) {
       throw e;
     }
-    log('Using default config (no config file found)', 3);
+    // If .config.js failed, try .config.json fallback
+    const configFileName = flags.config || '.config.js';
+    if(configFileName.endsWith('.js')){
+      try {
+        const jsonFallback = configFileName.replace(/\.js$/, '.json');
+        const jsonPath = path.isAbsolute(jsonFallback) 
+          ? jsonFallback 
+          : path.join(rootPath, jsonFallback);
+        log(`Trying JSON fallback: ${jsonPath}`, 3);
+        const configContent = await readFile(jsonPath, 'utf8');
+        const userConfig = JSON.parse(configContent);
+        config = {
+          ...defaultConfig,
+          ...userConfig,
+          allowedMimes: {
+            ...defaultConfig.allowedMimes,
+            ...(userConfig.allowedMimes || {})
+          },
+          middleware: {
+            ...defaultConfig.middleware,
+            ...(userConfig.middleware || {})
+          },
+          customRoutes: {
+            ...defaultConfig.customRoutes,
+            ...(userConfig.customRoutes || {})
+          },
+          cache: {
+            ...defaultConfig.cache,
+            ...(userConfig.cache || {})
+          },
+          templating: {
+            ...defaultConfig.templating,
+            ...(userConfig.templating || {})
+          }
+        };
+        log('User config loaded from JSON fallback', 3);
+      } catch(e2){
+        log('Using default config (no config file found)', 3);
+      }
+    } else {
+      log('Using default config (no config file found)', 3);
+    }
   }
   
   /*
@@ -88,11 +138,18 @@ export default async (flags, log) => {
   */
   const dis = new Set(config.disallowedRegex);
   dis.add("^/\\..*");
-  dis.add("\\.config$");
+  dis.add("\\.config\\.js$");
+  dis.add("\\.config\\.json$");
   dis.add("\\.git/"); 
   config.disallowedRegex = [...dis];
   log(`Config loaded with ${config.disallowedRegex.length} disallowed patterns`, 3);
   
+  if(config.templating.preRender){
+    const {globals, state, maxFragmentDepth} = config.templating;
+    const count = await renderDir(rootPath, rootPath, globals, state, maxFragmentDepth);
+    log(`Pre-rendered ${count} page(s)`, 2);
+  }
+
   let files = await getFiles(rootPath, config, log);
   log(`Initial scan found ${files.length} files`, 2);
 
@@ -194,9 +251,11 @@ export default async (flags, log) => {
   
   // Helper function to match wildcard patterns
   const matchWildcardRoute = (requestPath, pattern) => {
+    // Normalize pattern to ensure leading slash
+    const normalizedPattern = pattern.startsWith('/') ? pattern : '/' + pattern;
     // Convert wildcard pattern to regex
     // IMPORTANT: Replace ** BEFORE * to avoid replacing both * in **
-    const regexPattern = pattern
+    const regexPattern = normalizedPattern
       .replace(/\*\*/g, '(.+)')     // Replace ** with capture group for multiple segments
       .replace(/\*/g, '([^/]+)');   // Replace * with capture group for single segment
     

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta
+		name="viewport"
+		content="width=device-width, initial-scale=1.0"
+	/>
+	<title>Templating - Kempo Server</title>
+	<link rel="icon" type="image/svg+xml" href="./media/icon.svg" />
+	<link rel="icon" type="image/png" sizes="32x32" href="./media/icon32.png" />
+	<link rel="manifest" href="./manifest.json" />
+	<link
+		rel="stylesheet"
+		href="https://cdn.jsdelivr.net/npm/kempo-css@2/dist/kempo.min.css"
+	/>
+	<link rel="stylesheet" href="./theme.css" />
+	<script>
+		window.litDisableBundleWarning = true;
+		window.kempo = { pathsToIcons: ['https://cdn.jsdelivr.net/npm/kempo-ui@0.0.42/icons/'] };
+	</script>
+</head>
+<body>
+	
+  <k-nav
+    fixed
+    class="bg-primary"
+  >
+    <button
+      id="toggleNavSideMenu"
+      class="link"
+    >
+      <k-icon name="menu"></k-icon>
+    </button>
+    <a
+      href="./"
+      class="d-if ph"
+      style="align-items: center"
+    >
+      <img src="./media/icon32.png" alt="Kempo Server Icon" class="pr" />
+      Kempo Server
+    </a>
+    <div class="flex"></div>
+    <a href="https://github.com/dustinpoissant/kempo-ui?tab=License-1-ov-file#creative-commons-attribution-noncommercial-sharealike-20" target="_blank"><k-icon name="license"></k-icont></a>
+    <a href="https://github.com/dustinpoissant/kempo-ui" target="_blank"><k-icon name="github-mark"></k-icont></a>
+    <k-theme-switcher></k-theme-switcher>
+  </k-nav>
+  <div style="width: 100%; height: 4rem;"></div>
+  <k-aside
+    id="navSideMenu"
+    state="offscreen"
+  >
+    <menu>
+      <a href="./" class="ta-center bb mb r0">
+        <h1 class="tc-primary">Kempo Server</h1>
+        <img src="./media/icon128.png" alt="Kempo UI Icon" />
+      </a>
+        <h3>Getting Started</h3>
+        <a href="./" class="d-b pq pl">Quick Start</a>
+        <a href="./routing.html" class="d-b pq pl">Routing</a>
+        <a href="./request-response.html" class="d-b pq pl">Request & Response</a>
+        <br /><br />
+        <h3>Advanced Features</h3>
+        <a href="configuration.html" class="d-b pq pl">Configuration</a>
+        <a href="templating.html" class="d-b pq pl">Templating</a>
+        <a href="middleware.html" class="d-b pq pl">Middleware</a>
+        <a href="caching.html" class="d-b pq pl">Module Caching</a>
+        <a href="cli-utils.html" class="d-b pq pl">CLI Utilities</a>
+        <a href="fs-utils.html" class="d-b pq pl">File System Utilities</a>
+        <a href="examples.html" class="d-b pq pl">Examples & Demos</a>
+    </menu>
+  </k-aside>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Aside.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Main.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Nav.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Icon.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/ThemeSwitcher.js" type="module"></script>
+  <script>
+    document.getElementById('toggleNavSideMenu').addEventListener('click', async () => {
+      await window.customElements.whenDefined('k-aside');
+      document.getElementById('navSideMenu').toggle();
+    });
+    document.addEventListener('click', function(e) {
+      if (e.target.matches('a[href^="#"]')) {
+        e.preventDefault();
+        const targetId = e.target.getAttribute('href').replace('#', '');
+        const target = document.getElementById(targetId);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth' });
+          const url = window.location.pathname + window.location.search + '#' + targetId;
+          history.replaceState(null, '', url);
+        }
+      }
+    });
+  </script>
+
+	<main>
+		<h1 class="ta-center">Templating</h1>
+		
+		<p>Kempo Server includes a built-in XML-based templating system for building static sites with shared layouts, reusable fragments, and dynamic content. Pages can be pre-rendered at build time or server-side rendered on each request.</p>
+
+		<nav class="b r mb p">
+			<h4 class="mt0">On This Page</h4>
+			<ul>
+				<li><a href="#overview">Overview</a></li>
+				<li><a href="#file-types">File Types</a></li>
+				<li><a href="#templates">Templates</a></li>
+				<li><a href="#pages">Pages</a></li>
+				<li><a href="#fragments">Fragments</a></li>
+				<li><a href="#variables">Variables</a></li>
+				<li><a href="#conditionals">Conditionals</a></li>
+				<li><a href="#loops">Loops</a></li>
+				<li><a href="#rendering">Rendering</a></li>
+				<li><a href="#ssr">Server-Side Rendering</a></li>
+				<li><a href="#configuration">Configuration</a></li>
+			</ul>
+		</nav>
+
+		<h2 id="overview">Overview</h2>
+		<p>The templating system uses three file types that work together:</p>
+		<ul>
+			<li><strong>Templates</strong> (<code>*.template.html</code>) &mdash; Shared page layouts with named content slots</li>
+			<li><strong>Pages</strong> (<code>*.page.html</code>) &mdash; Individual pages that fill template slots with content</li>
+			<li><strong>Fragments</strong> (<code>*.fragment.html</code>) &mdash; Reusable HTML partials included in templates or other fragments</li>
+		</ul>
+		<p>All three file types are blocked from being served directly by the default <code>disallowedRegex</code> configuration.</p>
+
+		<h2 id="file-types">File Types</h2>
+		<p>A typical project structure:</p>
+		<pre><code class="hljs markdown">my-site/<br />├─ default.template.html    # Shared layout<br />├─ nav.fragment.html        # Reusable navigation<br />├─ footer.fragment.html     # Reusable footer<br />├─ index.page.html          # Homepage → renders to index.html<br />├─ about.page.html          # About → renders to about.html<br />├─ blog/<br />│  ├─ index.page.html       # Blog index → blog/index.html<br />│  ├─ post-1.page.html      # Blog post → blog/post-1.html<br /></code></pre>
+		<p>Templates and fragments are resolved by walking up the directory tree from the page file to the root, so subdirectories can override them by providing their own versions.</p>
+
+		<h2 id="templates">Templates</h2>
+		<p>A template defines the shared HTML structure for your pages. Use <code>&lt;location&gt;</code> tags to define named content slots that pages will fill.</p>
+		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- default.template.html --&gt;</span><br /><span class="hljs-meta">&lt;!DOCTYPE html&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">html</span> <span class="hljs-attr">lang</span>=<span class="hljs-string">"en"</span>&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">head</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">meta</span> <span class="hljs-attr">charset</span>=<span class="hljs-string">"UTF-8"</span> /&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">title</span>&gt;</span>Templating - Kempo Server<span class="hljs-tag">&lt;/<span class="hljs-name">title</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">head</span>&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">body</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">fragment</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"nav"</span> /&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">main</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">h1</span>&gt;</span>Templating<span class="hljs-tag">&lt;/<span class="hljs-name">h1</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">location</span> /&gt;</span><br />  <span class="hljs-tag">&lt;/<span class="hljs-name">main</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">location</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"scripts"</span>&gt;</span><br />    <span class="hljs-comment">&lt;!-- default scripts if page doesn't provide any --&gt;</span><br />  <span class="hljs-tag">&lt;/<span class="hljs-name">location</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">body</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">html</span>&gt;</span></code></pre>
+
+		<h3>Location Tags</h3>
+		<p>Locations are named slots in a template that pages fill with content. The <code>name</code> attribute is optional &mdash; a <code>&lt;location&gt;</code> without a name defaults to <code>"default"</code>.</p>
+		<ul>
+			<li><code>&lt;location /&gt;</code> &mdash; Self-closing default slot (equivalent to <code>&lt;location name="default" /&gt;</code>)</li>
+			<li><code>&lt;location name="scripts" /&gt;</code> &mdash; Named slot, renders empty if the page doesn't provide content for it</li>
+			<li><code>&lt;location name="scripts"&gt;...fallback...&lt;/location&gt;</code> &mdash; Includes fallback content used when the page doesn't override it</li>
+		</ul>
+
+		<h2 id="pages">Pages</h2>
+		<p>A page file wraps its content in a <code>&lt;page&gt;</code> root element and uses <code>&lt;content&gt;</code> blocks to fill the template's locations. The <code>location</code> attribute is optional &mdash; a <code>&lt;content&gt;</code> block without one targets the <code>"default"</code> location. Multiple <code>&lt;content&gt;</code> blocks targeting the same location are concatenated in order.</p>
+		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- about.page.html → renders to about.html --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">page</span> <span class="hljs-attr">pageName</span>=<span class="hljs-string">"About Us"</span> <span class="hljs-attr">title</span>=<span class="hljs-string">"About - My Site"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">content</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">p</span>&gt;</span>Welcome to our about page.<span class="hljs-tag">&lt;/<span class="hljs-name">p</span>&gt;</span><br />  <span class="hljs-tag">&lt;/<span class="hljs-name">content</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">page</span>&gt;</span></code></pre>
+
+		<h3>Page Attributes</h3>
+		<p>Attributes on the <code>&lt;page&gt;</code> tag become template variables. In the example above, <code>Templating</code> resolves to <code>About Us</code> and <code>Templating - Kempo Server</code> resolves to <code>About - My Site</code>.</p>
+		<p>The special <code>template</code> attribute selects which template to use. It defaults to <code>default</code>, which looks for <code>default.template.html</code>.</p>
+		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- Uses blog.template.html instead of default.template.html --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">page</span> <span class="hljs-attr">template</span>=<span class="hljs-string">"blog"</span> <span class="hljs-attr">title</span>=<span class="hljs-string">"My Post"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">content</span> <span class="hljs-attr">location</span>=<span class="hljs-string">"main"</span>&gt;</span>...<span class="hljs-tag">&lt;/<span class="hljs-name">content</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">page</span>&gt;</span></code></pre>
+
+		<h2 id="fragments">Fragments</h2>
+		<p>Fragments are reusable HTML partials. Include them in templates or other fragments using the <code>&lt;fragment&gt;</code> tag.</p>
+		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- nav.fragment.html --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">fragment</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">nav</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">a</span> <span class="hljs-attr">href</span>=<span class="hljs-string">"./"</span>&gt;</span>Home<span class="hljs-tag">&lt;/<span class="hljs-name">a</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">a</span> <span class="hljs-attr">href</span>=<span class="hljs-string">"./about.html"</span>&gt;</span>About<span class="hljs-tag">&lt;/<span class="hljs-name">a</span>&gt;</span><br />  <span class="hljs-tag">&lt;/<span class="hljs-name">nav</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">fragment</span>&gt;</span></code></pre>
+		<p>Include it in a template:</p>
+		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- Self-closing: renders empty if fragment file not found --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">fragment</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"nav"</span> /&gt;</span><br /><br /><span class="hljs-comment">&lt;!-- With fallback content if fragment file not found --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">fragment</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"nav"</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">nav</span>&gt;</span>Fallback Nav<span class="hljs-tag">&lt;/<span class="hljs-name">nav</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">fragment</span>&gt;</span></code></pre>
+		<p>Fragments can include other fragments. The maximum nesting depth is controlled by <code>maxFragmentDepth</code> (default: 10).</p>
+
+		<h3>File Resolution</h3>
+		<p>When a page references a template or a template includes a fragment, the system searches for the file starting in the page's directory and walking up to the root. This means:</p>
+		<ul>
+			<li>Templates and fragments placed at the root apply to all pages</li>
+			<li>A subdirectory can provide its own version to override the parent</li>
+		</ul>
+
+		<h2 id="variables">Variables</h2>
+		<p>Use <code></code> syntax to insert dynamic values into templates and fragments.</p>
+
+		<h3>Built-in Variables</h3>
+		<table>
+			<thead>
+				<tr>
+					<th>Variable</th>
+					<th>Description</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr><td><code>./</code></td><td>Relative path from the page to the root directory (e.g. <code>./</code>, <code>../</code>, <code>../../</code>)</td></tr>
+				<tr><td><code>2026</code></td><td>Current four-digit year</td></tr>
+				<tr><td><code>2026-04-09</code></td><td>Current date in ISO format (<code>YYYY-MM-DD</code>)</td></tr>
+				<tr><td><code>2026-04-09T16:07:00.794Z</code></td><td>Full ISO 8601 datetime string</td></tr>
+				<tr><td><code>1775750820794</code></td><td>Unix timestamp in milliseconds</td></tr>
+				<tr><td><code></code></td><td>Version from the root <code>package.json</code></td></tr>
+				<tr><td><code></code></td><td>Value of <code>NODE_ENV</code></td></tr>
+			</tbody>
+		</table>
+
+		<h3>Page Attributes as Variables</h3>
+		<p>Any attribute on the <code>&lt;page&gt;</code> tag is available as a variable in the template:</p>
+		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- page file --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">page</span> <span class="hljs-attr">title</span>=<span class="hljs-string">"My Page"</span> <span class="hljs-attr">author</span>=<span class="hljs-string">"Dustin"</span>&gt;</span>...<span class="hljs-tag">&lt;/<span class="hljs-name">page</span>&gt;</span><br /><br /><span class="hljs-comment">&lt;!-- template file --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">title</span>&gt;</span>Templating - Kempo Server<span class="hljs-tag">&lt;/<span class="hljs-name">title</span>&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">meta</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"author"</span> <span class="hljs-attr">content</span>=<span class="hljs-string">""</span> /&gt;</span></code></pre>
+
+		<h3>Globals and State</h3>
+		<p>Additional variables can be provided through the <code>globals</code> and <code>state</code> configuration objects. Globals and state are merged with page attributes, with page attributes taking priority.</p>
+		<pre><code class="hljs javascript"><span class="hljs-comment">// .config.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {<br />  <span class="hljs-attr">templating</span>: {<br />    <span class="hljs-attr">globals</span>: {<br />      <span class="hljs-attr">siteName</span>: <span class="hljs-string">'My Site'</span>,<br />      <span class="hljs-attr">copyright</span>: <span class="hljs-string">'© 2026 My Company'</span><br />    },<br />    <span class="hljs-attr">state</span>: {<br />      <span class="hljs-attr">buildId</span>: () =&gt; <span class="hljs-built_in">Date</span>.now().toString(<span class="hljs-number">36</span>)<br />    }<br />  }<br />};</code></pre>
+		<p>Function values in globals or state are called at render time, allowing dynamic values.</p>
+
+		<h3>Dot-Path Access</h3>
+		<p>Variables support dot notation for nested object access:</p>
+		<pre><code class="hljs xml"><br /></code></pre>
+
+		<h2 id="conditionals">Conditionals</h2>
+		<p>Use <code>&lt;if&gt;</code> blocks to conditionally include content based on variable values.</p>
+		<pre><code class="hljs xml"><span class="hljs-tag">&lt;<span class="hljs-name">if</span> <span class="hljs-attr">condition</span>=<span class="hljs-string">"showBanner"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"banner"</span>&gt;</span>Welcome!<span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">if</span>&gt;</span></code></pre>
+
+		<h3>Supported Operators</h3>
+		<p>Conditions support a full expression syntax:</p>
+		<table>
+			<thead>
+				<tr>
+					<th>Operator</th>
+					<th>Description</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr><td><code>===</code></td><td>Strict equality</td></tr>
+				<tr><td><code>!==</code></td><td>Strict inequality</td></tr>
+				<tr><td><code>&gt;</code>, <code>&lt;</code>, <code>&gt;=</code>, <code>&lt;=</code></td><td>Comparison</td></tr>
+				<tr><td><code>&amp;&amp;</code></td><td>Logical AND</td></tr>
+				<tr><td><code>||</code></td><td>Logical OR</td></tr>
+				<tr><td><code>!</code></td><td>Logical NOT</td></tr>
+				<tr><td><code>( )</code></td><td>Grouping</td></tr>
+			</tbody>
+		</table>
+
+		<h3>Examples</h3>
+		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- Truthy check --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">if</span> <span class="hljs-attr">condition</span>=<span class="hljs-string">"isLoggedIn"</span>&gt;</span>Welcome back!<span class="hljs-tag">&lt;/<span class="hljs-name">if</span>&gt;</span><br /><br /><span class="hljs-comment">&lt;!-- Negation --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">if</span> <span class="hljs-attr">condition</span>=<span class="hljs-string">"!isLoggedIn"</span>&gt;</span>Please log in.<span class="hljs-tag">&lt;/<span class="hljs-name">if</span>&gt;</span><br /><br /><span class="hljs-comment">&lt;!-- String comparison --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">if</span> <span class="hljs-attr">condition</span>=<span class="hljs-string">"env === 'production'"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"analytics.js"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">if</span>&gt;</span><br /><br /><span class="hljs-comment">&lt;!-- Compound conditions --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">if</span> <span class="hljs-attr">condition</span>=<span class="hljs-string">"isAdmin &amp;&amp; hasPermission"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">a</span> <span class="hljs-attr">href</span>=<span class="hljs-string">"/admin"</span>&gt;</span>Admin Panel<span class="hljs-tag">&lt;/<span class="hljs-name">a</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">if</span>&gt;</span></code></pre>
+
+		<h2 id="loops">Loops</h2>
+		<p>Use <code>&lt;foreach&gt;</code> blocks to iterate over arrays.</p>
+		<pre><code class="hljs xml"><span class="hljs-tag">&lt;<span class="hljs-name">foreach</span> <span class="hljs-attr">in</span>=<span class="hljs-string">"navLinks"</span> <span class="hljs-attr">as</span>=<span class="hljs-string">"link"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">a</span> <span class="hljs-attr">href</span>=<span class="hljs-string">""</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">a</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">foreach</span>&gt;</span></code></pre>
+		<p>The <code>in</code> attribute references an array variable and <code>as</code> names the loop variable. The loop variable supports dot-path access for object items.</p>
+
+		<p>Provide the array through globals or state:</p>
+		<pre><code class="hljs javascript"><span class="hljs-comment">// .config.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {<br />  <span class="hljs-attr">templating</span>: {<br />    <span class="hljs-attr">globals</span>: {<br />      <span class="hljs-attr">navLinks</span>: [<br />        { <span class="hljs-attr">url</span>: <span class="hljs-string">'/'</span>, <span class="hljs-attr">label</span>: <span class="hljs-string">'Home'</span> },<br />        { <span class="hljs-attr">url</span>: <span class="hljs-string">'/about.html'</span>, <span class="hljs-attr">label</span>: <span class="hljs-string">'About'</span> }<br />      ]<br />    }<br />  }<br />};</code></pre>
+
+		<h2 id="rendering">Rendering</h2>
+		<p>Pages can be pre-rendered to static HTML files using the CLI tool or the programmatic API.</p>
+
+		<h3>CLI</h3>
+		<pre><code class="hljs bash"><span class="hljs-comment"># Render to a separate output directory</span><br />npx kempo-server-render ./src ./dist<br /><br /><span class="hljs-comment"># Render in-place (output to same directory)</span><br />npx kempo-server-render ./src<br /><br /><span class="hljs-comment"># With a state file</span><br />npx kempo-server-render ./src ./dist state.json</code></pre>
+		<p>The CLI automatically loads <code>.config.js</code> or <code>.config.json</code> from the input directory for globals, state, and maxFragmentDepth settings.</p>
+
+		<h3>Programmatic API</h3>
+		<pre><code class="hljs javascript"><span class="hljs-keyword">import</span> { renderDir, renderPage } <span class="hljs-keyword">from</span> <span class="hljs-string">'kempo-server/templating'</span>;<br /><br /><span class="hljs-comment">// Render all pages in a directory</span><br /><span class="hljs-keyword">const</span> count = <span class="hljs-keyword">await</span> renderDir(<span class="hljs-string">'./src'</span>, <span class="hljs-string">'./dist'</span>, globals, state, maxDepth);<br /><br /><span class="hljs-comment">// Render a single page</span><br /><span class="hljs-keyword">const</span> html = <span class="hljs-keyword">await</span> renderPage(<span class="hljs-string">'./src/about.page.html'</span>, <span class="hljs-string">'./src'</span>, globals, state, maxDepth);</code></pre>
+
+		<h2 id="ssr">Server-Side Rendering</h2>
+		<p>Pages can also be rendered on each request instead of pre-built. This is useful during development so you can see changes without rebuilding.</p>
+
+		<h3>SSR Fallback</h3>
+		<p>When <code>ssr</code> is enabled, the server first looks for a static file. If no static file is found, it looks for a matching <code>.page.html</code> file and renders it on the fly.</p>
+		<pre><code class="hljs javascript"><span class="hljs-comment">// .config.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {<br />  <span class="hljs-attr">templating</span>: {<br />    <span class="hljs-attr">ssr</span>: <span class="hljs-literal">true</span><br />  }<br />};</code></pre>
+
+		<h3>SSR Priority</h3>
+		<p>When <code>ssrPriority</code> is also enabled, the server renders the <code>.page.html</code> file <em>before</em> checking for static files. This ensures you always see the latest template changes, even if a pre-rendered <code>.html</code> file exists in the same directory.</p>
+		<pre><code class="hljs javascript"><span class="hljs-comment">// dev.config.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {<br />  <span class="hljs-attr">templating</span>: {<br />    <span class="hljs-attr">ssr</span>: <span class="hljs-literal">true</span>,<br />    <span class="hljs-attr">ssrPriority</span>: <span class="hljs-literal">true</span><br />  }<br />};</code></pre>
+		<p>This is ideal for development. For production, pre-render your pages and serve them as static files with SSR disabled.</p>
+
+		<h2 id="configuration">Configuration</h2>
+		<p>All templating options live under the <code>templating</code> key in your configuration file.</p>
+		<table>
+			<thead>
+				<tr>
+					<th>Option</th>
+					<th>Default</th>
+					<th>Description</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr><td><code>preRender</code></td><td><code>false</code></td><td>Pre-render pages on server start</td></tr>
+				<tr><td><code>ssr</code></td><td><code>false</code></td><td>Enable server-side rendering as a fallback</td></tr>
+				<tr><td><code>ssrPriority</code></td><td><code>false</code></td><td>Render pages before checking for static files (requires <code>ssr: true</code>)</td></tr>
+				<tr><td><code>globals</code></td><td><code>{}</code></td><td>Variables available to all pages</td></tr>
+				<tr><td><code>state</code></td><td><code>{}</code></td><td>Additional variables (function values are called at render time)</td></tr>
+				<tr><td><code>maxFragmentDepth</code></td><td><code>10</code></td><td>Maximum fragment nesting depth</td></tr>
+			</tbody>
+		</table>
+
+		<h3>Development vs Production</h3>
+		<p>A common pattern is to use separate config files:</p>
+		<pre><code class="hljs javascript"><span class="hljs-comment">// dev.config.js — live rendering, no rebuild needed</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {<br />  <span class="hljs-attr">templating</span>: { <span class="hljs-attr">ssr</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">ssrPriority</span>: <span class="hljs-literal">true</span> }<br />};<br /><br /><span class="hljs-comment">// prod.config.js — static files only</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {<br />  <span class="hljs-attr">templating</span>: { <span class="hljs-attr">ssr</span>: <span class="hljs-literal">false</span> }<br />};</code></pre>
+		<pre><code class="hljs bash"><span class="hljs-comment"># Development</span><br />node dist/index.js -r ./docs/src -c dev.config.js<br /><br /><span class="hljs-comment"># Production (serve pre-rendered output)</span><br />node dist/index.js -r ./docs/dist</code></pre>
+	
+	</main>
+	<div style="height:25vh"></div>
+	<script
+		type="module"
+		src="https://cdn.jsdelivr.net/npm/kempo-ui@0.0.42/dist/components/Import.js"
+	></script>
+</body>
+</html>

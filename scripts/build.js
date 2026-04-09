@@ -2,13 +2,13 @@ import { readdir, readFile, writeFile, mkdir, copyFile } from 'fs/promises';
 import { join, dirname } from 'path';
 import { minify } from 'terser';
 import { fileURLToPath } from 'url';
+import { renderDir } from '../src/templating/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, '..');
 const srcDir = join(rootDir, 'src');
 const utilsDir = join(rootDir, 'utils');
 const distDir = join(rootDir, 'dist');
-const docsDir = join(rootDir, 'docs');
 
 /*
   File Processing Helper
@@ -79,6 +79,27 @@ const build = async () => {
       await processJsFile(join(utilsDir, file), join(distDir, 'utils', file));
     }
     
+    // Process src/templating directory
+    const templatingDir = join(srcDir, 'templating');
+    await mkdir(join(distDir, 'templating'), { recursive: true });
+    const templatingFiles = await readdir(templatingDir);
+    const templatingJsFiles = templatingFiles.filter(file => file.endsWith('.js'));
+    
+    for (const file of templatingJsFiles) {
+      await processJsFile(join(templatingDir, file), join(distDir, 'templating', file));
+    }
+    
+    // Process render CLI script
+    const scriptsDir = join(rootDir, 'scripts');
+    await processJsFile(join(scriptsDir, 'render.js'), join(distDir, 'render.js'));
+    
+    // Render docs
+    console.log('Rendering docs...');
+    const docsSrcDir = join(rootDir, 'docs', 'src');
+    const docsDistDir = join(rootDir, 'docs', 'dist');
+    const docsCount = await renderDir(docsSrcDir, docsDistDir);
+    console.log(`✓ Rendered ${docsCount} doc pages`);
+
     console.log('Build completed successfully!');
     
   } catch (error) {

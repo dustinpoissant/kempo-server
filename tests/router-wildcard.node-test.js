@@ -172,6 +172,51 @@ export default {
       pass('wildcard routes correctly override static files');
     } catch(e){ 
       fail(e.message); 
-    }
-  }
+    }  },
+
+  'wildcard routes without leading slash match requests': async ({pass, fail, log}) => {
+    try {
+      await withTempDir(async (dir) => {
+        await write(dir, 'media/icon.png', 'icon-data');
+        await write(dir, 'media/logo.svg', '<svg/>');
+
+        const prev = process.cwd();
+        process.chdir(dir);
+
+        const flags = {root: 'docs', logging: 0};
+
+        // Keys without leading slash — the bug caused these to never match
+        const config = {
+          customRoutes: {
+            'media/*': '../media/*'
+          }
+        };
+
+        await write(dir, 'docs/.config.json', JSON.stringify(config));
+        const handler = await router(flags, () => {});
+        const server = http.createServer(handler);
+        const port = randomPort();
+
+        await new Promise(r => server.listen(port, r));
+        await new Promise(r => setTimeout(r, 50));
+
+        try {
+          const r1 = await httpGet(`http://localhost:${port}/media/icon.png`);
+          log('png status: ' + r1.res.statusCode);
+          if(r1.res.statusCode !== 200) throw new Error('expected 200 for /media/icon.png');
+          if(r1.body.toString() !== 'icon-data') throw new Error('wrong content for icon.png');
+
+          const r2 = await httpGet(`http://localhost:${port}/media/logo.svg`);
+          log('svg status: ' + r2.res.statusCode);
+          if(r2.res.statusCode !== 200) throw new Error('expected 200 for /media/logo.svg');
+          if(r2.body.toString() !== '<svg/>') throw new Error('wrong content for logo.svg');
+        } finally {
+          await new Promise(r => server.close(r));
+          process.chdir(prev);
+        }
+      });
+      pass('wildcard routes without leading slash match requests correctly');
+    } catch(e){
+      fail(e.message);
+    }  }
 };

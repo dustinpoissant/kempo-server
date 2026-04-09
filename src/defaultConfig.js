@@ -44,7 +44,8 @@ export default {
   },
   disallowedRegex: [
     "^/\\..*",
-    "\\.config$",
+    "\\.config\\.js$",
+    "\\.config\\.json$",
     "\\.env$",
     "\\.git/",
     "\\.htaccess$",
@@ -59,7 +60,10 @@ export default {
     "wp-config\\.php$",
     "\\.DS_Store$",
     "package\\.json$",
-    "package-lock\\.json$"
+    "package-lock\\.json$",
+    "\\.template\\.html$",
+    "\\.fragment\\.html$",
+    "\\.page\\.html$"
   ],
   routeFiles: [
     'GET.js',
@@ -138,5 +142,13 @@ export default {
     memoryCheckInterval: 30000,      // Memory check interval (30 seconds)
     watchFiles: true,                // Auto-invalidate on file changes
     enableMemoryMonitoring: true     // Enable automatic memory monitoring
+  },
+  templating: {
+    preRender: false,
+    ssr: false,
+    ssrPriority: false,
+    globals: {},
+    state: {},
+    maxFragmentDepth: 10
   }
 }

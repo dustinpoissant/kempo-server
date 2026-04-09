@@ -7,14 +7,14 @@ export const prepareTestScenario = async (dir, scenario) => {
       // Already has index.html, api/GET.js, etc.
       break;
     case 'wildcard-routes':
-      await write(dir, 'docs/.config.json', JSON.stringify({
+      await write(dir, 'docs/.config.js', `export default ${JSON.stringify({
         customRoutes: { '/src/**': '../src/**' }
-      }));
+      })}`);
       break;
     case 'middleware':
-      await write(dir, '.config.json', JSON.stringify({
+      await write(dir, '.config.js', `export default ${JSON.stringify({
         middleware: { cors: {enabled: true} }
-      }));
+      })}`);
       break;
     default:
       // No special preparation needed

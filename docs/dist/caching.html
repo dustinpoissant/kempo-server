@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta
+		name="viewport"
+		content="width=device-width, initial-scale=1.0"
+	/>
+	<title>Module Caching - Kempo Server</title>
+	<link rel="icon" type="image/svg+xml" href="./media/icon.svg" />
+	<link rel="icon" type="image/png" sizes="32x32" href="./media/icon32.png" />
+	<link rel="manifest" href="./manifest.json" />
+	<link
+		rel="stylesheet"
+		href="https://cdn.jsdelivr.net/npm/kempo-css@2/dist/kempo.min.css"
+	/>
+	<link rel="stylesheet" href="./theme.css" />
+	<script>
+		window.litDisableBundleWarning = true;
+		window.kempo = { pathsToIcons: ['https://cdn.jsdelivr.net/npm/kempo-ui@0.0.42/icons/'] };
+	</script>
+</head>
+<body>
+	
+  <k-nav
+    fixed
+    class="bg-primary"
+  >
+    <button
+      id="toggleNavSideMenu"
+      class="link"
+    >
+      <k-icon name="menu"></k-icon>
+    </button>
+    <a
+      href="./"
+      class="d-if ph"
+      style="align-items: center"
+    >
+      <img src="./media/icon32.png" alt="Kempo Server Icon" class="pr" />
+      Kempo Server
+    </a>
+    <div class="flex"></div>
+    <a href="https://github.com/dustinpoissant/kempo-ui?tab=License-1-ov-file#creative-commons-attribution-noncommercial-sharealike-20" target="_blank"><k-icon name="license"></k-icont></a>
+    <a href="https://github.com/dustinpoissant/kempo-ui" target="_blank"><k-icon name="github-mark"></k-icont></a>
+    <k-theme-switcher></k-theme-switcher>
+  </k-nav>
+  <div style="width: 100%; height: 4rem;"></div>
+  <k-aside
+    id="navSideMenu"
+    state="offscreen"
+  >
+    <menu>
+      <a href="./" class="ta-center bb mb r0">
+        <h1 class="tc-primary">Kempo Server</h1>
+        <img src="./media/icon128.png" alt="Kempo UI Icon" />
+      </a>
+        <h3>Getting Started</h3>
+        <a href="./" class="d-b pq pl">Quick Start</a>
+        <a href="./routing.html" class="d-b pq pl">Routing</a>
+        <a href="./request-response.html" class="d-b pq pl">Request & Response</a>
+        <br /><br />
+        <h3>Advanced Features</h3>
+        <a href="configuration.html" class="d-b pq pl">Configuration</a>
+        <a href="templating.html" class="d-b pq pl">Templating</a>
+        <a href="middleware.html" class="d-b pq pl">Middleware</a>
+        <a href="caching.html" class="d-b pq pl">Module Caching</a>
+        <a href="cli-utils.html" class="d-b pq pl">CLI Utilities</a>
+        <a href="fs-utils.html" class="d-b pq pl">File System Utilities</a>
+        <a href="examples.html" class="d-b pq pl">Examples & Demos</a>
+    </menu>
+  </k-aside>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Aside.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Main.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Nav.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Icon.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/ThemeSwitcher.js" type="module"></script>
+  <script>
+    document.getElementById('toggleNavSideMenu').addEventListener('click', async () => {
+      await window.customElements.whenDefined('k-aside');
+      document.getElementById('navSideMenu').toggle();
+    });
+    document.addEventListener('click', function(e) {
+      if (e.target.matches('a[href^="#"]')) {
+        e.preventDefault();
+        const targetId = e.target.getAttribute('href').replace('#', '');
+        const target = document.getElementById(targetId);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth' });
+          const url = window.location.pathname + window.location.search + '#' + targetId;
+          history.replaceState(null, '', url);
+        }
+      }
+    });
+  </script>
+
+	<main>
+		<h1 class="ta-center">Module Caching</h1>
+		
+    <p>Kempo Server includes an intelligent module caching system that dramatically improves performance by caching JavaScript route modules in memory.</p>
+
+    <h2>How It Works</h2>
+    <p>The cache system combines multiple strategies to optimize performance while preventing memory issues:</p>
+    <ul>
+      <li><strong>LRU (Least Recently Used)</strong> - Evicts oldest modules when cache fills</li>
+      <li><strong>Time-based expiration</strong> - Modules expire after configurable TTL</li>
+      <li><strong>Memory monitoring</strong> - Automatically clears cache if memory usage gets too high</li>
+      <li><strong>File watching</strong> - Instantly invalidates cache when files change (development)</li>
+    </ul>
+
+    <h2>Basic Configuration</h2>
+    <p>Add a <code>cache</code> object to your <code>.config.json</code> file:</p>
+    <pre><code class="hljs json">{
+  <span class="hljs-attr">"cache"</span>: {
+    <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,
+    <span class="hljs-attr">"maxSize"</span>: <span class="hljs-number">100</span>,
+    <span class="hljs-attr">"maxMemoryMB"</span>: <span class="hljs-number">50</span>,
+    <span class="hljs-attr">"ttlMs"</span>: <span class="hljs-number">300000</span>,
+    <span class="hljs-attr">"watchFiles"</span>: <span class="hljs-literal">true</span>
+  }
+}</code></pre>
+
+    <h2>Configuration Options</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Option</th>
+          <th>Type</th>
+          <th>Default</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>enabled</code></td>
+          <td>boolean</td>
+          <td><code>true</code></td>
+          <td>Enable/disable the entire caching system</td>
+        </tr>
+        <tr>
+          <td><code>maxSize</code></td>
+          <td>number</td>
+          <td><code>100</code></td>
+          <td>Maximum number of modules to cache</td>
+        </tr>
+        <tr>
+          <td><code>maxMemoryMB</code></td>
+          <td>number</td>
+          <td><code>50</code></td>
+          <td>Memory limit for cache in megabytes</td>
+        </tr>
+        <tr>
+          <td><code>ttlMs</code></td>
+          <td>number</td>
+          <td><code>300000</code></td>
+          <td>Time to live in milliseconds (5 minutes)</td>
+        </tr>
+        <tr>
+          <td><code>maxHeapUsagePercent</code></td>
+          <td>number</td>
+          <td><code>70</code></td>
+          <td>Clear cache when heap usage exceeds this percentage</td>
+        </tr>
+        <tr>
+          <td><code>memoryCheckInterval</code></td>
+          <td>number</td>
+          <td><code>30000</code></td>
+          <td>How often to check memory usage (milliseconds)</td>
+        </tr>
+        <tr>
+          <td><code>watchFiles</code></td>
+          <td>boolean</td>
+          <td><code>true</code></td>
+          <td>Auto-invalidate cache when files change</td>
+        </tr>
+        <tr>
+          <td><code>enableMemoryMonitoring</code></td>
+          <td>boolean</td>
+          <td><code>true</code></td>
+          <td>Enable automatic memory monitoring</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Environment-Specific Configuration</h2>
+    <p>Use separate configuration files for different environments instead of nested objects:</p>
+
+    <h3>Development Configuration</h3>
+    <p>Create <code>dev.config.json</code> with settings optimized for development:</p>
+    <pre><code class="hljs json">{
+  <span class="hljs-attr">"cache"</span>: {
+    <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,
+    <span class="hljs-attr">"maxSize"</span>: <span class="hljs-number">50</span>,
+    <span class="hljs-attr">"maxMemoryMB"</span>: <span class="hljs-number">25</span>,
+    <span class="hljs-attr">"ttlMs"</span>: <span class="hljs-number">300000</span>,
+    <span class="hljs-attr">"watchFiles"</span>: <span class="hljs-literal">true</span>
+  }
+}</code></pre>
+    <pre><code class="hljs bash">node src/index.js --config dev.config.json</code></pre>
+
+    <h3>Production Configuration</h3>
+    <p>Create <code>prod.config.json</code> with settings optimized for production:</p>
+    <pre><code class="hljs json">{
+  <span class="hljs-attr">"cache"</span>: {
+    <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,
+    <span class="hljs-attr">"maxSize"</span>: <span class="hljs-number">1000</span>,
+    <span class="hljs-attr">"maxMemoryMB"</span>: <span class="hljs-number">200</span>,
+    <span class="hljs-attr">"ttlMs"</span>: <span class="hljs-number">3600000</span>,
+    <span class="hljs-attr">"watchFiles"</span>: <span class="hljs-literal">false</span>
+  }
+}</code></pre>
+    <pre><code class="hljs bash">node src/index.js --config prod.config.json</code></pre>
+
+    <h2>Cache Monitoring</h2>
+    <p>Monitor cache performance and manage cached modules at runtime:</p>
+
+    <h3>View Cache Statistics</h3>
+    <pre><code class="hljs bash">curl http://localhost:3000/_admin/cache</code></pre>
+    <p>Returns detailed statistics including:</p>
+    <ul>
+      <li>Cache size and memory usage</li>
+      <li>Hit/miss rates</li>
+      <li>Node.js memory usage</li>
+      <li>List of cached files</li>
+    </ul>
+
+    <h3>Clear Cache</h3>
+    <pre><code class="hljs bash">curl -X DELETE http://localhost:3000/_admin/cache</code></pre>
+    <p>Immediately clears all cached modules.</p>
+
+    <h2>Performance Tuning</h2>
+
+    <h3>Memory Settings</h3>
+    <ul>
+      <li>Set <code>maxMemoryMB</code> to 10-20% of available server RAM</li>
+      <li>Use lower <code>maxHeapUsagePercent</code> (60-70%) for memory-constrained environments</li>
+      <li>Monitor actual usage with <code>/_admin/cache</code> endpoint</li>
+    </ul>
+
+    <h3>Cache Size</h3>
+    <ul>
+      <li>Start with <code>maxSize</code> = 10x your typical concurrent routes</li>
+      <li>Increase if you have many route files and sufficient memory</li>
+      <li>Decrease for microservices with few routes</li>
+    </ul>
+
+    <h3>TTL Settings</h3>
+    <ul>
+      <li><strong>Development:</strong> Short TTL (5-10 minutes) for quick iteration</li>
+      <li><strong>Production:</strong> Longer TTL (30-60 minutes) for stability</li>
+      <li><strong>High-change environments:</strong> Shorter TTL or rely on file watching</li>
+    </ul>
+
+    <h3>File Watching</h3>
+    <ul>
+      <li><strong>Enable</strong> (<code>watchFiles: true</code>) in development for instant invalidation</li>
+      <li><strong>Disable</strong> (<code>watchFiles: false</code>) in production to reduce overhead</li>
+    </ul>
+
+    <h2>Configuration Examples</h2>
+
+    <h3>Minimal Configuration</h3>
+    <p>Just enable caching with defaults:</p>
+    <pre><code class="hljs json">{
+  <span class="hljs-attr">"cache"</span>: {
+    <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>
+  }
+}</code></pre>
+
+    <h3>High-Traffic Configuration</h3>
+    <p>For servers with lots of routes and traffic:</p>
+    <pre><code class="hljs json">{
+  <span class="hljs-attr">"cache"</span>: {
+    <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,
+    <span class="hljs-attr">"maxSize"</span>: <span class="hljs-number">2000</span>,
+    <span class="hljs-attr">"maxMemoryMB"</span>: <span class="hljs-number">500</span>,
+    <span class="hljs-attr">"ttlMs"</span>: <span class="hljs-number">7200000</span>,
+    <span class="hljs-attr">"watchFiles"</span>: <span class="hljs-literal">false</span>
+  }
+}</code></pre>
+
+    <h3>Memory-Constrained Configuration</h3>
+    <p>For servers with limited RAM:</p>
+    <pre><code class="hljs json">{
+  <span class="hljs-attr">"cache"</span>: {
+    <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,
+    <span class="hljs-attr">"maxSize"</span>: <span class="hljs-number">25</span>,
+    <span class="hljs-attr">"maxMemoryMB"</span>: <span class="hljs-number">10</span>,
+    <span class="hljs-attr">"ttlMs"</span>: <span class="hljs-number">120000</span>,
+    <span class="hljs-attr">"maxHeapUsagePercent"</span>: <span class="hljs-number">60</span>
+  }
+}</code></pre>
+
+    <h2>Troubleshooting</h2>
+
+    <h3>Cache Not Working</h3>
+    <ul>
+      <li>Verify <code>cache.enabled</code> is <code>true</code></li>
+      <li>Check file permissions for watching</li>
+      <li>Review server logs for cache statistics</li>
+    </ul>
+
+    <h3>Memory Issues</h3>
+    <ul>
+      <li>Reduce <code>maxMemoryMB</code> and <code>maxSize</code></li>
+      <li>Lower <code>maxHeapUsagePercent</code></li>
+      <li>Enable more aggressive memory monitoring</li>
+    </ul>
+
+    <h3>Performance Issues</h3>
+    <ul>
+      <li>Increase cache limits if you have available memory</li>
+      <li>Extend <code>ttlMs</code> for stable route files</li>
+      <li>Monitor hit rates with admin endpoints</li>
+    </ul>
+	
+	</main>
+	<div style="height:25vh"></div>
+	<script
+		type="module"
+		src="https://cdn.jsdelivr.net/npm/kempo-ui@0.0.42/dist/components/Import.js"
+	></script>
+</body>
+</html>

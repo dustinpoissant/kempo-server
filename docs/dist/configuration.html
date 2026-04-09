@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta
+		name="viewport"
+		content="width=device-width, initial-scale=1.0"
+	/>
+	<title>Configuration - Kempo Server</title>
+	<link rel="icon" type="image/svg+xml" href="./media/icon.svg" />
+	<link rel="icon" type="image/png" sizes="32x32" href="./media/icon32.png" />
+	<link rel="manifest" href="./manifest.json" />
+	<link
+		rel="stylesheet"
+		href="https://cdn.jsdelivr.net/npm/kempo-css@2/dist/kempo.min.css"
+	/>
+	<link rel="stylesheet" href="./theme.css" />
+	<script>
+		window.litDisableBundleWarning = true;
+		window.kempo = { pathsToIcons: ['https://cdn.jsdelivr.net/npm/kempo-ui@0.0.42/icons/'] };
+	</script>
+</head>
+<body>
+	
+  <k-nav
+    fixed
+    class="bg-primary"
+  >
+    <button
+      id="toggleNavSideMenu"
+      class="link"
+    >
+      <k-icon name="menu"></k-icon>
+    </button>
+    <a
+      href="./"
+      class="d-if ph"
+      style="align-items: center"
+    >
+      <img src="./media/icon32.png" alt="Kempo Server Icon" class="pr" />
+      Kempo Server
+    </a>
+    <div class="flex"></div>
+    <a href="https://github.com/dustinpoissant/kempo-ui?tab=License-1-ov-file#creative-commons-attribution-noncommercial-sharealike-20" target="_blank"><k-icon name="license"></k-icont></a>
+    <a href="https://github.com/dustinpoissant/kempo-ui" target="_blank"><k-icon name="github-mark"></k-icont></a>
+    <k-theme-switcher></k-theme-switcher>
+  </k-nav>
+  <div style="width: 100%; height: 4rem;"></div>
+  <k-aside
+    id="navSideMenu"
+    state="offscreen"
+  >
+    <menu>
+      <a href="./" class="ta-center bb mb r0">
+        <h1 class="tc-primary">Kempo Server</h1>
+        <img src="./media/icon128.png" alt="Kempo UI Icon" />
+      </a>
+        <h3>Getting Started</h3>
+        <a href="./" class="d-b pq pl">Quick Start</a>
+        <a href="./routing.html" class="d-b pq pl">Routing</a>
+        <a href="./request-response.html" class="d-b pq pl">Request & Response</a>
+        <br /><br />
+        <h3>Advanced Features</h3>
+        <a href="configuration.html" class="d-b pq pl">Configuration</a>
+        <a href="templating.html" class="d-b pq pl">Templating</a>
+        <a href="middleware.html" class="d-b pq pl">Middleware</a>
+        <a href="caching.html" class="d-b pq pl">Module Caching</a>
+        <a href="cli-utils.html" class="d-b pq pl">CLI Utilities</a>
+        <a href="fs-utils.html" class="d-b pq pl">File System Utilities</a>
+        <a href="examples.html" class="d-b pq pl">Examples & Demos</a>
+    </menu>
+  </k-aside>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Aside.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Main.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Nav.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Icon.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/ThemeSwitcher.js" type="module"></script>
+  <script>
+    document.getElementById('toggleNavSideMenu').addEventListener('click', async () => {
+      await window.customElements.whenDefined('k-aside');
+      document.getElementById('navSideMenu').toggle();
+    });
+    document.addEventListener('click', function(e) {
+      if (e.target.matches('a[href^="#"]')) {
+        e.preventDefault();
+        const targetId = e.target.getAttribute('href').replace('#', '');
+        const target = document.getElementById(targetId);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth' });
+          const url = window.location.pathname + window.location.search + '#' + targetId;
+          history.replaceState(null, '', url);
+        }
+      }
+    });
+  </script>
+
+	<main>
+		<h1 class="ta-center">Configuration</h1>
+		
+    <p>Customize Kempo Server's behavior with a simple JSON configuration file.</p>
+
+    <h2>Configuration File</h2>
+    <div class="callout warning">
+      <strong>Important:</strong> The configuration file must be placed <strong>inside the server root directory</strong> (the folder specified by <code>--root</code>). For example, if you run <code>kempo-server --root public</code>, your config file should be at <code>public/.config.json</code> or <code>public/dev.config.json</code>, not in the project root.
+    </div>
+    <p>To configure the server, create a configuration file (by default <code>.config.json</code>) within the root directory of your server (<code>public</code> in the start example). You can specify a different configuration file using the <code>--config</code> flag:</p>
+    <pre><code class="hljs bash"># Use default .config.json<br />kempo-server --root public<br /><br /># Use custom config file<br />kempo-server --root public --config staging.config.json<br /><br /># Use absolute path<br />kempo-server --root public --config /etc/kempo/production.config.json</code></pre>
+    <p>This json file can have any of the following properties. Any property not defined will use the default configuration.</p>
+
+    <h2>Configuration Options</h2>
+    <ul>
+      <li><a href="#allowedMimes">allowedMimes</a> - File types that can be served</li>
+      <li><a href="#disallowedRegex">disallowedRegex</a> - Patterns for paths that should be blocked</li>
+      <li><a href="#customRoutes">customRoutes</a> - Custom route mappings</li>
+      <li><a href="#routeFiles">routeFiles</a> - Files that should be treated as route handlers</li>
+      <li><a href="#noRescanPaths">noRescanPaths</a> - Paths that should not trigger file system rescans</li>
+      <li><a href="#maxRescanAttempts">maxRescanAttempts</a> - Maximum number of rescan attempts</li>
+      <li><a href="#maxBodySize">maxBodySize</a> - Maximum request body size in bytes</li>
+      <li><a href="#cache">cache</a> - Module caching configuration</li>
+      <li><a href="#middleware">middleware</a> - Middleware configuration</li>
+    </ul>
+
+    <h3 id="allowedMimes">allowedMimes</h3>
+    <p>An object mapping file extensions to their MIME types and encoding. Each value is an object with <code>mime</code> and <code>encoding</code> properties. Files with extensions not in this list will not be served.</p>
+    <pre><code class="hljs json">{
+  "allowedMimes": {
+    "html": { "mime": "text/html", "encoding": "utf8" },
+    "css": { "mime": "text/css", "encoding": "utf8" },
+    "js": { "mime": "application/javascript", "encoding": "utf8" },
+    "json": { "mime": "application/json", "encoding": "utf8" },
+    "png": { "mime": "image/png", "encoding": "binary" },
+    "jpg": { "mime": "image/jpeg", "encoding": "binary" },
+    "jpeg": { "mime": "image/jpeg", "encoding": "binary" },
+    "gif": { "mime": "image/gif", "encoding": "binary" },
+    "svg": { "mime": "image/svg+xml", "encoding": "utf8" },
+    "woff": { "mime": "font/woff", "encoding": "binary" },
+    "woff2": { "mime": "font/woff2", "encoding": "binary" }
+  }
+}</code></pre>
+
+    <h3 id="disallowedRegex">disallowedRegex</h3>
+    <p>An array of regular expressions that match paths that should never be served. This provides security by preventing access to sensitive files.</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"disallowedRegex"</span>: [<br />    <span class="hljs-string">"^/\\..*"</span>,        <span class="hljs-comment">// Hidden files (starting with .)</span><br />    <span class="hljs-string">"\\.env$"</span>,        <span class="hljs-comment">// Environment files</span><br />    <span class="hljs-string">"\\.config$"</span>,     <span class="hljs-comment">// Configuration files</span><br />    <span class="hljs-string">"password"</span>,      <span class="hljs-comment">// Files containing "password"</span><br />    <span class="hljs-string">"node_modules"</span>,  <span class="hljs-comment">// Node modules directory</span><br />    <span class="hljs-string">"\\.git"</span>          <span class="hljs-comment">// Git directory</span><br />  ]<br />}</code></pre>
+
+    <h3 id="routeFiles">routeFiles</h3>
+    <p>An array of filenames that should be treated as route handlers and executed as JavaScript modules.</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"routeFiles"</span>: [<br />    <span class="hljs-string">"GET.js"</span>,<br />    <span class="hljs-string">"POST.js"</span>,<br />    <span class="hljs-string">"PUT.js"</span>,<br />    <span class="hljs-string">"DELETE.js"</span>,<br />    <span class="hljs-string">"PATCH.js"</span>,<br />    <span class="hljs-string">"HEAD.js"</span>,<br />    <span class="hljs-string">"OPTIONS.js"</span>,<br />    <span class="hljs-string">"index.js"</span><br />  ]<br />}</code></pre>
+
+    <h3 id="noRescanPaths">noRescanPaths</h3>
+    <p>An array of regex patterns for paths that should not trigger a file system rescan. This improves performance for common static assets.</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"noRescanPaths"</span>: [<br />    <span class="hljs-string">"/favicon\\.ico$"</span>,<br />    <span class="hljs-string">"/robots\\.txt$"</span>,<br />    <span class="hljs-string">"\\.map$"</span>,<br />    <span class="hljs-string">"\\.css$"</span>,<br />    <span class="hljs-string">"\\.js$"</span>,<br />    <span class="hljs-string">"\\.png$"</span>,<br />    <span class="hljs-string">"\\.jpg$"</span>,<br />    <span class="hljs-string">"\\.jpeg$"</span>,<br />    <span class="hljs-string">"\\.gif$"</span><br />  ]<br />}</code></pre>
+
+    <h3 id="customRoutes">customRoutes</h3>
+    <p>An object mapping custom route paths to file paths. Useful for aliasing or serving files from outside the document root.</p>
+    
+    <div class="callout info">
+      <strong>Path Resolution:</strong> All paths in <code>customRoutes</code> are resolved <strong>relative to the config file's location</strong> (which is the server root). To reference files outside the server root (like <code>node_modules</code> or a <code>src</code> folder), use <code>../</code> to navigate up to the project root.
+    </div>
+    
+    <div class="callout info">
+      <strong>Route Priority:</strong> Custom routes take priority over files that exist in the directory structure. If you have both <code>public/dist/app.js</code> and a custom route <code>"/dist/**": "../src/**"</code>, the custom route will be used and the file will be served from <code>src/</code>.
+    </div>
+    
+    <h4>Basic Routes</h4>
+    <p>Map specific paths to files:</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"customRoutes"</span>: {<br />    <span class="hljs-attr">"/vendor/bootstrap.css"</span>: <span class="hljs-string">"./node_modules/bootstrap/dist/css/bootstrap.min.css"</span>,<br />    <span class="hljs-attr">"/api/status"</span>: <span class="hljs-string">"./status.js"</span>,<br />    <span class="hljs-attr">"/health"</span>: <span class="hljs-string">"./health-check.js"</span><br />  }<br />}</code></pre>
+
+    <h4>Wildcard Routes</h4>
+    <p>Wildcard routes allow you to map entire directory structures using the <code>*</code> wildcard:</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"customRoutes"</span>: {<br />    <span class="hljs-attr">"kempo/*"</span>: <span class="hljs-string">"./node_modules/kempo/dist/*"</span>,<br />    <span class="hljs-attr">"assets/*"</span>: <span class="hljs-string">"./static-files/*"</span>,<br />    <span class="hljs-attr">"docs/*"</span>: <span class="hljs-string">"./documentation/*"</span>,<br />    <span class="hljs-attr">"lib/*"</span>: <span class="hljs-string">"./node_modules/my-library/build/*"</span><br />  }<br />}</code></pre>
+
+    <p>With wildcard routes:</p>
+    <ul>
+      <li><code>kempo/styles.css</code> would serve <code>./node_modules/kempo/dist/styles.css</code></li>
+      <li><code>assets/logo.png</code> would serve <code>./static-files/logo.png</code></li>
+      <li><code>docs/readme.md</code> would serve <code>./documentation/readme.md</code></li>
+      <li><code>lib/utils.js</code> would serve <code>./node_modules/my-library/build/utils.js</code></li>
+    </ul>
+    <h4>Wildcard Syntax</h4>
+    <ul>
+      <li><code>*</code> - Matches a single path segment (anything between <code>/</code> characters)</li>
+      <li><code>**</code> - Matches recursively (any depth of subdirectories)</li>
+    </ul>
+    <p>Use <code>**</code> when you want to redirect an entire directory tree. Multiple wildcards can be used in a single route pattern.</p>
+    
+    <h4>Common Use Case: Dev vs Production Builds</h4>
+    <p>A common pattern is to serve source files during development but built/minified files in production. Given this project structure:</p>
+    <pre><code class="hljs">project/
+├── src/                    # Source files
+│   └── app.js
+├── node_modules/
+├── public/                 # Server root (--root public)
+│   ├── dev.config.json     # Config lives HERE (inside server root)
+│   ├── dist/               # Built files
+│   │   └── app.js
+│   └── index.html</code></pre>
+    <p>Your <code>dev.config.json</code> can redirect <code>/dist/**</code> requests to serve from <code>src/</code> instead:</p>
+    <pre><code class="hljs json">{
+  "customRoutes": {
+    "/dist/**": "../src/**",
+    "/kempo-ui/**": "../node_modules/kempo-ui/**"
+  }
+}</code></pre>
+    <p>Now requests to <code>/dist/app.js</code> will serve <code>../src/app.js</code> (the unminified source), while production uses the actual <code>dist/</code> files.</p>
+
+    <h4>Directory Resolution</h4>
+    <p>When a custom route (basic or wildcard) resolves to a directory, the server looks for files inside it using the same priority as normal file-based routing:</p>
+    <ol>
+      <li><code>METHOD.js</code> (e.g. <code>GET.js</code>, <code>POST.js</code>) &mdash; executed as a route module</li>
+      <li><code>METHOD.html</code> (e.g. <code>GET.html</code>) &mdash; served as a static file</li>
+      <li><code>index.js</code> &mdash; executed as a route module</li>
+      <li><code>index.html</code> / <code>index.htm</code> &mdash; served as a static file</li>
+    </ol>
+    <p>This means wildcard routes like <code>"/api/**": "../api/**"</code> fully support API directories containing route files (<code>GET.js</code>, <code>POST.js</code>, etc.), not just static files.</p>
+    <p>If the resolved path is a file whose name matches <code>routeFiles</code> (e.g. <code>GET.js</code>), it will be executed as a route module rather than served as static content.</p>
+
+    <h3 id="maxRescanAttempts">maxRescanAttempts</h3>
+    <p>The maximum number of times to attempt rescanning the file system when a file is not found. Defaults to 3.</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"maxRescanAttempts"</span>: <span class="hljs-number">3</span><br />}</code></pre>
+
+    <h3 id="maxBodySize">maxBodySize</h3>
+    <p>Maximum allowed request body size in bytes. If a request body exceeds this limit, the server responds with <code>413 Payload Too Large</code> before the route handler runs. Defaults to <code>1048576</code> (1 MB).</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"maxBodySize"</span>: <span class="hljs-number">1048576</span><br />}</code></pre>
+
+    <h3 id="middleware">middleware</h3>
+    <p>Configuration for built-in and custom middleware. Middleware runs before your route handlers and can modify requests, responses, or handle requests entirely.</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"middleware"</span>: {<br />    <span class="hljs-attr">"cors"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"origin"</span>: <span class="hljs-string">"*"</span><br />    },<br />    <span class="hljs-attr">"compression"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span><br />    },<br />    <span class="hljs-attr">"custom"</span>: [<span class="hljs-string">"./middleware/auth.js"</span>]<br />  }<br />}</code></pre>
+
+    <h2>Complete Configuration Example</h2>
+    <p>Here's a complete example of a <code>.config.json</code> file:</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"allowedMimes"</span>: {<br />    <span class="hljs-attr">"html"</span>: <span class="hljs-string">"text/html"</span>,<br />    <span class="hljs-attr">"css"</span>: <span class="hljs-string">"text/css"</span>,<br />    <span class="hljs-attr">"js"</span>: <span class="hljs-string">"application/javascript"</span>,<br />    <span class="hljs-attr">"json"</span>: <span class="hljs-string">"application/json"</span>,<br />    <span class="hljs-attr">"png"</span>: <span class="hljs-string">"image/png"</span>,<br />    <span class="hljs-attr">"jpg"</span>: <span class="hljs-string">"image/jpeg"</span>,<br />    <span class="hljs-attr">"jpeg"</span>: <span class="hljs-string">"image/jpeg"</span>,<br />    <span class="hljs-attr">"gif"</span>: <span class="hljs-string">"image/gif"</span>,<br />    <span class="hljs-attr">"svg"</span>: <span class="hljs-string">"image/svg+xml"</span>,<br />    <span class="hljs-attr">"woff"</span>: <span class="hljs-string">"font/woff"</span>,<br />    <span class="hljs-attr">"woff2"</span>: <span class="hljs-string">"font/woff2"</span><br />  },<br />  <span class="hljs-attr">"disallowedRegex"</span>: [<br />    <span class="hljs-string">"^/\\..*"</span>,<br />    <span class="hljs-string">"\\.env$"</span>,<br />    <span class="hljs-string">"\\.config$"</span>,<br />    <span class="hljs-string">"password"</span>,<br />    <span class="hljs-string">"node_modules"</span>,<br />    <span class="hljs-string">"\\.git"</span><br />  ],<br />  <span class="hljs-attr">"routeFiles"</span>: [<br />    <span class="hljs-string">"GET.js"</span>,<br />    <span class="hljs-string">"POST.js"</span>,<br />    <span class="hljs-string">"PUT.js"</span>,<br />    <span class="hljs-string">"DELETE.js"</span>,<br />    <span class="hljs-string">"PATCH.js"</span>,<br />    <span class="hljs-string">"HEAD.js"</span>,<br />    <span class="hljs-string">"OPTIONS.js"</span>,<br />    <span class="hljs-string">"index.js"</span><br />  ],<br />  <span class="hljs-attr">"noRescanPaths"</span>: [<br />    <span class="hljs-string">"/favicon\\.ico$"</span>,<br />    <span class="hljs-string">"/robots\\.txt$"</span>,<br />    <span class="hljs-string">"\\.map$"</span>,<br />    <span class="hljs-string">"\\.css$"</span>,<br />    <span class="hljs-string">"\\.js$"</span>,<br />    <span class="hljs-string">"\\.png$"</span>,<br />    <span class="hljs-string">"\\.jpg$"</span>,<br />    <span class="hljs-string">"\\.jpeg$"</span>,<br />    <span class="hljs-string">"\\.gif$"</span><br />  ],<br />  <span class="hljs-attr">"customRoutes"</span>: {<br />    <span class="hljs-attr">"/vendor/bootstrap.css"</span>: <span class="hljs-string">"./node_modules/bootstrap/dist/css/bootstrap.min.css"</span>,<br />    <span class="hljs-attr">"/vendor/jquery.js"</span>: <span class="hljs-string">"./node_modules/jquery/dist/jquery.min.js"</span>,<br />    <span class="hljs-attr">"assets/*"</span>: <span class="hljs-string">"./static-files/*"</span>,<br />    <span class="hljs-attr">"docs/*"</span>: <span class="hljs-string">"./documentation/*"</span><br />  },<br />  <span class="hljs-attr">"maxRescanAttempts"</span>: <span class="hljs-number">3</span>,<br />  <span class="hljs-attr">"middleware"</span>: {<br />    <span class="hljs-attr">"cors"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"origin"</span>: <span class="hljs-string">"*"</span>,<br />      <span class="hljs-attr">"methods"</span>: [<span class="hljs-string">"GET"</span>, <span class="hljs-string">"POST"</span>, <span class="hljs-string">"PUT"</span>, <span class="hljs-string">"DELETE"</span>],<br />      <span class="hljs-attr">"headers"</span>: [<span class="hljs-string">"Content-Type"</span>, <span class="hljs-string">"Authorization"</span>]<br />    },<br />    <span class="hljs-attr">"compression"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"threshold"</span>: <span class="hljs-number">1024</span><br />    },<br />    <span class="hljs-attr">"security"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"headers"</span>: {<br />        <span class="hljs-attr">"X-Content-Type-Options"</span>: <span class="hljs-string">"nosniff"</span>,<br />        <span class="hljs-attr">"X-Frame-Options"</span>: <span class="hljs-string">"DENY"</span>,<br />        <span class="hljs-attr">"X-XSS-Protection"</span>: <span class="hljs-string">"1; mode=block"</span><br />      }<br />    },<br />    <span class="hljs-attr">"custom"</span>: [<br />      <span class="hljs-string">"./middleware/auth.js"</span>,<br />      <span class="hljs-string">"./middleware/logging.js"</span><br />    ]<br />  }<br />}</code></pre>
+
+    <h2>Environment-Specific Configuration</h2>
+    <p>You can create different configuration files for different environments and specify them using the <code>--config</code> flag:</p>
+    
+    <h3>Development Configuration</h3>
+    <p>Create <code>.config.dev.json</code> for development:</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"allowedMimes"</span>: {<br />    <span class="hljs-attr">"html"</span>: <span class="hljs-string">"text/html"</span>,<br />    <span class="hljs-attr">"css"</span>: <span class="hljs-string">"text/css"</span>,<br />    <span class="hljs-attr">"js"</span>: <span class="hljs-string">"application/javascript"</span>,<br />    <span class="hljs-attr">"json"</span>: <span class="hljs-string">"application/json"</span>,<br />    <span class="hljs-attr">"map"</span>: <span class="hljs-string">"application/json"</span><br />  },<br />  <span class="hljs-attr">"middleware"</span>: {<br />    <span class="hljs-attr">"cors"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"origin"</span>: <span class="hljs-string">"*"</span><br />    },<br />    <span class="hljs-attr">"compression"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">false</span><br />    }<br />  }<br />}</code></pre>
+    <pre><code class="hljs json">{
+  "allowedMimes": {
+    "html": { "mime": "text/html", "encoding": "utf8" },
+    "css": { "mime": "text/css", "encoding": "utf8" },
+    "js": { "mime": "application/javascript", "encoding": "utf8" },
+    "json": { "mime": "application/json", "encoding": "utf8" },
+    "map": { "mime": "application/json", "encoding": "utf8" }
+  },
+  "middleware": {
+    "cors": {
+      "enabled": true,
+      "origin": "*"
+    },
+    "compression": {
+      "enabled": false
+    }
+  }
+}</code></pre>
+    <pre><code class="hljs json">{
+  "allowedMimes": {
+    "html": { "mime": "text/html", "encoding": "utf8" },
+    "css": { "mime": "text/css", "encoding": "utf8" },
+    "js": { "mime": "application/javascript", "encoding": "utf8" },
+    "json": { "mime": "application/json", "encoding": "utf8" },
+    "png": { "mime": "image/png", "encoding": "binary" },
+    "jpg": { "mime": "image/jpeg", "encoding": "binary" }
+  },
+  "disallowedRegex": [
+    "^/\\..*",
+    "\\.env$",
+    "\\.config$",
+    "password",
+    "node_modules",
+    "\\.git",
+    "\\.map$"
+  ],
+  "middleware": {
+    "cors": {
+      "enabled": true,
+      "origin": "https://yourdomain.com"
+    },
+    "compression": {
+      "enabled": true,
+      "threshold": 1024
+    },
+    "security": {
+      "enabled": true,
+      "headers": {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "X-XSS-Protection": "1; mode=block",
+        "Strict-Transport-Security": "max-age=31536000; includeSubDomains"
+      }
+    }
+  }
+}</code></pre>
+    <p>Use with: <code>kempo-server --root public --config .config.dev.json</code></p>
+
+    <h3>Production Configuration</h3>
+    <p>Create <code>.config.prod.json</code> for production:</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"allowedMimes"</span>: {<br />    <span class="hljs-attr">"html"</span>: <span class="hljs-string">"text/html"</span>,<br />    <span class="hljs-attr">"css"</span>: <span class="hljs-string">"text/css"</span>,<br />    <span class="hljs-attr">"js"</span>: <span class="hljs-string">"application/javascript"</span>,<br />    <span class="hljs-attr">"json"</span>: <span class="hljs-string">"application/json"</span>,<br />    <span class="hljs-attr">"png"</span>: <span class="hljs-string">"image/png"</span>,<br />    <span class="hljs-attr">"jpg"</span>: <span class="hljs-string">"image/jpeg"</span><br />  },<br />  <span class="hljs-attr">"disallowedRegex"</span>: [<br />    <span class="hljs-string">"^/\\..*"</span>,<br />    <span class="hljs-string">"\\.env$"</span>,<br />    <span class="hljs-string">"\\.config$"</span>,<br />    <span class="hljs-string">"password"</span>,<br />    <span class="hljs-string">"node_modules"</span>,<br />    <span class="hljs-string">"\\.git"</span>,<br />    <span class="hljs-string">"\\.map$"</span><br />  ],<br />  <span class="hljs-attr">"middleware"</span>: {<br />    <span class="hljs-attr">"cors"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"origin"</span>: <span class="hljs-string">"https://yourdomain.com"</span><br />    },<br />    <span class="hljs-attr">"compression"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"threshold"</span>: <span class="hljs-number">1024</span><br />    },<br />    <span class="hljs-attr">"security"</span>: {<br />      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />      <span class="hljs-attr">"headers"</span>: {<br />        <span class="hljs-attr">"X-Content-Type-Options"</span>: <span class="hljs-string">"nosniff"</span>,<br />        <span class="hljs-attr">"X-Frame-Options"</span>: <span class="hljs-string">"DENY"</span>,<br />        <span class="hljs-attr">"X-XSS-Protection"</span>: <span class="hljs-string">"1; mode=block"</span>,<br />        <span class="hljs-attr">"Strict-Transport-Security"</span>: <span class="hljs-string">"max-age=31536000; includeSubDomains"</span><br />      }<br />    }<br />  }<br />}</code></pre>
+    <p>Use with: <code>kempo-server --root public --config .config.prod.json</code></p>
+
+    <h3 id="cache">cache</h3>
+    <p>Module caching configuration to improve performance by keeping compiled JavaScript modules in memory. The cache supports LRU eviction, TTL expiration, memory monitoring, and automatic file watching.</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"cache"</span>: {<br />    <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />    <span class="hljs-attr">"maxSize"</span>: <span class="hljs-number">1000</span>,<br />    <span class="hljs-attr">"ttlMs"</span>: <span class="hljs-number">3600000</span>,<br />    <span class="hljs-attr">"maxMemoryUsageMB"</span>: <span class="hljs-number">500</span>,<br />    <span class="hljs-attr">"checkIntervalMs"</span>: <span class="hljs-number">30000</span>,<br />    <span class="hljs-attr">"fileWatching"</span>: <span class="hljs-literal">true</span><br />  }<br />}</code></pre>
+
+    <h4>Cache Configuration Options</h4>
+    <table>
+      <thead>
+        <tr>
+          <th>Option</th>
+          <th>Type</th>
+          <th>Default</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>enabled</code></td>
+          <td>boolean</td>
+          <td>true</td>
+          <td>Enable/disable module caching system</td>
+        </tr>
+        <tr>
+          <td><code>maxSize</code></td>
+          <td>number</td>
+          <td>1000</td>
+          <td>Maximum number of modules to cache (LRU eviction)</td>
+        </tr>
+        <tr>
+          <td><code>ttlMs</code></td>
+          <td>number</td>
+          <td>3600000</td>
+          <td>Time-to-live in milliseconds (default: 1 hour)</td>
+        </tr>
+        <tr>
+          <td><code>maxMemoryUsageMB</code></td>
+          <td>number</td>
+          <td>500</td>
+          <td>Maximum memory usage in MB before triggering cleanup</td>
+        </tr>
+        <tr>
+          <td><code>checkIntervalMs</code></td>
+          <td>number</td>
+          <td>30000</td>
+          <td>Memory check interval in milliseconds (default: 30 seconds)</td>
+        </tr>
+        <tr>
+          <td><code>fileWatching</code></td>
+          <td>boolean</td>
+          <td>true</td>
+          <td>Watch files for changes and auto-invalidate cache</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4>Environment-Specific Cache Settings</h4>
+    <h5>Development (.config.dev.json)</h5>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"cache"</span>: {<br />    <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />    <span class="hljs-attr">"maxSize"</span>: <span class="hljs-number">100</span>,<br />    <span class="hljs-attr">"ttlMs"</span>: <span class="hljs-number">300000</span>,<br />    <span class="hljs-attr">"fileWatching"</span>: <span class="hljs-literal">true</span><br />  }<br />}</code></pre>
+
+    <h5>Production (.config.prod.json)</h5>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"cache"</span>: {<br />    <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />    <span class="hljs-attr">"maxSize"</span>: <span class="hljs-number">5000</span>,<br />    <span class="hljs-attr">"ttlMs"</span>: <span class="hljs-number">7200000</span>,<br />    <span class="hljs-attr">"maxMemoryUsageMB"</span>: <span class="hljs-number">1000</span>,<br />    <span class="hljs-attr">"fileWatching"</span>: <span class="hljs-literal">false</span><br />  }<br />}</code></pre>
+
+    <h4>Cache Monitoring</h4>
+    <p>Access cache statistics and management via admin endpoints:</p>
+    <ul>
+      <li><code>GET /_admin/cache</code> - View cache statistics (hits, misses, size, memory usage)</li>
+      <li><code>DELETE /_admin/cache</code> - Clear all cached modules</li>
+    </ul>
+
+    <p>For detailed cache usage and configuration examples, see the <a href="caching.html">Caching Guide</a>.</p>
+
+    <h3>Package.json Scripts</h3>
+    <p>Add environment-specific scripts to your <code>package.json</code>:</p>
+    <pre><code class="hljs json">{<br />  <span class="hljs-attr">"scripts"</span>: {<br />    <span class="hljs-attr">"start"</span>: <span class="hljs-string">"kempo-server --root public"</span>,<br />    <span class="hljs-attr">"start:dev"</span>: <span class="hljs-string">"kempo-server --root public --config .config.dev.json --verbose"</span>,<br />    <span class="hljs-attr">"start:staging"</span>: <span class="hljs-string">"kempo-server --root public --config .config.staging.json"</span>,<br />    <span class="hljs-attr">"start:prod"</span>: <span class="hljs-string">"kempo-server --root public --config .config.prod.json"</span><br />  }<br />}</code></pre>
+
+    <h2>Configuration Tips</h2>
+    
+    <h3>Security Best Practices</h3>
+    <ul>
+      <li>Always include patterns to block sensitive files in <code>disallowedRegex</code></li>
+      <li>Use strict CORS settings in production</li>
+      <li>Enable security headers middleware</li>
+      <li>Don't serve source maps in production</li>
+    </ul>
+
+    <h3>Performance Optimization</h3>
+    <ul>
+      <li>Enable module caching with appropriate <code>maxSize</code> and <code>ttlMs</code> settings</li>
+      <li>Use <code>noRescanPaths</code> for static assets to improve performance</li>
+      <li>Enable compression for larger files</li>
+      <li>Use custom routes to serve files from CDN or optimized locations</li>
+      <li>Limit <code>maxRescanAttempts</code> to prevent excessive file system scanning</li>
+      <li>Configure <code>maxMemoryUsageMB</code> to prevent memory issues in production</li>
+    </ul>
+
+    <h3>Development vs Production</h3>
+    <ul>
+      <li>Enable source maps in development, disable in production</li>
+      <li>Use relaxed CORS in development, strict in production</li>
+      <li>Enable compression in production for better performance</li>
+      <li>Add more security headers in production</li>
+      <li>Use smaller cache sizes in development, larger in production</li>
+      <li>Enable file watching in development, disable in production for stability</li>
+      <li>Use shorter TTL in development for faster iteration</li>
+    </ul>
+	
+	</main>
+	<div style="height:25vh"></div>
+	<script
+		type="module"
+		src="https://cdn.jsdelivr.net/npm/kempo-ui@0.0.42/dist/components/Import.js"
+	></script>
+</body>
+</html>

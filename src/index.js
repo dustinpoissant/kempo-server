@@ -7,7 +7,7 @@ const flags = getFlags(process.argv.slice(2), {
   port: 3000,
   logging: 2,
   root: './',
-  config: '.config.json'
+  config: '.config.js'
 }, {
   p: 'port',
   l: 'logging',

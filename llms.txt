@@ -9,7 +9,7 @@ npm install kempo-server
 npx kempo-server -r ./my-root -p 3000
 ```
 
-Flags: `--root`/`-r` (default `./`), `--port`/`-p` (default `3000`), `--logging`/`-l` (0-4 or silent/minimal/verbose/debug, default 2), `--config`/`-c` path to config file (default `.config.json`).
+Flags: `--root`/`-r` (default `./`), `--port`/`-p` (default `3000`), `--logging`/`-l` (0-4 or silent/minimal/verbose/debug, default 2), `--config`/`-c` path to config file (default `.config.js`, falls back to `.config.json`).
 
 ## File-Based Routing
 
@@ -68,32 +68,39 @@ export default async (req, res) => {
 | `res.cookie(name, val, opts)` | Set cookie; opts: maxAge, domain, path, secure, httpOnly, sameSite |
 | `res.clearCookie(name, opts)` | Clear cookie |
 
-## Configuration (.config.json)
+## Configuration (.config.js)
 
-```json
-{
-  "allowedMimes": { ".ext": { "mime": "type/subtype", "encoding": "utf8" } },
-  "disallowedRegex": ["pattern"],
-  "customRoutes": { "/old": "/new", "/spa/*": "/app.html" },
-  "routeFiles": ["GET.js", "index.js"],
-  "noRescanPaths": ["pattern"],
-  "maxRescanAttempts": 3,
-  "middleware": {
-    "cors": { "enabled": false, "origin": "*", "methods": "GET,POST", "headers": "*" },
-    "compression": { "enabled": false, "threshold": 1024 },
-    "rateLimit": { "enabled": false, "windowMs": 60000, "max": 100 },
-    "security": { "enabled": true, "headers": { "X-Frame-Options": "DENY" } },
-    "logging": { "enabled": true },
-    "custom": ["/middleware/auth.js"]
+```js
+export default {
+  allowedMimes: { '.ext': { mime: 'type/subtype', encoding: 'utf8' } },
+  disallowedRegex: ['pattern'],
+  customRoutes: { '/old': '/new', '/spa/*': '/app.html' },
+  routeFiles: ['GET.js', 'index.js'],
+  noRescanPaths: ['pattern'],
+  maxRescanAttempts: 3,
+  middleware: {
+    cors: { enabled: false, origin: '*', methods: 'GET,POST', headers: '*' },
+    compression: { enabled: false, threshold: 1024 },
+    rateLimit: { enabled: false, windowMs: 60000, max: 100 },
+    security: { enabled: true, headers: { 'X-Frame-Options': 'DENY' } },
+    logging: { enabled: true },
+    custom: ['/middleware/auth.js']
   },
-  "cache": {
-    "enabled": false,
-    "maxSize": 500,
-    "maxMemoryMB": 256,
-    "ttlMs": 300000,
-    "watchFiles": true
+  cache: {
+    enabled: false,
+    maxSize: 500,
+    maxMemoryMB: 256,
+    ttlMs: 300000,
+    watchFiles: true
+  },
+  templating: {
+    preRender: false,
+    ssr: false,
+    globals: {},
+    state: {},
+    maxFragmentDepth: 10
   }
-}
+};
 ```
 
 `customRoutes` values: exact path string or wildcard pattern mapped to a file or directory path. `*` matches one path segment; `**` matches multiple. When a route resolves to a directory, the server looks for route files inside it using the same priority as normal routing: `METHOD.js`, `METHOD.html`, `index.js`, `index.html`.
@@ -122,11 +129,67 @@ posts/[slug]/index.js  → /posts/my-title   (req.params.slug === 'my-title')
 
 Use `customRoutes` to redirect all page paths to the SPA entry:
 
-```json
-"customRoutes": {
-  "/": "/app.html",
-  "/*.html": "/app.html"
-}
+```js
+export default {
+  customRoutes: {
+    '/': '/app.html',
+    '/*.html': '/app.html'
+  }
+};
+```
+
+## Templating
+
+XML-based templating system with templates, pages, fragments, variables, conditionals, and loops.
+
+### File Conventions
+
+- `*.template.html` — Layout file with `<location name="...">` placeholders
+- `*.page.html` — Content file with `<page template="name">` root and `<content location="...">` blocks
+- `*.fragment.html` — Reusable snippet included via `<fragment name="..." />`
+
+Templates and fragments are found by walking up from the page file's directory to the root.
+
+### Example
+
+**default.template.html:**
+```html
+<html><head><title>{{title}}</title></head>
+<body><fragment name="nav" /><main><location name="main" /></main></body></html>
+```
+
+**index.page.html:**
+```html
+<page template="default" title="Home">
+  <content location="main"><h1>Welcome</h1></content>
+</page>
+```
+
+### Built-in Variables
+
+`{{pathToRoot}}` `{{year}}` `{{date}}` `{{datetime}}` `{{timestamp}}` `{{version}}` `{{env}}`
+
+### Conditionals and Loops
+
+```html
+<if condition="count > 0">{{count}} items</if>
+<foreach in="items" as="item"><li>{{item.name}}</li></foreach>
+```
+
+Conditions: `===` `!==` `>` `<` `>=` `<=` `&&` `||` `!` parentheses, string/number/boolean literals, dot-path variables.
+
+### CLI Rendering
+
+```bash
+kempo-render <inputDir> [outputDir] [stateFile]
+```
+
+### Programmatic API
+
+```js
+import { renderPage, renderDir } from 'kempo-server/templating';
+const html = await renderPage(pageFilePath, rootDir, globals, state, maxDepth);
+const count = await renderDir(inputDir, outputDir, globals, state, maxDepth);
 ```
 
 ## Utility Modules
@@ -134,7 +197,10 @@ Use `customRoutes` to redirect all page paths to the SPA entry:
 ```js
 import rescan from 'kempo-server/rescan';
 // rescan() → Promise<number> — triggers a file rescan on the running server, returns new file count
-// Works from anywhere in the same Node process: route handlers, middleware, file watchers, scheduled tasks
+
+import { renderPage, renderDir } from 'kempo-server/templating';
+// renderPage(pageFilePath, rootDir, globals?, state?, maxDepth?) → Promise<string>
+// renderDir(inputDir, outputDir, globals?, state?, maxDepth?) → Promise<number>
 
 import { getArgs } from 'kempo-server/utils/cli';
 // getArgs(mapping?) → parsed argv object
