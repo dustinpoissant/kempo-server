@@ -16,25 +16,47 @@ const extractAttrs = tagString => {
 */
 const extractContentBlocks = xml => {
   const blocks = {};
-  const re = /<content(?:\s+location="([^"]*)")?\s*>([\s\S]*?)<\/content>/g;
+  const re = /<content(?:\s+([^>]*))?\s*>([\s\S]*?)<\/content>/g;
   let match;
   while((match = re.exec(xml)) !== null){
-    const name = match[1] || 'default';
-    blocks[name] = (blocks[name] || '') + match[2];
+    const attrs = extractAttrs(match[1] || '');
+    const name = attrs.location || 'default';
+    const priority = parseInt(attrs.priority || '0', 10);
+    if(!blocks[name]) blocks[name] = [];
+    blocks[name].push({html: match[2], priority});
   }
   return blocks;
 };
 
 /*
+  Content Block Merging
+*/
+const mergeContentBlocks = (...maps) => {
+  const merged = {};
+  for(const map of maps){
+    for(const [name, entries] of Object.entries(map)){
+      if(!merged[name]) merged[name] = [];
+      merged[name].push(...entries);
+    }
+  }
+  return merged;
+};
+
+/*
   Location Replacement
 */
+const resolveLocation = (entries) => {
+  if(!entries?.length) return null;
+  return [...entries].sort((a, b) => b.priority - a.priority).map(e => e.html).join('');
+};
+
 const replaceLocations = (html, contentMap) =>
   html
     .replace(/<location(?:\s+name="([^"]*)")?>([\s\S]*?)<\/location>/g, (_, name, fallback) =>
-      contentMap[name || 'default'] ?? fallback
+      resolveLocation(contentMap[name || 'default']) ?? fallback
     )
     .replace(/<location(?:\s+name="([^"]*)")?\s*\/>/g, (_, name) =>
-      contentMap[name || 'default'] ?? ''
+      resolveLocation(contentMap[name || 'default']) ?? ''
     );
 
 /*
@@ -274,6 +296,7 @@ const evalCondition = (expression, vars) => {
 export {
   extractAttrs,
   extractContentBlocks,
+  mergeContentBlocks,
   replaceLocations,
   stripFragmentWrapper,
   resolveVars,

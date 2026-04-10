@@ -1,6 +1,7 @@
 import {
   extractAttrs,
   extractContentBlocks,
+  mergeContentBlocks,
   replaceLocations,
   stripFragmentWrapper,
   resolveVars,
@@ -26,13 +27,33 @@ export default {
   'extractContentBlocks extracts named blocks': ({pass, fail}) => {
     const xml = '<content location="main">Hello</content><content location="sidebar">World</content>';
     const blocks = extractContentBlocks(xml);
-    if(blocks.main !== 'Hello') return fail('main wrong');
-    if(blocks.sidebar !== 'World') return fail('sidebar wrong');
+    if(!Array.isArray(blocks.main) || blocks.main[0].html !== 'Hello') return fail('main wrong');
+    if(!Array.isArray(blocks.sidebar) || blocks.sidebar[0].html !== 'World') return fail('sidebar wrong');
+    pass();
+  },
+  'extractContentBlocks captures priority': ({pass, fail}) => {
+    const xml = '<content location="main" priority="5">hi</content>';
+    const blocks = extractContentBlocks(xml);
+    if(blocks.main[0].priority !== 5) return fail(`priority wrong: ${blocks.main[0].priority}`);
+    pass();
+  },
+  'extractContentBlocks defaults priority to 0': ({pass, fail}) => {
+    const xml = '<content location="main">hi</content>';
+    const blocks = extractContentBlocks(xml);
+    if(blocks.main[0].priority !== 0) return fail(`priority wrong: ${blocks.main[0].priority}`);
+    pass();
+  },
+  'mergeContentBlocks combines maps': ({pass, fail}) => {
+    const a = {main: [{html: 'A', priority: 0}]};
+    const b = {main: [{html: 'B', priority: 0}], sidebar: [{html: 'S', priority: 0}]};
+    const merged = mergeContentBlocks(a, b);
+    if(merged.main.length !== 2) return fail(`main length wrong: ${merged.main.length}`);
+    if(!merged.sidebar) return fail('sidebar missing');
     pass();
   },
   'replaceLocations fills named locations': ({pass, fail}) => {
     const html = '<location name="main" />';
-    const result = replaceLocations(html, {main: '<p>Hi</p>'});
+    const result = replaceLocations(html, {main: [{html: '<p>Hi</p>', priority: 0}]});
     if(result !== '<p>Hi</p>') return fail(`got: ${result}`);
     pass();
   },
@@ -44,8 +65,19 @@ export default {
   },
   'replaceLocations uses content over fallback': ({pass, fail}) => {
     const html = '<location name="main">fallback</location>';
-    const result = replaceLocations(html, {main: 'real'});
+    const result = replaceLocations(html, {main: [{html: 'real', priority: 0}]});
     if(result !== 'real') return fail(`got: ${result}`);
+    pass();
+  },
+  'replaceLocations orders by priority descending': ({pass, fail}) => {
+    const html = '<location name="scripts" />';
+    const entries = [
+      {html: 'low', priority: 1},
+      {html: 'high', priority: 10},
+      {html: 'mid', priority: 5}
+    ];
+    const result = replaceLocations(html, {scripts: entries});
+    if(result !== 'highmidlow') return fail(`got: ${result}`);
     pass();
   },
   'stripFragmentWrapper removes wrapping fragment tag': ({pass, fail}) => {
@@ -210,28 +242,30 @@ export default {
   },
   'extractContentBlocks defaults location to default': ({pass, fail}) => {
     const blocks = extractContentBlocks('<content>Hello</content>');
-    if(blocks.default !== 'Hello') return fail(`got: ${blocks.default}`);
+    if(!Array.isArray(blocks.default) || blocks.default[0].html !== 'Hello') return fail(`got: ${JSON.stringify(blocks.default)}`);
     pass();
   },
   'extractContentBlocks concatenates multiple contents to same location': ({pass, fail}) => {
     const xml = '<content location="main">A</content><content location="main">B</content>';
     const blocks = extractContentBlocks(xml);
-    if(blocks.main !== 'AB') return fail(`got: ${blocks.main}`);
+    if(blocks.main.length !== 2) return fail(`expected 2 entries, got: ${JSON.stringify(blocks.main)}`);
+    if(blocks.main[0].html !== 'A' || blocks.main[1].html !== 'B') return fail(`got: ${JSON.stringify(blocks.main)}`);
     pass();
   },
   'extractContentBlocks concatenates default contents': ({pass, fail}) => {
     const xml = '<content>A</content><content>B</content>';
     const blocks = extractContentBlocks(xml);
-    if(blocks.default !== 'AB') return fail(`got: ${blocks.default}`);
+    if(blocks.default.length !== 2) return fail(`expected 2 entries, got: ${JSON.stringify(blocks.default)}`);
+    if(blocks.default[0].html !== 'A' || blocks.default[1].html !== 'B') return fail(`got: ${JSON.stringify(blocks.default)}`);
     pass();
   },
   'replaceLocations defaults nameless location to default': ({pass, fail}) => {
-    const result = replaceLocations('<location />', {default: 'Hi'});
+    const result = replaceLocations('<location />', {default: [{html: 'Hi', priority: 0}]});
     if(result !== 'Hi') return fail(`got: ${result}`);
     pass();
   },
   'replaceLocations defaults nameless block location to default': ({pass, fail}) => {
-    const result = replaceLocations('<location>fallback</location>', {default: 'Hi'});
+    const result = replaceLocations('<location>fallback</location>', {default: [{html: 'Hi', priority: 0}]});
     if(result !== 'Hi') return fail(`got: ${result}`);
     pass();
   },

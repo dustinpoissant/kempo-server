@@ -184,5 +184,96 @@ export default {
       if(!html.includes(String(new Date().getFullYear()))) return fail(`year missing: ${html}`);
       pass();
     });
+  },
+  'renderPage injects global content into template location': async ({pass, fail}) => {
+    await withTempDir(async dir => {
+      await setupFiles(dir, {
+        'default.template.html': '<head><location name="head" /></head><body><location name="main" /></body>',
+        'site.global.html': '<content location="head"><meta charset="utf-8"></content>',
+        'index.page.html': '<page template="default"><content location="main">hello</content></page>'
+      });
+      const html = await renderPage(path.join(dir, 'index.page.html'), dir);
+      if(!html.includes('<meta charset="utf-8">')) return fail(`global head missing: ${html}`);
+      if(!html.includes('hello')) return fail(`page content missing: ${html}`);
+      pass();
+    });
+  },
+  'renderPage merges page and global content into same location': async ({pass, fail}) => {
+    await withTempDir(async dir => {
+      await setupFiles(dir, {
+        'default.template.html': '<location name="scripts" />',
+        'site.global.html': '<content location="scripts"><script src="analytics.js"></script></content>',
+        'index.page.html': '<page template="default"><content location="scripts"><script src="page.js"></script></content></page>'
+      });
+      const html = await renderPage(path.join(dir, 'index.page.html'), dir);
+      if(!html.includes('analytics.js')) return fail(`global script missing: ${html}`);
+      if(!html.includes('page.js')) return fail(`page script missing: ${html}`);
+      pass();
+    });
+  },
+  'renderPage respects priority ordering — higher number first': async ({pass, fail}) => {
+    await withTempDir(async dir => {
+      await setupFiles(dir, {
+        'default.template.html': '<location name="scripts" />',
+        'site.global.html': '<content location="scripts" priority="10">FIRST</content><content location="scripts" priority="1">LAST</content>',
+        'index.page.html': '<page template="default"></page>'
+      });
+      const html = await renderPage(path.join(dir, 'index.page.html'), dir);
+      if(html.indexOf('FIRST') > html.indexOf('LAST')) return fail(`wrong order: ${html}`);
+      pass();
+    });
+  },
+  'renderPage page content priority beats global at same location': async ({pass, fail}) => {
+    await withTempDir(async dir => {
+      await setupFiles(dir, {
+        'default.template.html': '<location name="scripts" />',
+        'site.global.html': '<content location="scripts" priority="0">global</content>',
+        'index.page.html': '<page template="default"><content location="scripts" priority="5">page</content></page>'
+      });
+      const html = await renderPage(path.join(dir, 'index.page.html'), dir);
+      if(html.indexOf('page') > html.indexOf('global')) return fail(`page should come before global: ${html}`);
+      pass();
+    });
+  },
+  'renderPage fills locations inside page content from globals': async ({pass, fail}) => {
+    await withTempDir(async dir => {
+      await setupFiles(dir, {
+        'default.template.html': '<location name="main" />',
+        'site.global.html': '<content location="badge"><span class="badge">NEW</span></content>',
+        'index.page.html': '<page template="default"><content location="main"><h1>Title</h1><location name="badge" /></content></page>'
+      });
+      const html = await renderPage(path.join(dir, 'index.page.html'), dir);
+      if(!html.includes('<span class="badge">NEW</span>')) return fail(`badge missing: ${html}`);
+      pass();
+    });
+  },
+  'renderPage loads globals from subdirectories': async ({pass, fail}) => {
+    await withTempDir(async dir => {
+      await setupFiles(dir, {
+        'default.template.html': '<location name="head" /><location name="main" />',
+        'sub/site.global.html': '<content location="head">subglobal</content>',
+        'index.page.html': '<page template="default"><content location="main">x</content></page>'
+      });
+      const html = await renderPage(path.join(dir, 'index.page.html'), dir);
+      if(!html.includes('subglobal')) return fail(`subdir global missing: ${html}`);
+      pass();
+    });
+  },
+  'renderDir applies global content to all pages': async ({pass, fail}) => {
+    await withTempDir(async dir => {
+      await setupFiles(dir, {
+        'default.template.html': '<location name="head" /><location name="main" />',
+        'site.global.html': '<content location="head"><meta name="global"></content>',
+        'index.page.html': '<page template="default"><content location="main">home</content></page>',
+        'about.page.html': '<page template="default"><content location="main">about</content></page>'
+      });
+      const outDir = path.join(dir, 'out');
+      await renderDir(dir, outDir);
+      const home = await readFile(path.join(outDir, 'index.html'), 'utf8');
+      const about = await readFile(path.join(outDir, 'about.html'), 'utf8');
+      if(!home.includes('<meta name="global">')) return fail(`home missing global: ${home}`);
+      if(!about.includes('<meta name="global">')) return fail(`about missing global: ${about}`);
+      pass();
+    });
   }
 };

@@ -55,19 +55,22 @@
         <h1 class="tc-primary">Kempo Server</h1>
         <img src="./media/icon128.png" alt="Kempo UI Icon" />
       </a>
-        <h3>Getting Started</h3>
-        <a href="./" class="d-b pq pl">Quick Start</a>
-        <a href="./routing.html" class="d-b pq pl">Routing</a>
-        <a href="./request-response.html" class="d-b pq pl">Request & Response</a>
-        <br /><br />
-        <h3>Advanced Features</h3>
-        <a href="configuration.html" class="d-b pq pl">Configuration</a>
-        <a href="templating.html" class="d-b pq pl">Templating</a>
-        <a href="middleware.html" class="d-b pq pl">Middleware</a>
-        <a href="caching.html" class="d-b pq pl">Module Caching</a>
-        <a href="cli-utils.html" class="d-b pq pl">CLI Utilities</a>
-        <a href="fs-utils.html" class="d-b pq pl">File System Utilities</a>
-        <a href="examples.html" class="d-b pq pl">Examples & Demos</a>
+      
+	<h3 class="mt mb0">Advanced Features</h3>
+	<a href="configuration.html" class="d-b pq pl">Configuration</a>
+	<a href="templating.html" class="d-b pq pl">Templating</a>
+	<a href="middleware.html" class="d-b pq pl">Middleware</a>
+	<a href="caching.html" class="d-b pq pl">Module Caching</a>
+	<a href="cli-utils.html" class="d-b pq pl">CLI Utilities</a>
+	<a href="fs-utils.html" class="d-b pq pl">File System Utilities</a>
+	<a href="examples.html" class="d-b pq pl">Examples & Demos</a>
+
+	<h3 class="mt mb0">Getting Started</h3>
+	<a href="./" class="d-b pq pl">Quick Start</a>
+	<a href="./routing.html" class="d-b pq pl">Routing</a>
+	<a href="./request-response.html" class="d-b pq pl">Request & Response</a>
+	<br /><br />
+
     </menu>
   </k-aside>
   <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Aside.js" type="module"></script>
@@ -304,6 +307,7 @@
     <pre><code class="hljs json">{<br />  <span class="hljs-attr">"cache"</span>: {<br />    <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,<br />    <span class="hljs-attr">"maxSize"</span>: <span class="hljs-number">1000</span>,<br />    <span class="hljs-attr">"ttlMs"</span>: <span class="hljs-number">3600000</span>,<br />    <span class="hljs-attr">"maxMemoryUsageMB"</span>: <span class="hljs-number">500</span>,<br />    <span class="hljs-attr">"checkIntervalMs"</span>: <span class="hljs-number">30000</span>,<br />    <span class="hljs-attr">"fileWatching"</span>: <span class="hljs-literal">true</span><br />  }<br />}</code></pre>
 
     <h4>Cache Configuration Options</h4>
+    <div class="table-wrapper mb">
     <table>
       <thead>
         <tr>
@@ -352,6 +356,7 @@
         </tr>
       </tbody>
     </table>
+    </div>
 
     <h4>Environment-Specific Cache Settings</h4>
     <h5>Development (.config.dev.json)</h5>

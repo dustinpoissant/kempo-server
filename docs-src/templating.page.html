@@ -8,8 +8,14 @@
 				<li><a href="#overview">Overview</a></li>
 				<li><a href="#file-types">File Types</a></li>
 				<li><a href="#templates">Templates</a></li>
-				<li><a href="#pages">Pages</a></li>
+				<li><a href="#pages">Pages</a>
+					<ul>
+						<li><a href="#frontmatter">Frontmatter</a></li>
+					</ul>
+				</li>
 				<li><a href="#fragments">Fragments</a></li>
+				<li><a href="#global-files">Global Files</a></li>
+				<li><a href="#fragments-vs-globals">Fragments vs. Global Files</a></li>
 				<li><a href="#variables">Variables</a></li>
 				<li><a href="#conditionals">Conditionals</a></li>
 				<li><a href="#loops">Loops</a></li>
@@ -20,22 +26,23 @@
 		</nav>
 
 		<h2 id="overview">Overview</h2>
-		<p>The templating system uses three file types that work together:</p>
+		<p>The templating system uses four file types that work together:</p>
 		<ul>
 			<li><strong>Templates</strong> (<code>*.template.html</code>) &mdash; Shared page layouts with named content slots</li>
 			<li><strong>Pages</strong> (<code>*.page.html</code>) &mdash; Individual pages that fill template slots with content</li>
 			<li><strong>Fragments</strong> (<code>*.fragment.html</code>) &mdash; Reusable HTML partials included in templates or other fragments</li>
+			<li><strong>Globals</strong> (<code>*.global.html</code>) &mdash; Site-wide content blocks automatically injected into every page render</li>
 		</ul>
 		<p>All three file types are blocked from being served directly by the default <code>disallowedRegex</code> configuration.</p>
 
 		<h2 id="file-types">File Types</h2>
 		<p>A typical project structure:</p>
-		<pre><code class="hljs markdown">my-site/<br />├─ default.template.html    # Shared layout<br />├─ nav.fragment.html        # Reusable navigation<br />├─ footer.fragment.html     # Reusable footer<br />├─ index.page.html          # Homepage → renders to index.html<br />├─ about.page.html          # About → renders to about.html<br />├─ blog/<br />│  ├─ index.page.html       # Blog index → blog/index.html<br />│  ├─ post-1.page.html      # Blog post → blog/post-1.html<br /></code></pre>
+		<pre><code class="hljs markdown">my-site/<br />├─ default.template.html    # Shared layout<br />├─ nav.fragment.html        # Reusable navigation<br />├─ footer.fragment.html     # Reusable footer<br />├─ analytics.global.html    # Site-wide scripts injected into every page<br />├─ index.page.html          # Homepage → renders to index.html<br />├─ about.page.html          # About → renders to about.html<br />├─ blog/<br />│  ├─ index.page.html       # Blog index → blog/index.html<br />│  ├─ post-1.page.html      # Blog post → blog/post-1.html<br /></code></pre>
 		<p>Templates and fragments are resolved by walking up the directory tree from the page file to the root, so subdirectories can override them by providing their own versions.</p>
 
 		<h2 id="templates">Templates</h2>
 		<p>A template defines the shared HTML structure for your pages. Use <code>&lt;location&gt;</code> tags to define named content slots that pages will fill.</p>
-		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- default.template.html --&gt;</span><br /><span class="hljs-meta">&lt;!DOCTYPE html&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">html</span> <span class="hljs-attr">lang</span>=<span class="hljs-string">"en"</span>&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">head</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">meta</span> <span class="hljs-attr">charset</span>=<span class="hljs-string">"UTF-8"</span> /&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">title</span>&gt;</span>{{title}}<span class="hljs-tag">&lt;/<span class="hljs-name">title</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">head</span>&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">body</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">fragment</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"nav"</span> /&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">main</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">h1</span>&gt;</span>{{pageName}}<span class="hljs-tag">&lt;/<span class="hljs-name">h1</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">location</span> /&gt;</span><br />  <span class="hljs-tag">&lt;/<span class="hljs-name">main</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">location</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"scripts"</span>&gt;</span><br />    <span class="hljs-comment">&lt;!-- default scripts if page doesn't provide any --&gt;</span><br />  <span class="hljs-tag">&lt;/<span class="hljs-name">location</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">body</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">html</span>&gt;</span></code></pre>
+		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- default.template.html --&gt;</span><br /><span class="hljs-meta">&lt;!DOCTYPE html&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">html</span> <span class="hljs-attr">lang</span>=<span class="hljs-string">"en"</span>&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">head</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">meta</span> <span class="hljs-attr">charset</span>=<span class="hljs-string">"UTF-8"</span> /&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">title</span>&gt;</span>&#123;&#123;title&#125;&#125;<span class="hljs-tag">&lt;/<span class="hljs-name">title</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">head</span>&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">body</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">fragment</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"nav"</span> /&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">main</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">h1</span>&gt;</span>&#123;&#123;pageName&#125;&#125;<span class="hljs-tag">&lt;/<span class="hljs-name">h1</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">location</span> /&gt;</span><br />  <span class="hljs-tag">&lt;/<span class="hljs-name">main</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">location</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"scripts"</span>&gt;</span><br />    <span class="hljs-comment">&lt;!-- default scripts if page doesn't provide any --&gt;</span><br />  <span class="hljs-tag">&lt;/<span class="hljs-name">location</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">body</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">html</span>&gt;</span></code></pre>
 
 		<h3>Location Tags</h3>
 		<p>Locations are named slots in a template that pages fill with content. The <code>name</code> attribute is optional &mdash; a <code>&lt;location&gt;</code> without a name defaults to <code>"default"</code>.</p>
@@ -46,15 +53,22 @@
 		</ul>
 
 		<h2 id="pages">Pages</h2>
-		<p>A page file wraps its content in a <code>&lt;page&gt;</code> root element and uses <code>&lt;content&gt;</code> blocks to fill the template's locations. The <code>location</code> attribute is optional &mdash; a <code>&lt;content&gt;</code> block without one targets the <code>"default"</code> location. Multiple <code>&lt;content&gt;</code> blocks targeting the same location are concatenated in order.</p>
+		<p>A page file wraps its content in a <code>&lt;page&gt;</code> root element and uses <code>&lt;content&gt;</code> blocks to fill the template's locations. The <code>location</code> attribute is optional &mdash; a <code>&lt;content&gt;</code> block without one targets the <code>"default"</code> location. Multiple <code>&lt;content&gt;</code> blocks targeting the same location are merged and sorted by <code>priority</code> (higher first, default <code>0</code>).</p>
 		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- about.page.html → renders to about.html --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">page</span> <span class="hljs-attr">pageName</span>=<span class="hljs-string">"About Us"</span> <span class="hljs-attr">title</span>=<span class="hljs-string">"About - My Site"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">content</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">p</span>&gt;</span>Welcome to our about page.<span class="hljs-tag">&lt;/<span class="hljs-name">p</span>&gt;</span><br />  <span class="hljs-tag">&lt;/<span class="hljs-name">content</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">page</span>&gt;</span></code></pre>
 
 		<h3>Page Attributes</h3>
-		<p>Attributes on the <code>&lt;page&gt;</code> tag become template variables. In the example above, <code>{{pageName}}</code> resolves to <code>About Us</code> and <code>{{title}}</code> resolves to <code>About - My Site</code>.</p>
+		<p>Attributes on the <code>&lt;page&gt;</code> tag become template variables. In the example above, <code>&#123;&#123;pageName&#125;&#125;</code> resolves to <code>About Us</code> and <code>&#123;&#123;title&#125;&#125;</code> resolves to <code>About - My Site</code>.</p>
 		<p>The special <code>template</code> attribute selects which template to use. It defaults to <code>default</code>, which looks for <code>default.template.html</code>.</p>
 		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- Uses blog.template.html instead of default.template.html --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">page</span> <span class="hljs-attr">template</span>=<span class="hljs-string">"blog"</span> <span class="hljs-attr">title</span>=<span class="hljs-string">"My Post"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">content</span> <span class="hljs-attr">location</span>=<span class="hljs-string">"main"</span>&gt;</span>...<span class="hljs-tag">&lt;/<span class="hljs-name">content</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">page</span>&gt;</span></code></pre>
 
-		<h2 id="fragments">Fragments</h2>
+		<h3 id="frontmatter">Frontmatter</h3>
+		<p>Any content before the opening <code>&lt;page&gt;</code> tag is ignored by the renderer. This makes it a natural place for author metadata, description, dates, or any notes that belong with the file but shouldn't appear in the output &mdash; similar to frontmatter in other static site generators.</p>
+		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!--
+  author: Dustin Poissant
+  date: 2026-04-10
+  description: Overview of the routing system
+--&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">page</span> <span class="hljs-attr">title</span>=<span class="hljs-string">"Routing"</span>&gt;</span><br />  ...<br /><span class="hljs-tag">&lt;/<span class="hljs-name">page</span>&gt;</span></code></pre>
+		<p>The comment is purely for the author &mdash; nothing before <code>&lt;page&gt;</code> is parsed or rendered.</p>
 		<p>Fragments are reusable HTML partials. Include them in templates or other fragments using the <code>&lt;fragment&gt;</code> tag.</p>
 		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- nav.fragment.html --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">fragment</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">nav</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">a</span> <span class="hljs-attr">href</span>=<span class="hljs-string">"./"</span>&gt;</span>Home<span class="hljs-tag">&lt;/<span class="hljs-name">a</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">a</span> <span class="hljs-attr">href</span>=<span class="hljs-string">"./about.html"</span>&gt;</span>About<span class="hljs-tag">&lt;/<span class="hljs-name">a</span>&gt;</span><br />  <span class="hljs-tag">&lt;/<span class="hljs-name">nav</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">fragment</span>&gt;</span></code></pre>
 		<p>Include it in a template:</p>
@@ -68,10 +82,44 @@
 			<li>A subdirectory can provide its own version to override the parent</li>
 		</ul>
 
+		<h2 id="global-files">Global Files</h2>
+		<p>Any file named <code>*.global.html</code> anywhere under the root directory is automatically loaded and its <code>&lt;content&gt;</code> blocks are injected into every page render. This is the right place to put site-wide scripts, meta tags, nav links, or anything else that should appear across all pages without touching every template or page file.</p>
+		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- analytics.global.html --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">content</span> <span class="hljs-attr">location</span>=<span class="hljs-string">"scripts"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"analytics.js"</span> <span class="hljs-attr">defer</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">content</span>&gt;</span></code></pre>
+		<p>The template just needs a matching <code>&lt;location&gt;</code> tag &mdash; the global file fills it automatically on every page.</p>
+
+		<h3>Priority</h3>
+		<p>When multiple <code>&lt;content&gt;</code> blocks &mdash; from global files, multiple global files, or the page itself &mdash; target the same location, a <code>priority</code> attribute controls their output order. Higher numbers come first. The default is <code>0</code>.</p>
+		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- framework.global.html --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">content</span> <span class="hljs-attr">location</span>=<span class="hljs-string">"scripts"</span> <span class="hljs-attr">priority</span>=<span class="hljs-string">"10"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"framework.js"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">content</span>&gt;</span><br /><br /><span class="hljs-comment">&lt;!-- analytics.global.html — priority defaults to 0 --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">content</span> <span class="hljs-attr">location</span>=<span class="hljs-string">"scripts"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"analytics.js"</span> <span class="hljs-attr">defer</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">content</span>&gt;</span></code></pre>
+		<p>Output: <code>framework.js</code> first (priority 10), then <code>analytics.js</code> (priority 0). The same <code>priority</code> attribute works on <code>&lt;content&gt;</code> blocks in page files too, so a page can insert content before or after global content in the same location.</p>
+
+		<h3>Locations Inside Page Content</h3>
+		<p>You can place <code>&lt;location&gt;</code> tags inside a page's <code>&lt;content&gt;</code> block. Global content fills those locations before the block is inserted into the template. This lets a page pull in a global snippet at a specific spot without knowing what the snippet contains.</p>
+		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- nav-links.global.html --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">content</span> <span class="hljs-attr">location</span>=<span class="hljs-string">"links"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">a</span> <span class="hljs-attr">href</span>=<span class="hljs-string">"./about.html"</span>&gt;</span>About<span class="hljs-tag">&lt;/<span class="hljs-name">a</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">content</span>&gt;</span><br /><br /><span class="hljs-comment">&lt;!-- nav.fragment.html — location tag pulls in the global links --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">fragment</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">nav</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">location</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"links"</span> /&gt;</span><br />  <span class="hljs-tag">&lt;/<span class="hljs-name">nav</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">fragment</span>&gt;</span></code></pre>
+
+		<h2 id="fragments-vs-globals">Fragments vs. Global Files</h2>
+		<p>Fragments and global files both let you share HTML across pages, but they work in opposite directions.</p>
+		<p><strong>Fragments are a pull.</strong> The template (or another fragment) explicitly asks for one thing by name: <code>&lt;fragment name="nav" /&gt;</code>. The fragment file is a single reusable block of markup. Only what is asked for gets included, and where it lands is decided entirely by the caller.</p>
+		<p><strong>Global files are a push.</strong> A <code>*.global.html</code> file declares content and targets a location, and that content is automatically injected into every page render without the template needing to know it exists. You can have many global files each contributing to the same location, and a page can add its own content to that same location alongside them. The final output is all of those contributions merged and ordered by <code>priority</code>.</p>
+		<div class="table-wrapper mb">
+		<table>
+			<thead>
+				<tr><th></th><th>Fragments</th><th>Global Files</th></tr>
+			</thead>
+			<tbody>
+				<tr><td>Direction</td><td>Pull — caller decides what to include</td><td>Push — file injects itself automatically</td></tr>
+				<tr><td>How many per location</td><td>One (the named file)</td><td>Many — all globals targeting the same location are merged</td></tr>
+				<tr><td>Page can contribute too?</td><td>No — the fragment replaces the tag entirely</td><td>Yes — page <code>&lt;content&gt;</code> blocks merge with global content</td></tr>
+				<tr><td>Requires template change?</td><td>Yes — caller must add <code>&lt;fragment name="..." /&gt;</code></td><td>No — just add a <code>&lt;location&gt;</code> and the globals fill it</td></tr>
+				<tr><td>Good for</td><td>Reusable structural blocks (nav, footer, sidebar)</td><td>Site-wide injections (scripts, meta tags, nav links)</td></tr>
+			</tbody>
+		</table>
+		</div>
+
 		<h2 id="variables">Variables</h2>
-		<p>Use <code>{{variableName}}</code> syntax to insert dynamic values into templates and fragments.</p>
+		<p>Use <code>&#123;&#123;variableName&#125;&#125;</code> syntax to insert dynamic values into templates and fragments.</p>
 
 		<h3>Built-in Variables</h3>
+		<div class="table-wrapper mb">
 		<table>
 			<thead>
 				<tr>
@@ -80,19 +128,20 @@
 				</tr>
 			</thead>
 			<tbody>
-				<tr><td><code>{{pathToRoot}}</code></td><td>Relative path from the page to the root directory (e.g. <code>./</code>, <code>../</code>, <code>../../</code>)</td></tr>
-				<tr><td><code>{{year}}</code></td><td>Current four-digit year</td></tr>
-				<tr><td><code>{{date}}</code></td><td>Current date in ISO format (<code>YYYY-MM-DD</code>)</td></tr>
-				<tr><td><code>{{datetime}}</code></td><td>Full ISO 8601 datetime string</td></tr>
-				<tr><td><code>{{timestamp}}</code></td><td>Unix timestamp in milliseconds</td></tr>
-				<tr><td><code>{{version}}</code></td><td>Version from the root <code>package.json</code></td></tr>
-				<tr><td><code>{{env}}</code></td><td>Value of <code>NODE_ENV</code></td></tr>
+				<tr><td><code>&#123;&#123;pathToRoot&#125;&#125;</code></td><td>Relative path from the page to the root directory (e.g. <code>./</code>, <code>../</code>, <code>../../</code>)</td></tr>
+				<tr><td><code>&#123;&#123;year&#125;&#125;</code></td><td>Current four-digit year</td></tr>
+				<tr><td><code>&#123;&#123;date&#125;&#125;</code></td><td>Current date in ISO format (<code>YYYY-MM-DD</code>)</td></tr>
+				<tr><td><code>&#123;&#123;datetime&#125;&#125;</code></td><td>Full ISO 8601 datetime string</td></tr>
+				<tr><td><code>&#123;&#123;timestamp&#125;&#125;</code></td><td>Unix timestamp in milliseconds</td></tr>
+				<tr><td><code>&#123;&#123;version&#125;&#125;</code></td><td>Version from the root <code>package.json</code></td></tr>
+				<tr><td><code>&#123;&#123;env&#125;&#125;</code></td><td>Value of <code>NODE_ENV</code></td></tr>
 			</tbody>
 		</table>
+		</div>
 
 		<h3>Page Attributes as Variables</h3>
 		<p>Any attribute on the <code>&lt;page&gt;</code> tag is available as a variable in the template:</p>
-		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- page file --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">page</span> <span class="hljs-attr">title</span>=<span class="hljs-string">"My Page"</span> <span class="hljs-attr">author</span>=<span class="hljs-string">"Dustin"</span>&gt;</span>...<span class="hljs-tag">&lt;/<span class="hljs-name">page</span>&gt;</span><br /><br /><span class="hljs-comment">&lt;!-- template file --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">title</span>&gt;</span>{{title}}<span class="hljs-tag">&lt;/<span class="hljs-name">title</span>&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">meta</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"author"</span> <span class="hljs-attr">content</span>=<span class="hljs-string">"{{author}}"</span> /&gt;</span></code></pre>
+		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- page file --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">page</span> <span class="hljs-attr">title</span>=<span class="hljs-string">"My Page"</span> <span class="hljs-attr">author</span>=<span class="hljs-string">"Dustin"</span>&gt;</span>...<span class="hljs-tag">&lt;/<span class="hljs-name">page</span>&gt;</span><br /><br /><span class="hljs-comment">&lt;!-- template file --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">title</span>&gt;</span>&#123;&#123;title&#125;&#125;<span class="hljs-tag">&lt;/<span class="hljs-name">title</span>&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">meta</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"author"</span> <span class="hljs-attr">content</span>=<span class="hljs-string">"&#123;&#123;author&#125;&#125;"</span> /&gt;</span></code></pre>
 
 		<h3>Globals and State</h3>
 		<p>Additional variables can be provided through the <code>globals</code> and <code>state</code> configuration objects. Globals and state are merged with page attributes, with page attributes taking priority.</p>
@@ -101,7 +150,7 @@
 
 		<h3>Dot-Path Access</h3>
 		<p>Variables support dot notation for nested object access:</p>
-		<pre><code class="hljs xml">{{site.name}}<br />{{author.email}}</code></pre>
+		<pre><code class="hljs xml">&#123;&#123;site.name&#125;&#125;<br />&#123;&#123;author.email&#125;&#125;</code></pre>
 
 		<h2 id="conditionals">Conditionals</h2>
 		<p>Use <code>&lt;if&gt;</code> blocks to conditionally include content based on variable values.</p>
@@ -109,6 +158,7 @@
 
 		<h3>Supported Operators</h3>
 		<p>Conditions support a full expression syntax:</p>
+		<div class="table-wrapper mb">
 		<table>
 			<thead>
 				<tr>
@@ -126,13 +176,14 @@
 				<tr><td><code>( )</code></td><td>Grouping</td></tr>
 			</tbody>
 		</table>
+		</div>
 
 		<h3>Examples</h3>
 		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- Truthy check --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">if</span> <span class="hljs-attr">condition</span>=<span class="hljs-string">"isLoggedIn"</span>&gt;</span>Welcome back!<span class="hljs-tag">&lt;/<span class="hljs-name">if</span>&gt;</span><br /><br /><span class="hljs-comment">&lt;!-- Negation --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">if</span> <span class="hljs-attr">condition</span>=<span class="hljs-string">"!isLoggedIn"</span>&gt;</span>Please log in.<span class="hljs-tag">&lt;/<span class="hljs-name">if</span>&gt;</span><br /><br /><span class="hljs-comment">&lt;!-- String comparison --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">if</span> <span class="hljs-attr">condition</span>=<span class="hljs-string">"env === 'production'"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"analytics.js"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">if</span>&gt;</span><br /><br /><span class="hljs-comment">&lt;!-- Compound conditions --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">if</span> <span class="hljs-attr">condition</span>=<span class="hljs-string">"isAdmin &amp;&amp; hasPermission"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">a</span> <span class="hljs-attr">href</span>=<span class="hljs-string">"/admin"</span>&gt;</span>Admin Panel<span class="hljs-tag">&lt;/<span class="hljs-name">a</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">if</span>&gt;</span></code></pre>
 
 		<h2 id="loops">Loops</h2>
 		<p>Use <code>&lt;foreach&gt;</code> blocks to iterate over arrays.</p>
-		<pre><code class="hljs xml"><span class="hljs-tag">&lt;<span class="hljs-name">foreach</span> <span class="hljs-attr">in</span>=<span class="hljs-string">"navLinks"</span> <span class="hljs-attr">as</span>=<span class="hljs-string">"link"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">a</span> <span class="hljs-attr">href</span>=<span class="hljs-string">"{{link.url}}"</span>&gt;</span>{{link.label}}<span class="hljs-tag">&lt;/<span class="hljs-name">a</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">foreach</span>&gt;</span></code></pre>
+		<pre><code class="hljs xml"><span class="hljs-tag">&lt;<span class="hljs-name">foreach</span> <span class="hljs-attr">in</span>=<span class="hljs-string">"navLinks"</span> <span class="hljs-attr">as</span>=<span class="hljs-string">"link"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">a</span> <span class="hljs-attr">href</span>=<span class="hljs-string">"&#123;&#123;link.url&#125;&#125;"</span>&gt;</span>&#123;&#123;link.label&#125;&#125;<span class="hljs-tag">&lt;/<span class="hljs-name">a</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">foreach</span>&gt;</span></code></pre>
 		<p>The <code>in</code> attribute references an array variable and <code>as</code> names the loop variable. The loop variable supports dot-path access for object items.</p>
 
 		<p>Provide the array through globals or state:</p>
@@ -162,6 +213,7 @@
 
 		<h2 id="configuration">Configuration</h2>
 		<p>All templating options live under the <code>templating</code> key in your configuration file.</p>
+		<div class="table-wrapper mb">
 		<table>
 			<thead>
 				<tr>
@@ -179,6 +231,7 @@
 				<tr><td><code>maxFragmentDepth</code></td><td><code>10</code></td><td>Maximum fragment nesting depth</td></tr>
 			</tbody>
 		</table>
+		</div>
 
 		<h3>Development vs Production</h3>
 		<p>A common pattern is to use separate config files:</p>

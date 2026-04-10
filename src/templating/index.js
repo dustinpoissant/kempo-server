@@ -3,6 +3,7 @@ import path from 'path';
 import {
   extractAttrs,
   extractContentBlocks,
+  mergeContentBlocks,
   replaceLocations,
   resolveVars,
   resolveIfs,
@@ -39,9 +40,32 @@ const loadVersion = rootDir => {
 };
 
 /*
+  Walk Directory for *.global.html Files
+*/
+const walkGlobals = async dir => {
+  const entries = await readdir(dir, {withFileTypes: true});
+  const results = [];
+  for(const entry of entries){
+    const full = path.join(dir, entry.name);
+    if(entry.isDirectory()){
+      results.push(...await walkGlobals(full));
+    } else if(entry.name.endsWith('.global.html')){
+      results.push(full);
+    }
+  }
+  return results;
+};
+
+const loadGlobalContent = async rootDir => {
+  const files = await walkGlobals(rootDir);
+  const maps = await Promise.all(files.map(async f => extractContentBlocks(await readFile(f, 'utf8'))));
+  return mergeContentBlocks(...maps);
+};
+
+/*
   Render a Single Page
 */
-const renderPage = async (pageFilePath, rootDir, globals = {}, state = {}, maxDepth = 10) => {
+const renderPage = async (pageFilePath, rootDir, globals = {}, state = {}, maxDepth = 10, preloadedGlobalContent = null) => {
   const pageContent = await readFile(pageFilePath, 'utf8');
   const pageTagMatch = pageContent.match(/^[\s\S]*?<page\s([^>]*)>/);
   if(!pageTagMatch) throw new Error(`Invalid page file: missing <page> root element in ${pageFilePath}`);
@@ -49,11 +73,20 @@ const renderPage = async (pageFilePath, rootDir, globals = {}, state = {}, maxDe
   const templateName = pageAttrs.template || 'default';
   delete pageAttrs.template;
 
-  const contentBlocks = extractContentBlocks(pageContent);
   const pageDir = path.dirname(pageFilePath);
   const templateFile = findFileUpSync(`${templateName}.template.html`, pageDir, rootDir);
   if(!templateFile) throw new Error(`Template not found: ${templateName}.template.html (searched from ${pageDir} to ${rootDir})`);
 
+  const globalContent = preloadedGlobalContent ?? await loadGlobalContent(rootDir);
+  const rawPageBlocks = extractContentBlocks(pageContent);
+
+  // Allow <location> tags inside page content blocks to be filled by global content
+  const pageBlocks = {};
+  for(const [name, entries] of Object.entries(rawPageBlocks)){
+    pageBlocks[name] = entries.map(e => ({...e, html: replaceLocations(e.html, globalContent)}));
+  }
+
+  const contentBlocks = mergeContentBlocks(pageBlocks, globalContent);
   let templateHtml = readFileSync(templateFile, 'utf8');
 
   const findFragmentFile = name => {
@@ -115,14 +148,14 @@ const walkPages = async dir => {
   Render All Pages in a Directory
 */
 const renderDir = async (inputDir, outputDir, globals = {}, state = {}, maxDepth = 10) => {
-  const pages = await walkPages(inputDir);
+  const [pages, globalContent] = await Promise.all([walkPages(inputDir), loadGlobalContent(inputDir)]);
   let count = 0;
   for(const page of pages){
     const rel = path.relative(inputDir, page);
     const outRel = rel.replace(/\.page\.html$/, '.html');
     const outPath = path.join(outputDir, outRel);
     await mkdir(path.dirname(outPath), {recursive: true});
-    const html = await renderPage(page, inputDir, globals, state, maxDepth);
+    const html = await renderPage(page, inputDir, globals, state, maxDepth, globalContent);
     await writeFile(outPath, html, 'utf8');
     count++;
   }

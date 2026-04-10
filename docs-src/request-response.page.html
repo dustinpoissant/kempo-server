@@ -27,6 +27,7 @@
 
     <h3 id="body-parsing">Body Parsing</h3>
     <p><code>request.body</code> is eagerly parsed before your route handler runs. The parsing strategy depends on the <code>Content-Type</code> header:</p>
+    <div class="table-wrapper mb">
     <table>
       <thead>
         <tr><th>Content-Type</th><th><code>request.body</code> value</th></tr>
@@ -38,6 +39,7 @@
         <tr><td>Any other Content-Type</td><td>Raw string</td></tr>
       </tbody>
     </table>
+    </div>
     <p>The convenience methods <code>request.json()</code>, <code>request.text()</code>, and <code>request.buffer()</code> still exist and return promises for backward compatibility, but they resolve immediately from the cached body.</p>
 
     <h2>Response Object</h2>
