@@ -17,7 +17,7 @@ import {
   loggingMiddleware 
 } from './builtinMiddleware.js';
 import { onRescan } from './rescan.js';
-import { renderDir } from './templating/index.js';
+import { renderDir, renderPage } from './templating/index.js';
 
 export default async (flags, log) => {
   log('Initializing router', 3);
@@ -148,6 +148,19 @@ export default async (flags, log) => {
     const {globals, state, maxFragmentDepth} = config.templating;
     const count = await renderDir(rootPath, rootPath, globals, state, maxFragmentDepth);
     log(`Pre-rendered ${count} page(s)`, 2);
+
+    for(const [urlPattern, dirPath] of Object.entries(config.customRoutes || {})) {
+      const baseDirRaw = dirPath.includes('*') ? dirPath.split('*')[0] : dirPath;
+      const resolvedBaseDir = (path.isAbsolute(baseDirRaw)
+        ? baseDirRaw
+        : path.resolve(rootPath, baseDirRaw)).replace(/[/\\]+$/, '');
+      try {
+        const s = await stat(resolvedBaseDir);
+        if(!s.isDirectory()) continue;
+        const extraCount = await renderDir(resolvedBaseDir, resolvedBaseDir, globals, state, maxFragmentDepth);
+        log(`Pre-rendered ${extraCount} page(s) from custom route: ${urlPattern}`, 2);
+      } catch { /* directory doesn't exist or isn't accessible, skip */ }
+    }
   }
 
   let files = await getFiles(rootPath, config, log);
@@ -421,33 +434,58 @@ export default async (flags, log) => {
 
   // Resolves a custom route path supporting files, directories, and [param] segments.
   // Returns true if handled, null if path not found.
-  const serveCustomRoutePath = async (resolvedFilePath, req, res) => {
+  // customRootDir: root used for template/fragment lookup when attempting SSR.
+  const serveCustomRoutePath = async (resolvedFilePath, req, res, customRootDir = null) => {
     let fileStat;
     try {
       fileStat = await stat(resolvedFilePath);
-      return await serveResolvedPath(resolvedFilePath, fileStat, {}, req, res);
+      const result = await serveResolvedPath(resolvedFilePath, fileStat, {}, req, res);
+      if(result) return result;
+      // Directory existed but no index/route candidates — fall through to SSR
     } catch(e) {
       if(e.code !== 'ENOENT') throw e;
     }
 
-    // Path doesn't exist literally — walk backwards to find the nearest existing
-    // ancestor directory, then traverse forward with [param] support.
-    let current = resolvedFilePath;
-    const remaining = [];
-    while(current !== path.dirname(current)) {
-      remaining.unshift(path.basename(current));
-      current = path.dirname(current);
-      try {
-        const s = await stat(current);
-        if(!s.isDirectory()) break;
-        const result = await walkDynamic(current, remaining);
-        if(!result) return null;
-        const resolvedStat = await stat(result.filePath);
-        return await serveResolvedPath(result.filePath, resolvedStat, result.params, req, res);
-      } catch(e2) {
-        if(e2.code !== 'ENOENT') throw e2;
+    if(!fileStat) {
+      // Path doesn't exist literally — walk backwards to find the nearest existing
+      // ancestor directory, then traverse forward with [param] support.
+      let current = resolvedFilePath;
+      const remaining = [];
+      while(current !== path.dirname(current)) {
+        remaining.unshift(path.basename(current));
+        current = path.dirname(current);
+        try {
+          const s = await stat(current);
+          if(!s.isDirectory()) break;
+          const result = await walkDynamic(current, remaining);
+          if(!result) break;
+          const resolvedStat = await stat(result.filePath);
+          const served = await serveResolvedPath(result.filePath, resolvedStat, result.params, req, res);
+          if(served) return served;
+          break;
+        } catch(e2) {
+          if(e2.code !== 'ENOENT') throw e2;
+        }
       }
     }
+
+    if(config.templating?.ssr && customRootDir) {
+      const {globals, state, maxFragmentDepth} = config.templating;
+      const base = resolvedFilePath.replace(/\.html$/, '').replace(/[\/\\]+$/, '');
+      for(const pageFile of [base + '.page.html', path.join(base, 'index.page.html')]) {
+        try {
+          await stat(pageFile);
+          const html = await renderPage(pageFile, customRootDir, globals, state, maxFragmentDepth);
+          res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
+          res.end(html);
+          log(`SSR rendered custom route: ${pageFile}`, 2);
+          return true;
+        } catch(e) {
+          log(`SSR custom route miss for ${pageFile}: ${e.message}`, 3);
+        }
+      }
+    }
+
     return null;
   };
 
@@ -572,7 +610,7 @@ export default async (flags, log) => {
         const customFilePath = customRoutes.get(matchedKey);
         log(`Serving custom route: ${normalizedRequestPath} -> ${customFilePath}`, 3);
         try {
-          const result = await serveCustomRoutePath(customFilePath, req, res);
+          const result = await serveCustomRoutePath(customFilePath, req, res, customFilePath);
           if(result) return;
           log(`Custom route path not found: ${customFilePath}`, 1);
           res.writeHead(404, { 'Content-Type': 'text/plain' });
@@ -592,7 +630,8 @@ export default async (flags, log) => {
         const resolvedFilePath = resolveWildcardPath(wildcardMatch.filePath, wildcardMatch.matches);
         log(`Serving wildcard route: ${requestPath} -> ${resolvedFilePath}`, 3);
         try {
-          const result = await serveCustomRoutePath(resolvedFilePath, req, res);
+          const customRootDir = wildcardMatch.filePath.split('*')[0].replace(/[\/\\]+$/, '');
+          const result = await serveCustomRoutePath(resolvedFilePath, req, res, customRootDir);
           if(result) return;
           log(`Wildcard route path not found: ${requestPath}`, 2);
         } catch(error) {
