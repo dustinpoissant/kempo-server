@@ -17,7 +17,7 @@
 	<link rel="stylesheet" href="./theme.css" />
 	<script>
 		window.litDisableBundleWarning = true;
-		window.kempo = { pathsToIcons: ['https://cdn.jsdelivr.net/npm/kempo-ui@0.0.42/icons/'] };
+		window.kempo = { pathsToIcons: ['https://cdn.jsdelivr.net/npm/kempo-ui@0.3/icons/'] };
 	</script>
 </head>
 <body>
@@ -73,11 +73,11 @@
 
     </menu>
   </k-aside>
-  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Aside.js" type="module"></script>
-  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Main.js" type="module"></script>
-  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Nav.js" type="module"></script>
-  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/Icon.js" type="module"></script>
-  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3.5/src/components/ThemeSwitcher.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/src/components/Aside.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/src/components/Main.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/src/components/Nav.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/src/components/Icon.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/src/components/ThemeSwitcher.js" type="module"></script>
   <script>
     document.getElementById('toggleNavSideMenu').addEventListener('click', async () => {
       await window.customElements.whenDefined('k-aside');
@@ -102,28 +102,33 @@
 		
 		<p>Kempo Server includes a built-in XML-based templating system for building static sites with shared layouts, reusable fragments, and dynamic content. Pages can be pre-rendered at build time or server-side rendered on each request.</p>
 
-		<nav class="b r mb p">
-			<h4 class="mt0">On This Page</h4>
-			<ul>
-				<li><a href="#overview">Overview</a></li>
-				<li><a href="#file-types">File Types</a></li>
-				<li><a href="#templates">Templates</a></li>
-				<li><a href="#pages">Pages</a>
-					<ul>
-						<li><a href="#frontmatter">Frontmatter</a></li>
-					</ul>
-				</li>
-				<li><a href="#fragments">Fragments</a></li>
-				<li><a href="#global-files">Global Files</a></li>
-				<li><a href="#fragments-vs-globals">Fragments vs. Global Files</a></li>
-				<li><a href="#variables">Variables</a></li>
-				<li><a href="#conditionals">Conditionals</a></li>
-				<li><a href="#loops">Loops</a></li>
-				<li><a href="#rendering">Rendering</a></li>
-				<li><a href="#ssr">Server-Side Rendering</a></li>
-				<li><a href="#configuration">Configuration</a></li>
-			</ul>
-		</nav>
+		<k-accordion persistent-id="templating-toc" class="mb">
+			<k-accordion-header for-panel="toc">Table of Contents</k-accordion-header>
+			<k-accordion-panel name="toc">
+				<ul class="m">
+					<li><a href="#overview">Overview</a></li>
+					<li><a href="#templates">Templates</a></li>
+					<li><a href="#pages">Pages</a>
+						<ul>
+							<li><a href="#frontmatter">Frontmatter</a></li>
+						</ul>
+					</li>
+					<li><a href="#fragments">Fragments</a></li>
+					<li><a href="#global-files">Global Files</a></li>
+					<li><a href="#fragments-vs-globals">Fragments vs. Global Files</a></li>
+					<li><a href="#template-syntax">Template Syntax</a>
+						<ul>
+							<li><a href="#variables">Variables</a></li>
+							<li><a href="#conditionals">Conditionals</a></li>
+							<li><a href="#loops">Loops</a></li>
+						</ul>
+					</li>
+					<li><a href="#rendering">Rendering</a></li>
+					<li><a href="#ssr">Server-Side Rendering</a></li>
+					<li><a href="#configuration">Configuration</a></li>
+				</ul>
+			</k-accordion-panel>
+		</k-accordion>
 
 		<h2 id="overview">Overview</h2>
 		<p>The templating system uses four file types that work together:</p>
@@ -133,12 +138,23 @@
 			<li><strong>Fragments</strong> (<code>*.fragment.html</code>) &mdash; Reusable HTML partials included in templates or other fragments</li>
 			<li><strong>Globals</strong> (<code>*.global.html</code>) &mdash; Site-wide content blocks automatically injected into every page render</li>
 		</ul>
-		<p>All three file types are blocked from being served directly by the default <code>disallowedRegex</code> configuration.</p>
-
-		<h2 id="file-types">File Types</h2>
 		<p>A typical project structure:</p>
 		<pre><code class="hljs markdown">my-site/<br />├─ default.template.html    # Shared layout<br />├─ nav.fragment.html        # Reusable navigation<br />├─ footer.fragment.html     # Reusable footer<br />├─ analytics.global.html    # Site-wide scripts injected into every page<br />├─ index.page.html          # Homepage → renders to index.html<br />├─ about.page.html          # About → renders to about.html<br />├─ blog/<br />│  ├─ index.page.html       # Blog index → blog/index.html<br />│  ├─ post-1.page.html      # Blog post → blog/post-1.html<br /></code></pre>
-		<p>Templates and fragments are resolved by walking up the directory tree from the page file to the root, so subdirectories can override them by providing their own versions.</p>
+		<p>All four file types are blocked from being served directly by the default <code>disallowedRegex</code> configuration. Each type is located differently at startup:</p>
+		<div class="table-wrapper mb">
+		<table>
+			<thead>
+				<tr><th>File Type</th><th>How It Is Found</th></tr>
+			</thead>
+			<tbody>
+				<tr><td><code>*.page.html</code></td><td>Recursive scan of the entire root directory tree &mdash; pages in any subdirectory are discovered automatically.</td></tr>
+				<tr><td><code>*.global.html</code></td><td>Recursive scan of the entire root directory tree &mdash; globals in any subdirectory are merged together automatically.</td></tr>
+				<tr><td><code>*.template.html</code></td><td>Walks <strong>up</strong> the directory tree from the page file&rsquo;s directory toward the root. The nearest match wins. A subdirectory template overrides the root one for pages below it.</td></tr>
+				<tr><td><code>*.fragment.html</code></td><td>Same up-walk as templates &mdash; starts at the including file&rsquo;s directory and searches each ancestor up to the root. Nearest match wins.</td></tr>
+			</tbody>
+		</table>
+		</div>
+		<p>Because pages and globals use a downward recursive scan, you can freely organize them into subdirectories and they will still be found. Templates and fragments use an upward walk, so they must live in the same directory as the files that reference them, or in a parent directory. Placing a template or fragment in a sibling or cousin directory will not be found.</p>
 
 		<h2 id="templates">Templates</h2>
 		<p>A template defines the shared HTML structure for your pages. Use <code>&lt;location&gt;</code> tags to define named content slots that pages will fill.</p>
@@ -169,13 +185,15 @@
   description: Overview of the routing system
 --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">page</span> <span class="hljs-attr">title</span>=<span class="hljs-string">"Routing"</span>&gt;</span><br />  ...<br /><span class="hljs-tag">&lt;/<span class="hljs-name">page</span>&gt;</span></code></pre>
 		<p>The comment is purely for the author &mdash; nothing before <code>&lt;page&gt;</code> is parsed or rendered.</p>
+
+		<h2 id="fragments">Fragments</h2>
 		<p>Fragments are reusable HTML partials. Include them in templates or other fragments using the <code>&lt;fragment&gt;</code> tag.</p>
 		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- nav.fragment.html --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">fragment</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">nav</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">a</span> <span class="hljs-attr">href</span>=<span class="hljs-string">"./"</span>&gt;</span>Home<span class="hljs-tag">&lt;/<span class="hljs-name">a</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">a</span> <span class="hljs-attr">href</span>=<span class="hljs-string">"./about.html"</span>&gt;</span>About<span class="hljs-tag">&lt;/<span class="hljs-name">a</span>&gt;</span><br />  <span class="hljs-tag">&lt;/<span class="hljs-name">nav</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">fragment</span>&gt;</span></code></pre>
 		<p>Include it in a template:</p>
 		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- Self-closing: renders empty if fragment file not found --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">fragment</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"nav"</span> /&gt;</span><br /><br /><span class="hljs-comment">&lt;!-- With fallback content if fragment file not found --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">fragment</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"nav"</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">nav</span>&gt;</span>Fallback Nav<span class="hljs-tag">&lt;/<span class="hljs-name">nav</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">fragment</span>&gt;</span></code></pre>
 		<p>Fragments can include other fragments. The maximum nesting depth is controlled by <code>maxFragmentDepth</code> (default: 10).</p>
 
-		<h3>File Resolution</h3>
+		<h3>Directory Overrides</h3>
 		<p>When a page references a template or a template includes a fragment, the system searches for the file starting in the page's directory and walking up to the root. This means:</p>
 		<ul>
 			<li>Templates and fragments placed at the root apply to all pages</li>
@@ -215,10 +233,13 @@
 		</table>
 		</div>
 
-		<h2 id="variables">Variables</h2>
+		<h2 id="template-syntax">Template Syntax</h2>
+		<p>Use these tags and expressions inside templates, fragments, and pages to produce dynamic output.</p>
+
+		<h3 id="variables">Variables</h3>
 		<p>Use <code>&#123;&#123;variableName&#125;&#125;</code> syntax to insert dynamic values into templates and fragments.</p>
 
-		<h3>Built-in Variables</h3>
+		<h4>Built-in Variables</h4>
 		<div class="table-wrapper mb">
 		<table>
 			<thead>
@@ -239,24 +260,24 @@
 		</table>
 		</div>
 
-		<h3>Page Attributes as Variables</h3>
+		<h4>Page Attributes as Variables</h4>
 		<p>Any attribute on the <code>&lt;page&gt;</code> tag is available as a variable in the template:</p>
 		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- page file --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">page</span> <span class="hljs-attr">title</span>=<span class="hljs-string">"My Page"</span> <span class="hljs-attr">author</span>=<span class="hljs-string">"Dustin"</span>&gt;</span>...<span class="hljs-tag">&lt;/<span class="hljs-name">page</span>&gt;</span><br /><br /><span class="hljs-comment">&lt;!-- template file --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">title</span>&gt;</span>&#123;&#123;title&#125;&#125;<span class="hljs-tag">&lt;/<span class="hljs-name">title</span>&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">meta</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"author"</span> <span class="hljs-attr">content</span>=<span class="hljs-string">"&#123;&#123;author&#125;&#125;"</span> /&gt;</span></code></pre>
 
-		<h3>Globals and State</h3>
+		<h4>Globals and State</h4>
 		<p>Additional variables can be provided through the <code>globals</code> and <code>state</code> configuration objects. Globals and state are merged with page attributes, with page attributes taking priority.</p>
 		<pre><code class="hljs javascript"><span class="hljs-comment">// .config.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {<br />  <span class="hljs-attr">templating</span>: {<br />    <span class="hljs-attr">globals</span>: {<br />      <span class="hljs-attr">siteName</span>: <span class="hljs-string">'My Site'</span>,<br />      <span class="hljs-attr">copyright</span>: <span class="hljs-string">'© 2026 My Company'</span><br />    },<br />    <span class="hljs-attr">state</span>: {<br />      <span class="hljs-attr">buildId</span>: () =&gt; <span class="hljs-built_in">Date</span>.now().toString(<span class="hljs-number">36</span>)<br />    }<br />  }<br />};</code></pre>
 		<p>Function values in globals or state are called at render time, allowing dynamic values.</p>
 
-		<h3>Dot-Path Access</h3>
+		<h4>Dot-Path Access</h4>
 		<p>Variables support dot notation for nested object access:</p>
 		<pre><code class="hljs xml">&#123;&#123;site.name&#125;&#125;<br />&#123;&#123;author.email&#125;&#125;</code></pre>
 
-		<h2 id="conditionals">Conditionals</h2>
+		<h3 id="conditionals">Conditionals</h3>
 		<p>Use <code>&lt;if&gt;</code> blocks to conditionally include content based on variable values.</p>
 		<pre><code class="hljs xml"><span class="hljs-tag">&lt;<span class="hljs-name">if</span> <span class="hljs-attr">condition</span>=<span class="hljs-string">"showBanner"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"banner"</span>&gt;</span>Welcome!<span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">if</span>&gt;</span></code></pre>
 
-		<h3>Supported Operators</h3>
+		<h4>Supported Operators</h4>
 		<p>Conditions support a full expression syntax:</p>
 		<div class="table-wrapper mb">
 		<table>
@@ -278,10 +299,10 @@
 		</table>
 		</div>
 
-		<h3>Examples</h3>
+		<h4>Examples</h4>
 		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- Truthy check --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">if</span> <span class="hljs-attr">condition</span>=<span class="hljs-string">"isLoggedIn"</span>&gt;</span>Welcome back!<span class="hljs-tag">&lt;/<span class="hljs-name">if</span>&gt;</span><br /><br /><span class="hljs-comment">&lt;!-- Negation --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">if</span> <span class="hljs-attr">condition</span>=<span class="hljs-string">"!isLoggedIn"</span>&gt;</span>Please log in.<span class="hljs-tag">&lt;/<span class="hljs-name">if</span>&gt;</span><br /><br /><span class="hljs-comment">&lt;!-- String comparison --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">if</span> <span class="hljs-attr">condition</span>=<span class="hljs-string">"env === 'production'"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"analytics.js"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">if</span>&gt;</span><br /><br /><span class="hljs-comment">&lt;!-- Compound conditions --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">if</span> <span class="hljs-attr">condition</span>=<span class="hljs-string">"isAdmin &amp;&amp; hasPermission"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">a</span> <span class="hljs-attr">href</span>=<span class="hljs-string">"/admin"</span>&gt;</span>Admin Panel<span class="hljs-tag">&lt;/<span class="hljs-name">a</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">if</span>&gt;</span></code></pre>
 
-		<h2 id="loops">Loops</h2>
+		<h3 id="loops">Loops</h3>
 		<p>Use <code>&lt;foreach&gt;</code> blocks to iterate over arrays.</p>
 		<pre><code class="hljs xml"><span class="hljs-tag">&lt;<span class="hljs-name">foreach</span> <span class="hljs-attr">in</span>=<span class="hljs-string">"navLinks"</span> <span class="hljs-attr">as</span>=<span class="hljs-string">"link"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">a</span> <span class="hljs-attr">href</span>=<span class="hljs-string">"&#123;&#123;link.url&#125;&#125;"</span>&gt;</span>&#123;&#123;link.label&#125;&#125;<span class="hljs-tag">&lt;/<span class="hljs-name">a</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">foreach</span>&gt;</span></code></pre>
 		<p>The <code>in</code> attribute references an array variable and <code>as</code> names the loop variable. The loop variable supports dot-path access for object items.</p>
@@ -342,8 +363,10 @@
 	<div style="height:25vh"></div>
 	<script
 		type="module"
-		src="https://cdn.jsdelivr.net/npm/kempo-ui@0.0.42/dist/components/Import.js"
+		src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/dist/components/Import.js"
 	></script>
+	
+		<script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/src/components/Accordion.js" type="module"></script>
 	
 </body>
 </html>
