@@ -307,5 +307,52 @@ export default {
     const result = resolveFragmentTags(html, finder, 0, 10);
     if(result !== 'fallback') return fail(`got: ${result}`);
     pass();
+  },
+  'resolveFragmentTags handles excessive whitespace': ({pass, fail}) => {
+    const html = '<fragment      name="nav" />';
+    const finder = name => name === 'nav' ? '<nav>Link</nav>' : null;
+    const result = resolveFragmentTags(html, finder, 0, 10);
+    if(result !== '<nav>Link</nav>') return fail(`got: ${result}`);
+    pass();
+  },
+  'replaceLocations handles excessive whitespace on self-closing': ({pass, fail}) => {
+    const result = replaceLocations('<location      name="main"      />', {main: [{html: 'hi', priority: 0}]});
+    if(result !== 'hi') return fail(`got: ${result}`);
+    pass();
+  },
+  'replaceLocations handles excessive whitespace on block location': ({pass, fail}) => {
+    const result = replaceLocations('<location      name="main"      >fallback</location>', {main: [{html: 'hi', priority: 0}]});
+    if(result !== 'hi') return fail(`got: ${result}`);
+    pass();
+  },
+  'resolveIfs handles extra attributes before condition': ({pass, fail}) => {
+    const result = resolveIfs('<if label="test" condition="show">visible</if>', {show: true});
+    if(result !== 'visible') return fail(`got: ${result}`);
+    pass();
+  },
+  'resolveIfs handles extra attributes after condition': ({pass, fail}) => {
+    const result = resolveIfs('<if condition="show" label="test">visible</if>', {show: false});
+    if(result !== '') return fail(`got: ${result}`);
+    pass();
+  },
+  'resolveForeach handles reversed attribute order': ({pass, fail}) => {
+    const result = resolveForeach('<foreach as="item" in="items">{{item}},</foreach>', {items: ['a', 'b']});
+    if(result !== 'a,b,') return fail(`got: ${result}`);
+    pass();
+  },
+  'resolveForeach handles extra attributes': ({pass, fail}) => {
+    const result = resolveForeach('<foreach in="items" as="item" label="List">{{item}}</foreach>', {items: ['x', 'y']});
+    if(result !== 'xy') return fail(`got: ${result}`);
+    pass();
+  },
+  'extractContentBlocks handles excessive whitespace': ({pass, fail}) => {
+    const blocks = extractContentBlocks('<content      location="main"      >Hello</content>');
+    if(!Array.isArray(blocks.main) || blocks.main[0].html !== 'Hello') return fail(`got: ${JSON.stringify(blocks.main)}`);
+    pass();
+  },
+  'extractContentBlocks handles extra custom attributes': ({pass, fail}) => {
+    const blocks = extractContentBlocks('<content location="main" label="Main" editable="true">Hello</content>');
+    if(!Array.isArray(blocks.main) || blocks.main[0].html !== 'Hello') return fail(`got: ${JSON.stringify(blocks.main)}`);
+    pass();
   }
 };

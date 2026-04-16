@@ -67,7 +67,7 @@ const loadGlobalContent = async rootDir => {
 */
 const renderPage = async (pageFilePath, rootDir, globals = {}, state = {}, maxDepth = 10, preloadedGlobalContent = null) => {
   const pageContent = await readFile(pageFilePath, 'utf8');
-  const pageTagMatch = pageContent.match(/^[\s\S]*?<page\s([^>]*)>/);
+  const pageTagMatch = pageContent.match(/^[\s\S]*?<page((?:[^>"']|"[^"]*"|'[^']*')*)>/);
   if(!pageTagMatch) throw new Error(`Invalid page file: missing <page> root element in ${pageFilePath}`);
   const pageAttrs = extractAttrs(pageTagMatch[1]);
   const templateName = pageAttrs.template || 'default';

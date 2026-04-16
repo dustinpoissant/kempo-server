@@ -16,7 +16,7 @@ const extractAttrs = tagString => {
 */
 const extractContentBlocks = xml => {
   const blocks = {};
-  const re = /<content(?:\s+([^>]*))?\s*>([\s\S]*?)<\/content>/g;
+  const re = /<content((?:[^>"']|"[^"]*"|'[^']*')*)>([\s\S]*?)<\/content>/g;
   let match;
   while((match = re.exec(xml)) !== null){
     const attrs = extractAttrs(match[1] || '');
@@ -51,19 +51,15 @@ const resolveLocation = (entries) => {
 };
 
 const replaceLocations = (html, contentMap) =>
-  html
-    .replace(/<location(?:\s+([^>]*?))?\s*>([\s\S]*?)<\/location>/g, (_, attrStr, fallback) =>
-      resolveLocation(contentMap[extractAttrs(attrStr || '').name || 'default']) ?? fallback
-    )
-    .replace(/<location(?:\s+([^>]*?))?\s*\/>/g, (_, attrStr) =>
-      resolveLocation(contentMap[extractAttrs(attrStr || '').name || 'default']) ?? ''
-    );
+  html.replace(/<location((?:[^>"']|"[^"]*"|'[^']*')*?)(?:\s*\/>|>([\s\S]*?)<\/location>)/g, (_, attrStr, fallback) =>
+    resolveLocation(contentMap[extractAttrs(attrStr).name || 'default']) ?? fallback ?? ''
+  );
 
 /*
   Fragment Wrapper Stripping
 */
 const stripFragmentWrapper = xml => {
-  const match = xml.match(/^\s*<fragment\b[^>]*>([\s\S]*)<\/fragment>\s*$/);
+  const match = xml.match(/^\s*<fragment(?:[^>"']|"[^"]*"|'[^']*')*>([\s\S]*)<\/fragment>\s*$/);
   return match ? match[1] : xml;
 };
 
@@ -88,13 +84,13 @@ const resolveVars = (html, vars) =>
   If-Block Resolution
 */
 const resolveIfs = (html, vars) => {
-  const re = /<if\s+condition="([^"]+)">([\s\S]*?)<\/if>/g;
+  const re = /<if((?:[^>"']|"[^"]*"|'[^']*')*)>([\s\S]*?)<\/if>/g;
   let result = html;
   let prev;
   do {
     prev = result;
-    result = result.replace(re, (_, condition, inner) =>
-      evalCondition(condition, vars) ? inner : ''
+    result = result.replace(re, (_, attrStr, inner) =>
+      evalCondition(extractAttrs(attrStr).condition || '', vars) ? inner : ''
     );
   } while(result !== prev);
   return result;
@@ -104,16 +100,17 @@ const resolveIfs = (html, vars) => {
   Foreach-Block Resolution
 */
 const resolveForeach = (html, vars) => {
-  const re = /<foreach\s+in="([^"]+)"\s+as="([^"]+)">([\s\S]*?)<\/foreach>/g;
+  const re = /<foreach((?:[^>"']|"[^"]*"|'[^']*')*)>([\s\S]*?)<\/foreach>/g;
   let result = html;
   let prev;
   do {
     prev = result;
-    result = result.replace(re, (_, inAttr, asAttr, inner) => {
-      const arr = resolvePath(vars, inAttr.trim());
+    result = result.replace(re, (_, attrStr, inner) => {
+      const attrs = extractAttrs(attrStr);
+      const arr = resolvePath(vars, (attrs['in'] || '').trim());
       if(!Array.isArray(arr)) return '';
       return arr.map(item => {
-        const scopedVars = {...vars, [asAttr]: item};
+        const scopedVars = {...vars, [attrs.as]: item};
         return resolveVars(inner, scopedVars);
       }).join('');
     });
@@ -126,7 +123,7 @@ const resolveForeach = (html, vars) => {
 */
 const resolveFragmentTags = (html, findFragmentFile, depth, maxDepth) => {
   if(depth > maxDepth) throw new Error(`Fragment depth exceeded maximum of ${maxDepth}`);
-  const re = /<fragment\s+([^>]*?)(?:\s*\/>|>([\s\S]*?)<\/fragment>)/g;
+  const re = /<fragment((?:[^>"']|"[^"]*"|'[^']*')*?)(?:\s*\/>|>([\s\S]*?)<\/fragment>)/g;
   return html.replace(re, (_, attrStr, fallback) => {
     const name = extractAttrs(attrStr || '').name;
     const content = findFragmentFile(name);
