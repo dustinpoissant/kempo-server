@@ -74,8 +74,14 @@ const renderPage = async (pageFilePath, rootDir, globals = {}, state = {}, maxDe
   delete pageAttrs.template;
 
   const pageDir = path.dirname(pageFilePath);
-  const templateFile = findFileUpSync(`${templateName}.template.html`, pageDir, rootDir);
-  if(!templateFile) throw new Error(`Template not found: ${templateName}.template.html (searched from ${pageDir} to ${rootDir})`);
+  let templateFile = findFileUpSync(`${templateName}.template.html`, pageDir, rootDir);
+
+  // If the specified template is not found, fall back to default.template.html
+  if (!templateFile && templateName !== 'default') {
+    templateFile = findFileUpSync('default.template.html', pageDir, rootDir);
+  }
+
+  if(!templateFile) throw new Error(`Template not found: ${templateName}.template.html or default.template.html (searched from ${pageDir} to ${rootDir})`);
 
   const globalContent = preloadedGlobalContent ?? await loadGlobalContent(rootDir);
   const rawPageBlocks = extractContentBlocks(pageContent);
