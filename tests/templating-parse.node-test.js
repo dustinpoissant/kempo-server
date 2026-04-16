@@ -273,5 +273,39 @@ export default {
     const result = replaceLocations('<location>fallback</location>', {});
     if(result !== 'fallback') return fail(`got: ${result}`);
     pass();
+  },
+  'replaceLocations handles custom attributes on self-closing location': ({pass, fail}) => {
+    const result = replaceLocations('<location name="main" label="Main Content" />', {main: [{html: '<p>Hi</p>', priority: 0}]});
+    if(result !== '<p>Hi</p>') return fail(`got: ${result}`);
+    pass();
+  },
+  'replaceLocations handles custom attributes on block location': ({pass, fail}) => {
+    const result = replaceLocations('<location name="sidebar" label="Sidebar" editable="true">fallback</location>', {sidebar: [{html: 'real', priority: 0}]});
+    if(result !== 'real') return fail(`got: ${result}`);
+    pass();
+  },
+  'replaceLocations handles custom attributes with fallback': ({pass, fail}) => {
+    const result = replaceLocations('<location name="missing" label="Test">fallback</location>', {});
+    if(result !== 'fallback') return fail(`got: ${result}`);
+    pass();
+  },
+  'replaceLocations handles custom attributes on nameless location': ({pass, fail}) => {
+    const result = replaceLocations('<location label="Default" />', {default: [{html: 'content', priority: 0}]});
+    if(result !== 'content') return fail(`got: ${result}`);
+    pass();
+  },
+  'resolveFragmentTags handles custom attributes on fragment': ({pass, fail}) => {
+    const html = '<fragment name="nav" label="Navigation" />';
+    const finder = name => name === 'nav' ? '<nav>Link</nav>' : null;
+    const result = resolveFragmentTags(html, finder, 0, 10);
+    if(result !== '<nav>Link</nav>') return fail(`got: ${result}`);
+    pass();
+  },
+  'resolveFragmentTags handles custom attributes with fallback': ({pass, fail}) => {
+    const html = '<fragment name="missing" label="Test">fallback</fragment>';
+    const finder = () => null;
+    const result = resolveFragmentTags(html, finder, 0, 10);
+    if(result !== 'fallback') return fail(`got: ${result}`);
+    pass();
   }
 };

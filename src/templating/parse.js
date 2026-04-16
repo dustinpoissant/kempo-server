@@ -52,11 +52,11 @@ const resolveLocation = (entries) => {
 
 const replaceLocations = (html, contentMap) =>
   html
-    .replace(/<location(?:\s+name="([^"]*)")?>([\s\S]*?)<\/location>/g, (_, name, fallback) =>
-      resolveLocation(contentMap[name || 'default']) ?? fallback
+    .replace(/<location(?:\s+([^>]*?))?\s*>([\s\S]*?)<\/location>/g, (_, attrStr, fallback) =>
+      resolveLocation(contentMap[extractAttrs(attrStr || '').name || 'default']) ?? fallback
     )
-    .replace(/<location(?:\s+name="([^"]*)")?\s*\/>/g, (_, name) =>
-      resolveLocation(contentMap[name || 'default']) ?? ''
+    .replace(/<location(?:\s+([^>]*?))?\s*\/>/g, (_, attrStr) =>
+      resolveLocation(contentMap[extractAttrs(attrStr || '').name || 'default']) ?? ''
     );
 
 /*
@@ -126,8 +126,9 @@ const resolveForeach = (html, vars) => {
 */
 const resolveFragmentTags = (html, findFragmentFile, depth, maxDepth) => {
   if(depth > maxDepth) throw new Error(`Fragment depth exceeded maximum of ${maxDepth}`);
-  const re = /<fragment\s+name="([^"]+)"(?:\s*\/>|>([\s\S]*?)<\/fragment>)/g;
-  return html.replace(re, (_, name, fallback) => {
+  const re = /<fragment\s+([^>]*?)(?:\s*\/>|>([\s\S]*?)<\/fragment>)/g;
+  return html.replace(re, (_, attrStr, fallback) => {
+    const name = extractAttrs(attrStr || '').name;
     const content = findFragmentFile(name);
     if(content === null) return fallback ?? '';
     const stripped = stripFragmentWrapper(content);
