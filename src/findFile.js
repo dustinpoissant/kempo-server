@@ -45,12 +45,17 @@ export default (files, rootPath, requestPath, method, log) => {
     const dirPath = normalizeRequestPath || '';
     const methodUpper = method.toUpperCase();
     
-    // Priority order: METHOD.js, METHOD.html, index.js, index.html
+    // Priority order: METHOD.js, METHOD.html, METHOD.page.html, index.js, index.html, index.page.html
     const indexFiles = [
       `${methodUpper}.js`,
       `${methodUpper}.html`,
+      `${methodUpper}.page.html`,
       'index.js',
-      'index.html'
+      'index.html',
+      'index.page.html',
+      'CATCH.js',
+      'CATCH.html',
+      'CATCH.page.html'
     ];
     
     log(`Looking for index files: [${indexFiles.join(', ')}]`, 3);
@@ -116,8 +121,13 @@ export default (files, rootPath, requestPath, method, log) => {
         const indexFiles = [
           `${methodUpper}.js`,
           `${methodUpper}.html`,
+          `${methodUpper}.page.html`,
           'index.js',
-          'index.html'
+          'index.html',
+          'index.page.html',
+          'CATCH.js',
+          'CATCH.html',
+          'CATCH.page.html'
         ];
         
         const priority = indexFiles.indexOf(fileName);

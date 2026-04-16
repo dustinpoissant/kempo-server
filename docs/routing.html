@@ -114,10 +114,15 @@
     <h2 id="htmlRoutes">HTML Routes</h2>
     <p>Just like JS files, HTML files can be used to define a route. Use <code>GET.html</code>, <code>POST.html</code>, etc... to define files that will be served when that route is requested.</p>
     <pre><code class="hljs markdown">my/<br />├─ route/<br />│  ├─ GET.js<br />│  ├─ POST.js<br />├─ other/<br />│  ├─ route/<br />│  │  ├─ GET.js<br />│  ├─ POST.html<br />│  ├─ GET.html<br /></code></pre>
+
+    <h2 id="pageHtmlRoutes">Template Page Routes</h2>
+    <p>You can use <code>.page.html</code> files as route handlers. These files are rendered through the <a href="templating.html">templating system</a>, so they support templates, fragments, globals, and all other templating features. Use <code>GET.page.html</code>, <code>POST.page.html</code>, etc... to define template-rendered routes for specific methods, or <code>index.page.html</code> as a fallback for all methods.</p>
+    <pre><code class="hljs markdown">my/<br />├─ route/<br />│  ├─ GET.js<br />│  ├─ POST.page.html<br />├─ other/<br />│  ├─ GET.page.html<br />│  ├─ index.page.html<br /></code></pre>
+    <p><code>.page.html</code> routes are a lower priority than their <code>.js</code> and <code>.html</code> counterparts. If both <code>GET.js</code> and <code>GET.page.html</code> exist in the same directory, <code>GET.js</code> will be used.</p>
     
     <h3><code>index</code> fallbacks</h3>
-    <p><code>index.js</code> or <code>index.html</code> will be used as a fallback for all routes if a <i>method</i> file is not defined. In the above examples we do not have any routes defined for <code>DELETE</code>, <code>PUT</code> <code>PATCH</code>, etc... so lets use an <code>index.js</code> and <code>index.html</code> to be a "catch-all" for all the methods we have not created handlers for.</p>
-    <pre><code class="hljs markdown">my/<br />├─ route/<br />│  ├─ GET.js<br />│  ├─ POST.js<br />│  ├─ index.js<br />├─ other/<br />│  ├─ route/<br />│  │  ├─ GET.js<br />│  │  ├─ index.js<br />│  ├─ POST.html<br />│  ├─ GET.html<br />│  ├─ index.html<br />├─ index.html<br /></code></pre>
+    <p><code>index.js</code>, <code>index.html</code>, or <code>index.page.html</code> will be used as a fallback for all routes if a <i>method</i> file is not defined. In the above examples we do not have any routes defined for <code>DELETE</code>, <code>PUT</code> <code>PATCH</code>, etc... so lets use an <code>index.js</code>, <code>index.html</code>, and <code>index.page.html</code> to be a "catch-all" for all the methods we have not created handlers for.</p>
+    <pre><code class="hljs markdown">my/<br />├─ route/<br />│  ├─ GET.js<br />│  ├─ POST.js<br />│  ├─ index.js<br />├─ other/<br />│  ├─ route/<br />│  │  ├─ GET.js<br />│  │  ├─ index.js<br />│  ├─ POST.html<br />│  ├─ GET.html<br />│  ├─ index.html<br />├─ index.page.html<br /></code></pre>
 
     <h2>Dynamic Routes</h2>
     <p>A dynamic route is a route with a "param" in its path. To define the dynamic parts of the route just wrap the directory name in square brackets. For example if you wanted to get a users profile, or perform CRUD operations on a user you might create the following directory structure.</p>
@@ -160,13 +165,41 @@
     <p>Example static file structure:</p>
     <pre><code class="hljs markdown">public/<br />├─ index.html         # Served at /<br />├─ styles.css         # Served at /styles.css<br />├─ script.js          # Served at /script.js<br />├─ images/<br />│  ├─ logo.png        # Served at /images/logo.png<br />├─ api/               # Routes directory<br />│  ├─ hello/GET.js    # Route handler<br /></code></pre>
 
+    <h2 id="catchHandler">Catch Fallback Handler</h2>
+    <p>A <code>CATCH</code> file is a special handler that catches requests to any undefined deeper paths within that directory. When a request doesn't match any route or static file, the server walks up the directory tree from the requested path looking for the closest <code>CATCH</code> handler.</p>
+    <p>Unlike <code>index</code> files which handle a specific directory, <code>CATCH</code> files are fallbacks for undefined paths below that directory. This makes them perfect for handling REST-style path parameters or serving custom error pages.</p>
+    <p>The server checks each directory for the following files in priority order:</p>
+    <ol>
+      <li><code>CATCH.js</code> &mdash; executed as a route module (you control the full response, status code, format)</li>
+      <li><code>CATCH.html</code> &mdash; served as static HTML with a 404 status code</li>
+      <li><code>CATCH.page.html</code> &mdash; rendered through the <a href="templating.html">templating system</a> with a 404 status code</li>
+    </ol>
+    <p>If no <code>CATCH</code> handler is found in the current directory, the server moves up one directory and checks again, repeating until it reaches the server root. This means you can define a root-level <code>CATCH.page.html</code> as a global fallback and override it with more specific handlers in subdirectories.</p>
+    <pre><code class="hljs markdown">public/<br />├─ CATCH.page.html          # Global fallback for all paths<br />├─ index.html<br />├─ docs/<br />│  ├─ CATCH.page.html       # Docs-specific fallback<br />│  ├─ index.html<br />├─ api/<br />│  ├─ CATCH.js              # API-specific handler (can return JSON, custom status, etc.)<br />│  ├─ users/<br />│  │  ├─ GET.js<br /></code></pre>
+    <p>With this structure:</p>
+    <ul>
+      <li>A request to <code>/api/users/123/profile</code> (where <code>profile</code> doesn't exist) would use <code>api/CATCH.js</code></li>
+      <li>A request to <code>/docs/nonexistent/path</code> would use <code>docs/CATCH.page.html</code></li>
+      <li>A request to <code>/other/deep/undefined/path</code> would walk up to <code>CATCH.page.html</code> at the root</li>
+    </ul>
+    <p>If no <code>CATCH</code> handler is found anywhere in the tree, the server responds with a plain text "Not Found" response.</p>
+    
+    <h3>Using CATCH for Dynamic Route Parameters</h3>
+    <p>A common use case is using <code>CATCH.js</code> to handle REST-style path parameters. For example, an <code>api/CATCH.js</code> handler can parse path segments and respond with data or status codes as appropriate:</p>
+    <pre><code class="hljs javascript"><span class="hljs-comment">// api/CATCH.js</span><br /><span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">request, response</span>) </span>{<br />  <span class="hljs-keyword">const</span> path = request.url.split(<span class="hljs-string">'?'</span>)[<span class="hljs-number">0</span>];<br />  <span class="hljs-keyword">const</span> parts = path.replace(<span class="hljs-string">/\\/api\\//</span>, <span class="hljs-string">''</span>).split(<span class="hljs-string">'/'</span>).filter(Boolean);<br />  <br />  <span class="hljs-comment">// Parse alternating keys and values: /key1/value1/key2/value2</span><br />  <span class="hljs-keyword">const</span> params = {};<br />  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> i = <span class="hljs-number">0</span>; i &lt; parts.length; i += <span class="hljs-number">2</span>) {<br />    params[parts[i]] = parts[i + <span class="hljs-number">1</span>];<br />  }<br />  <br />  <span class="hljs-keyword">if</span> (Object.keys(params).length === <span class="hljs-number">0</span>) {<br />    response.status(<span class="hljs-number">404</span>).json({error: <span class="hljs-string\">'No parameters provided'</span>});<br />  } <span class="hljs-keyword\">else</span> {<br />    response.json({params, message: <span class="hljs-string\">'Caught by CATCH handler'</span>});<br />  }<br />}</code></pre>
+
     <h2>Custom Route Directory Resolution</h2>
     <p>When using <code>customRoutes</code> (see <a href="configuration.html#customRoutes">Configuration</a>), routes that resolve to a directory support full file-based routing. The server checks for route files and index files inside the directory using the same priority order as normal routing:</p>
     <ol>
       <li><code>METHOD.js</code> (e.g. <code>GET.js</code>, <code>POST.js</code>) &mdash; executed as a route module</li>
       <li><code>METHOD.html</code> (e.g. <code>GET.html</code>) &mdash; served as static</li>
+      <li><code>METHOD.page.html</code> (e.g. <code>GET.page.html</code>) &mdash; rendered via templating</li>
       <li><code>index.js</code> &mdash; executed as a route module</li>
       <li><code>index.html</code> / <code>index.htm</code> &mdash; served as static</li>
+      <li><code>index.page.html</code> &mdash; rendered via templating</li>
+      <li><code>CATCH.js</code> &mdash; fallback handler for undefined deeper paths</li>
+      <li><code>CATCH.html</code> &mdash; fallback served as static</li>
+      <li><code>CATCH.page.html</code> &mdash; fallback rendered via templating</li>
     </ol>
     <p>This applies to both exact and wildcard custom routes. For example, with a wildcard route <code>"/api/**": "../api/**"</code>, a request to <code>/api/auth/session</code> resolves to the <code>../api/auth/session/</code> directory and executes the appropriate route file (e.g. <code>GET.js</code> for GET requests).</p>
 	

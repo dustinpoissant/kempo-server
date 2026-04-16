@@ -44,6 +44,22 @@ export default async (files, rootPath, requestPath, method, config, req, res, lo
   const fileName = path.basename(file);
   log(`Found file: ${file}`, 2);
   
+  if(fileName.endsWith('.page.html')) {
+    log(`Rendering page template: ${fileName}`, 2);
+    try {
+      const {globals, state, maxFragmentDepth} = config.templating;
+      const html = await renderPage(file, rootPath, globals, state, maxFragmentDepth);
+      res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
+      res.end(html);
+      return true;
+    } catch(error) {
+      log(`Error rendering page template ${fileName}: ${error.message}`, 0);
+      res.writeHead(500, {'Content-Type': 'text/plain'});
+      res.end('Internal Server Error');
+      return true;
+    }
+  }
+
   // Check if this is a route file that should be executed as a module
   if (config.routeFiles.includes(fileName)) {
     log(`Executing route file: ${fileName}`, 2);

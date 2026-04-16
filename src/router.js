@@ -403,13 +403,26 @@ export default async (flags, log) => {
       const candidates = [
         `${methodUpper}.js`,
         `${methodUpper}.html`,
+        `${methodUpper}.page.html`,
         'index.js',
         'index.html',
-        'index.htm'
+        'index.page.html',
+        'index.htm',
+        'CATCH.js',
+        'CATCH.html',
+        'CATCH.page.html'
       ];
       for(const candidate of candidates) {
         const candidatePath = path.join(filePath, candidate);
         try { await stat(candidatePath); } catch { continue; }
+        if(candidate.endsWith('.page.html')) {
+          log(`Rendering page template: ${candidatePath}`, 2);
+          const {globals, state, maxFragmentDepth} = config.templating;
+          const html = await renderPage(candidatePath, rootPath, globals, state, maxFragmentDepth);
+          res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
+          res.end(html);
+          return true;
+        }
         if(config.routeFiles.includes(candidate)) {
           log(`Executing route file: ${candidatePath}`, 2);
           await executeRouteModule(candidatePath, req, res, params);
@@ -423,6 +436,14 @@ export default async (flags, log) => {
     }
 
     const fileName = path.basename(filePath);
+    if(fileName.endsWith('.page.html')) {
+      log(`Rendering page template: ${filePath}`, 2);
+      const {globals, state, maxFragmentDepth} = config.templating;
+      const html = await renderPage(filePath, rootPath, globals, state, maxFragmentDepth);
+      res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
+      res.end(html);
+      return true;
+    }
     if(config.routeFiles.includes(fileName)) {
       log(`Executing route file: ${filePath}`, 2);
       await executeRouteModule(filePath, req, res, params);
@@ -491,6 +512,43 @@ export default async (flags, log) => {
 
   // Track 404 attempts to avoid unnecessary rescans
   const rescanAttempts = new Map(); // path -> attempt count
+
+  // Walk up the directory tree from requestPath looking for CATCH.js, CATCH.html, CATCH.page.html.
+  // Returns true if a catch fallback handler was found and served, false otherwise.
+  const serveCatchFallback = async (requestPath, req, res) => {
+    const candidates = ['CATCH.js', 'CATCH.html', 'CATCH.page.html'];
+    let dir = path.join(rootPath, requestPath.startsWith('/') ? requestPath.slice(1) : requestPath);
+    // Start from the requested directory (or its parent if it's a file path)
+    if(path.extname(dir)) dir = path.dirname(dir);
+
+    while(dir.startsWith(rootPath)) {
+      for(const candidate of candidates) {
+        const candidatePath = path.join(dir, candidate);
+        try { await stat(candidatePath); } catch { continue; }
+        log(`Serving catch fallback: ${candidatePath}`, 2);
+        if(candidate === 'CATCH.page.html') {
+          const {globals, state, maxFragmentDepth} = config.templating;
+          const html = await renderPage(candidatePath, rootPath, globals, state, maxFragmentDepth);
+          res.writeHead(404, {'Content-Type': 'text/html; charset=utf-8'});
+          res.end(html);
+          return true;
+        }
+        if(candidate === 'CATCH.js') {
+          await executeRouteModule(candidatePath, req, res);
+          return true;
+        }
+        // CATCH.html — serve static with 404 status
+        const fileContent = await readFile(candidatePath, 'utf8');
+        res.writeHead(404, {'Content-Type': 'text/html; charset=utf-8'});
+        res.end(fileContent);
+        return true;
+      }
+      const parent = path.dirname(dir);
+      if(parent === dir) break;
+      dir = parent;
+    }
+    return false;
+  };
   const dynamicNoRescanPaths = new Set(); // paths that have exceeded max attempts
   
   // Helper function to check if a path should skip rescanning
@@ -657,6 +715,7 @@ export default async (flags, log) => {
         if (!reserved) {
           trackRescanAttempt(requestPath);
           log(`404 - File not found after rescan: ${requestPath}`, 1);
+          if(await serveCatchFallback(requestPath, req, res)) return;
           enhancedResponse.writeHead(404, { 'Content-Type': 'text/plain' });
           enhancedResponse.end('Not Found');
         } else {
@@ -669,6 +728,7 @@ export default async (flags, log) => {
         } else {
           log(`404 - File not found: ${requestPath}`, 1);
         }
+        if(await serveCatchFallback(requestPath, req, res)) return;
         enhancedResponse.writeHead(404, { 'Content-Type': 'text/plain' });
         enhancedResponse.end('Not Found');
       }

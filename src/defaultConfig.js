@@ -62,8 +62,7 @@ export default {
     "package\\.json$",
     "package-lock\\.json$",
     "\\.template\\.html$",
-    "\\.fragment\\.html$",
-    "\\.page\\.html$"
+    "\\.fragment\\.html$"
   ],
   routeFiles: [
     'GET.js',
@@ -75,7 +74,19 @@ export default {
     'PATCH.js',
     'CONNECT.js',
     'TRACE.js',
-    'index.js'
+    'index.js',
+    'GET.page.html',
+    'POST.page.html',
+    'PUT.page.html',
+    'DELETE.page.html',
+    'HEAD.page.html',
+    'OPTIONS.page.html',
+    'PATCH.page.html',
+    'CONNECT.page.html',
+    'TRACE.page.html',
+    'index.page.html',
+    'CATCH.js',
+    'CATCH.page.html'
   ],
   noRescanPaths: [
     "^/\\.well-known/",
