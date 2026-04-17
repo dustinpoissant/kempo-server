@@ -2,6 +2,14 @@
 
 All notable changes to `kempo-server` are documented in this file.
 
+## [3.0.11] - 2026-04-16
+
+### Added
+
+- **`renderPageToString(pagePath, vars, rootDir)`** exported from `kempo-server/templating`. Runs the full templating pipeline (template resolution, fragment injection, global content, `<if>`, `<foreach>`, `{{vars}}`) against a `.page.html` file and returns the final HTML string. Intended for programmatic use such as rendering emails.
+
+---
+
 ## [3.0.0] - 2026-04-09
 
 ### Breaking Changes

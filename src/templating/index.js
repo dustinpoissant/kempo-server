@@ -168,4 +168,7 @@ const renderDir = async (inputDir, outputDir, globals = {}, state = {}, maxDepth
   return count;
 };
 
-export { renderPage, renderDir };
+const renderPageToString = (pagePath, vars = {}, rootDir = path.dirname(pagePath)) =>
+  renderPage(pagePath, rootDir, {}, vars);
+
+export { renderPage, renderDir, renderPageToString };

@@ -315,6 +315,73 @@ export default async function(request, response) {
 }
 ```
 
+## Programmatic HTML Rendering
+
+Use `renderPageToString` to run the full templating pipeline outside of an HTTP request — ideal for rendering emails, generating HTML to pass to a PDF library, or any other programmatic use case.
+
+```javascript
+import { renderPageToString } from 'kempo-server/templating';
+
+const html = await renderPageToString(pagePath, vars, rootDir);
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `pagePath` | `string` | Absolute path to a `.page.html` file |
+| `vars` | `object` | Data available as `{{varName}}` in templates, fragments, and `<if>` conditions |
+| `rootDir` | `string` | *(optional)* Root for template/fragment/global search. Defaults to the directory of `pagePath` |
+
+The same pipeline that runs for web requests is used: template resolution, fragment injection, global content push, `<if>` conditionals, `<foreach>` loops, and `{{var}}` interpolation.
+
+**Email example:**
+
+```
+emails/
+├─ email.template.html          ← shared header/footer for all emails
+├─ signature.fragment.html      ← reusable fragment
+├─ promo-banner.global.html     ← pushed into every email automatically
+├─ welcome.page.html
+├─ password-reset.page.html
+└─ order-confirmation.page.html
+```
+
+```javascript
+// email.template.html
+<html>
+  <body>
+    <location name="body" />
+    <fragment name="signature" />
+    <location name="promo" />
+  </body>
+</html>
+```
+
+```javascript
+// welcome.page.html
+<page template="email">
+  <content location="body">
+    <h1>Welcome, {{userName}}!</h1>
+  </content>
+</page>
+```
+
+```javascript
+import { renderPageToString } from 'kempo-server/templating';
+import path from 'path';
+
+const emailsDir = path.resolve('./emails');
+const html = await renderPageToString(
+  path.join(emailsDir, 'welcome.page.html'),
+  { userName: 'Alice' },
+  emailsDir
+);
+// html is the fully rendered email string — ready to send
+```
+
+**Note:** `vars` are merged as `state` in the pipeline, meaning `<page>` tag attributes take highest priority, followed by `vars`, then `globals`. Built-in vars (`{{year}}`, `{{date}}`, `{{datetime}}`, `{{timestamp}}`) are always available.
+
 ## Programmatic File Rescan
 
 When files are added or removed at runtime (e.g., by a CMS generating static pages), you can trigger a file rescan without restarting the server:
