@@ -63,9 +63,9 @@ const loadGlobalContent = async rootDir => {
 };
 
 /*
-  Render a Single Page
+  Render a Single Page (internal — accepts explicit resolveDir)
 */
-const renderPage = async (pageFilePath, rootDir, globals = {}, state = {}, maxDepth = 10, preloadedGlobalContent = null) => {
+const renderPageCore = async (pageFilePath, rootDir, resolveDir, globals = {}, state = {}, maxDepth = 10, preloadedGlobalContent = null) => {
   const pageContent = await readFile(pageFilePath, 'utf8');
   const pageTagMatch = pageContent.match(/^[\s\S]*?<page((?:[^>"']|"[^"]*"|'[^']*')*)>/);
   if(!pageTagMatch) throw new Error(`Invalid page file: missing <page> root element in ${pageFilePath}`);
@@ -73,15 +73,14 @@ const renderPage = async (pageFilePath, rootDir, globals = {}, state = {}, maxDe
   const templateName = pageAttrs.template || 'default';
   delete pageAttrs.template;
 
-  const pageDir = path.dirname(pageFilePath);
-  let templateFile = findFileUpSync(`${templateName}.template.html`, pageDir, rootDir);
+  let templateFile = findFileUpSync(`${templateName}.template.html`, resolveDir, rootDir);
 
   // If the specified template is not found, fall back to default.template.html
-  if (!templateFile && templateName !== 'default') {
-    templateFile = findFileUpSync('default.template.html', pageDir, rootDir);
+  if(!templateFile && templateName !== 'default'){
+    templateFile = findFileUpSync('default.template.html', resolveDir, rootDir);
   }
 
-  if(!templateFile) throw new Error(`Template not found: ${templateName}.template.html or default.template.html (searched from ${pageDir} to ${rootDir})`);
+  if(!templateFile) throw new Error(`Template not found: ${templateName}.template.html or default.template.html (searched from ${resolveDir} to ${rootDir})`);
 
   const globalContent = preloadedGlobalContent ?? await loadGlobalContent(rootDir);
   const rawPageBlocks = extractContentBlocks(pageContent);
@@ -96,7 +95,7 @@ const renderPage = async (pageFilePath, rootDir, globals = {}, state = {}, maxDe
   let templateHtml = readFileSync(templateFile, 'utf8');
 
   const findFragmentFile = name => {
-    const filePath = findFileUpSync(name + '.fragment.html', pageDir, rootDir);
+    const filePath = findFileUpSync(name + '.fragment.html', resolveDir, rootDir);
     if(!filePath) return null;
     return readFileSync(filePath, 'utf8');
   };
@@ -104,7 +103,7 @@ const renderPage = async (pageFilePath, rootDir, globals = {}, state = {}, maxDe
   templateHtml = resolveFragmentTags(templateHtml, findFragmentFile, 0, maxDepth);
   templateHtml = replaceLocations(templateHtml, contentBlocks);
 
-  const rel = path.relative(rootDir, path.dirname(pageFilePath));
+  const rel = path.relative(rootDir, resolveDir);
   const depth = rel ? rel.split(path.sep).length : 0;
   const now = new Date();
 
@@ -132,6 +131,18 @@ const renderPage = async (pageFilePath, rootDir, globals = {}, state = {}, maxDe
 
   return templateHtml;
 };
+
+/*
+  Render a Single Page
+*/
+const renderPage = (pageFilePath, rootDir, globals = {}, state = {}, maxDepth = 10, preloadedGlobalContent = null) =>
+  renderPageCore(pageFilePath, rootDir, path.dirname(pageFilePath), globals, state, maxDepth, preloadedGlobalContent);
+
+/*
+  Render a Page File That Lives Outside rootDir
+*/
+const renderExternalPage = (pageFilePath, rootDir, resolveDir, globals = {}, state = {}, maxDepth = 10) =>
+  renderPageCore(pageFilePath, rootDir, resolveDir, globals, state, maxDepth, null);
 
 /*
   Recursively Walk Directory for *.page.html
@@ -171,4 +182,4 @@ const renderDir = async (inputDir, outputDir, globals = {}, state = {}, maxDepth
 const renderPageToString = (pagePath, vars = {}, rootDir = path.dirname(pagePath)) =>
   renderPage(pagePath, rootDir, {}, vars);
 
-export { renderPage, renderDir, renderPageToString };
+export { renderPage, renderDir, renderPageToString, renderExternalPage };

@@ -2,12 +2,16 @@
 
 All notable changes to `kempo-server` are documented in this file.
 
+## [3.0.12] - 2026-04-17
+
+### Added
+- **`renderExternalPage(pageFilePath, rootDir, resolveDir, globals, state, maxDepth)`** exported from `kempo-server/templating`. Identical pipeline to `renderPage` but decouples the page file's physical location from where templates and fragments are resolved. `resolveDir` (a path within `rootDir`) drives template/fragment walk-up and `pathToRoot` calculation, allowing page files that live outside `rootDir` (e.g. in extension packages) to use the host project's templates. Internally `renderPage` now delegates to a shared `renderPageCore` with no change to its public signature or behavior.
+
 ## [3.0.11] - 2026-04-16
 
 ### Added
 
 - **`renderPageToString(pagePath, vars, rootDir)`** exported from `kempo-server/templating`. Runs the full templating pipeline (template resolution, fragment injection, global content, `<if>`, `<foreach>`, `{{vars}}`) against a `.page.html` file and returns the final HTML string. Intended for programmatic use such as rendering emails.
-
 ---
 
 ## [3.0.0] - 2026-04-09

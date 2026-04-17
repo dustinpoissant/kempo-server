@@ -318,7 +318,44 @@
 		<p>The CLI automatically loads <code>.config.js</code> or <code>.config.json</code> from the input directory for globals, state, and maxFragmentDepth settings.</p>
 
 		<h3>Programmatic API</h3>
-		<pre><code class="hljs javascript"><span class="hljs-keyword">import</span> { renderDir, renderPage } <span class="hljs-keyword">from</span> <span class="hljs-string">'kempo-server/templating'</span>;<br /><br /><span class="hljs-comment">// Render all pages in a directory</span><br /><span class="hljs-keyword">const</span> count = <span class="hljs-keyword">await</span> renderDir(<span class="hljs-string">'./src'</span>, <span class="hljs-string">'./dist'</span>, globals, state, maxDepth);<br /><br /><span class="hljs-comment">// Render a single page</span><br /><span class="hljs-keyword">const</span> html = <span class="hljs-keyword">await</span> renderPage(<span class="hljs-string">'./src/about.page.html'</span>, <span class="hljs-string">'./src'</span>, globals, state, maxDepth);</code></pre>
+		<pre><code class="hljs javascript"><span class="hljs-keyword">import</span> { renderDir, renderPage, renderPageToString, renderExternalPage } <span class="hljs-keyword">from</span> <span class="hljs-string">'kempo-server/templating'</span>;<br /><br /><span class="hljs-comment">// Render all pages in a directory</span><br /><span class="hljs-keyword">const</span> count = <span class="hljs-keyword">await</span> renderDir(<span class="hljs-string">'./src'</span>, <span class="hljs-string">'./dist'</span>, globals, state, maxDepth);<br /><br /><span class="hljs-comment">// Render a single page</span><br /><span class="hljs-keyword">const</span> html = <span class="hljs-keyword">await</span> renderPage(<span class="hljs-string">'./src/about.page.html'</span>, <span class="hljs-string">'./src'</span>, globals, state, maxDepth);<br /><br /><span class="hljs-comment">// Render a page to a string (e.g. for sending emails)</span><br /><span class="hljs-keyword">const</span> emailHtml = <span class="hljs-keyword">await</span> renderPageToString(pagePath, vars, rootDir);<br /><br /><span class="hljs-comment">// Render a page file that lives outside rootDir</span><br /><span class="hljs-keyword">const</span> extHtml = <span class="hljs-keyword">await</span> renderExternalPage(pageFilePath, rootDir, resolveDir, globals, state, maxDepth);</code></pre>
+
+		<h3 id="render-page-to-string">renderPageToString</h3>
+		<p>Runs the full templating pipeline against a <code>.page.html</code> file and returns the final HTML string — no HTTP request needed. Template resolution, fragment injection, global content, <code>&lt;if&gt;</code>, <code>&lt;foreach&gt;</code>, and <code>&#123;&#123;vars&#125;&#125;</code> all work identically to a normal web render. Ideal for sending emails, generating PDFs, or any other programmatic rendering.</p>
+		<div class="table-wrapper mb">
+		<table>
+			<thead>
+				<tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+			</thead>
+			<tbody>
+				<tr><td><code>pagePath</code></td><td><code>string</code></td><td><em>required</em></td><td>Absolute path to a <code>.page.html</code> file</td></tr>
+				<tr><td><code>vars</code></td><td><code>object</code></td><td><code>{}</code></td><td>Data available as <code>&#123;&#123;varName&#125;&#125;</code> in templates, fragments, and conditions</td></tr>
+				<tr><td><code>rootDir</code></td><td><code>string</code></td><td>Directory of <code>pagePath</code></td><td>Root for template, fragment, and global file search</td></tr>
+			</tbody>
+		</table>
+		</div>
+		<p>A common use case is sending templated emails. Create a dedicated email directory with a shared template, per-email pages, reusable fragments, and optional global content:</p>
+		<pre><code class="hljs javascript"><span class="hljs-keyword">import</span> { renderPageToString } <span class="hljs-keyword">from</span> <span class="hljs-string">'kempo-server/templating'</span>;<br /><span class="hljs-keyword">import</span> path <span class="hljs-keyword">from</span> <span class="hljs-string">'path'</span>;<br /><br /><span class="hljs-keyword">const</span> emailsDir = path.resolve(<span class="hljs-string">'./emails'</span>);<br /><span class="hljs-keyword">const</span> html = <span class="hljs-keyword">await</span> renderPageToString(<br />  path.join(emailsDir, <span class="hljs-string">'welcome.page.html'</span>),<br />  { userName: <span class="hljs-string">'Alice'</span>, orderId: <span class="hljs-string">'1234'</span> }<br />);</code></pre>
+		<p>Built-in vars (<code>2026</code>, <code>2026-04-17</code>, <code>2026-04-17T16:41:21.246Z</code>, <code>1776444081246</code>) are always available. Note that <code>&lt;page&gt;</code> tag attributes take highest priority and override <code>vars</code> with the same key.</p>
+
+		<h3 id="render-external-page">renderExternalPage</h3>
+		<p>Identical pipeline to <code>renderPage</code>, but decouples the page file's physical location from where templates and fragments are resolved. Use this when a page file lives outside <code>rootDir</code> — for example, in a plugin or extension package — but should be rendered using the host project's templates, fragments, and globals.</p>
+		<div class="table-wrapper mb">
+		<table>
+			<thead>
+				<tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+			</thead>
+			<tbody>
+				<tr><td><code>pageFilePath</code></td><td><code>string</code></td><td><em>required</em></td><td>Absolute path to the <code>.page.html</code> file. May live outside <code>rootDir</code>. Used only to read content.</td></tr>
+				<tr><td><code>rootDir</code></td><td><code>string</code></td><td><em>required</em></td><td>Ceiling for template/fragment walk-up. <code>*.global.html</code> files are scanned from here.</td></tr>
+				<tr><td><code>resolveDir</code></td><td><code>string</code></td><td><em>required</em></td><td>Directory within <code>rootDir</code> where template and fragment walk-up starts. <code>pathToRoot</code> is calculated from here.</td></tr>
+				<tr><td><code>globals</code></td><td><code>object</code></td><td><code>{}</code></td><td>Global variables available to all pages</td></tr>
+				<tr><td><code>state</code></td><td><code>object</code></td><td><code>{}</code></td><td>Per-render variables</td></tr>
+				<tr><td><code>maxDepth</code></td><td><code>number</code></td><td><code>10</code></td><td>Maximum fragment nesting depth</td></tr>
+			</tbody>
+		</table>
+		</div>
+		<pre><code class="hljs javascript"><span class="hljs-keyword">import</span> { renderExternalPage } <span class="hljs-keyword">from</span> <span class="hljs-string">'kempo-server/templating'</span>;<br /><span class="hljs-keyword">import</span> path <span class="hljs-keyword">from</span> <span class="hljs-string">'path'</span>;<br /><br /><span class="hljs-comment">// Page lives in an extension package, rendered with the host app's templates</span><br /><span class="hljs-keyword">const</span> html = <span class="hljs-keyword">await</span> renderExternalPage(<br />  path.resolve(<span class="hljs-string">'./node_modules/my-ext/admin/dashboard.page.html'</span>),<br />  path.resolve(<span class="hljs-string">'./public'</span>),         <span class="hljs-comment">// rootDir</span><br />  path.resolve(<span class="hljs-string">'./public/admin'</span>),    <span class="hljs-comment">// resolveDir</span><br />  globals,<br />  state<br />);</code></pre>
 
 		<h2 id="ssr">Server-Side Rendering</h2>
 		<p>Pages can also be rendered on each request instead of pre-built. This is useful during development so you can see changes without rebuilding.</p>

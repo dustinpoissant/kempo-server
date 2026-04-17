@@ -382,6 +382,45 @@ const html = await renderPageToString(
 
 **Note:** `vars` are merged as `state` in the pipeline, meaning `<page>` tag attributes take highest priority, followed by `vars`, then `globals`. Built-in vars (`{{year}}`, `{{date}}`, `{{datetime}}`, `{{timestamp}}`) are always available.
 
+## Rendering Pages from External Packages
+
+Use `renderExternalPage` when a page file lives outside `rootDir` — for example, in a plugin or extension package — but should be rendered using the host project's templates, fragments, and globals.
+
+```javascript
+import { renderExternalPage } from 'kempo-server/templating';
+
+const html = await renderExternalPage(pageFilePath, rootDir, resolveDir, globals, state, maxDepth);
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `pageFilePath` | `string` | Absolute path to the `.page.html` file. May live outside `rootDir`. Used only to read content. |
+| `rootDir` | `string` | Ceiling for template/fragment walk-up. `*.global.html` files are scanned from here. |
+| `resolveDir` | `string` | Directory **within** `rootDir` where template and fragment walk-up starts. `pathToRoot` is calculated from here. |
+| `globals` | `object` | Global variables available to all pages |
+| `state` | `object` | Per-render variables |
+| `maxDepth` | `number` | Max fragment nesting depth (default `10`) |
+
+The behavior is identical to `renderPage` called on a hypothetical page file physically located at `resolveDir/<filename>.page.html`. The only difference is that the page content is read from `pageFilePath` regardless of where it lives on disk.
+
+**Example — extension package rendering into host templates:**
+
+```javascript
+import { renderExternalPage } from 'kempo-server/templating';
+import path from 'path';
+
+// Page lives in the extension package, but uses the host app's templates
+const html = await renderExternalPage(
+  path.resolve('./node_modules/my-extension/admin/dashboard.page.html'),
+  path.resolve('./public'),          // rootDir — host project root
+  path.resolve('./public/admin'),    // resolveDir — treat it as if it lives here
+  globals,
+  state
+);
+```
+
 ## Programmatic File Rescan
 
 When files are added or removed at runtime (e.g., by a CMS generating static pages), you can trigger a file rescan without restarting the server:
