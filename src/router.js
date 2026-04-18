@@ -269,7 +269,7 @@ export default async (flags, log) => {
     // Convert wildcard pattern to regex
     // IMPORTANT: Replace ** BEFORE * to avoid replacing both * in **
     const regexPattern = normalizedPattern
-      .replace(/\*\*/g, '(.+)')     // Replace ** with capture group for multiple segments
+      .replace(/\*\*/g, '(.*?)')    // Replace ** with capture group for zero or more segments
       .replace(/\*/g, '([^/]+)');   // Replace * with capture group for single segment
     
     const regex = new RegExp(`^${regexPattern}$`);
