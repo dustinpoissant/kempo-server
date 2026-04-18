@@ -17,7 +17,7 @@ import {
   loggingMiddleware 
 } from './builtinMiddleware.js';
 import { onRescan } from './rescan.js';
-import { renderDir, renderPage, renderExternalPage } from './templating/index.js';
+import { renderDir, renderExternalPage } from './templating/index.js';
 
 export default async (flags, log) => {
   log('Initializing router', 3);
@@ -419,7 +419,8 @@ export default async (flags, log) => {
         if(candidate.endsWith('.page.html')) {
           log(`Rendering page template: ${candidatePath}`, 2);
           const {globals, state, maxFragmentDepth} = config.templating;
-          const html = await renderPage(candidatePath, rootPath, globals, state, maxFragmentDepth);
+          const resolveDir = candidatePath.startsWith(rootPath) ? path.dirname(candidatePath) : rootPath;
+          const html = await renderExternalPage(candidatePath, rootPath, resolveDir, globals, state, maxFragmentDepth);
           res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
           res.end(html);
           return true;
@@ -440,7 +441,8 @@ export default async (flags, log) => {
     if(fileName.endsWith('.page.html')) {
       log(`Rendering page template: ${filePath}`, 2);
       const {globals, state, maxFragmentDepth} = config.templating;
-      const html = await renderPage(filePath, rootPath, globals, state, maxFragmentDepth);
+      const resolveDir = filePath.startsWith(rootPath) ? path.dirname(filePath) : rootPath;
+      const html = await renderExternalPage(filePath, rootPath, resolveDir, globals, state, maxFragmentDepth);
       res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
       res.end(html);
       return true;
@@ -497,7 +499,8 @@ export default async (flags, log) => {
       for(const pageFile of [base + '.page.html', path.join(base, 'index.page.html')]) {
         try {
           await stat(pageFile);
-          const html = await renderExternalPage(pageFile, rootPath, path.dirname(pageFile), globals, state, maxFragmentDepth);
+          const resolveDir = pageFile.startsWith(rootPath) ? path.dirname(pageFile) : rootPath;
+          const html = await renderExternalPage(pageFile, rootPath, resolveDir, globals, state, maxFragmentDepth);
           res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
           res.end(html);
           log(`SSR rendered custom route: ${pageFile}`, 2);
@@ -529,7 +532,8 @@ export default async (flags, log) => {
         log(`Serving catch fallback: ${candidatePath}`, 2);
         if(candidate === 'CATCH.page.html') {
           const {globals, state, maxFragmentDepth} = config.templating;
-          const html = await renderPage(candidatePath, rootPath, globals, state, maxFragmentDepth);
+          const resolveDir = candidatePath.startsWith(rootPath) ? path.dirname(candidatePath) : rootPath;
+          const html = await renderExternalPage(candidatePath, rootPath, resolveDir, globals, state, maxFragmentDepth);
           res.writeHead(404, {'Content-Type': 'text/html; charset=utf-8'});
           res.end(html);
           return true;
