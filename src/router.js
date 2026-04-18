@@ -396,6 +396,18 @@ export default async (flags, log) => {
     return null;
   };
 
+  // Build a virtual resolveDir that reflects the URL depth, so pathToRoot is computed correctly.
+  // For pages inside rootPath use their actual dir; for external pages fake a subdir at the right depth.
+  const getResolveDir = (pageFilePath, reqUrl) => {
+    if(pageFilePath.startsWith(rootPath)) return path.dirname(pageFilePath);
+    const urlParts = reqUrl.split('?')[0].replace(/\/+$/, '').split('/').filter(Boolean);
+    const depth = urlParts.length;
+    // Build a virtual path depth levels deep inside rootPath
+    let fakeDir = rootPath;
+    for(let i = 0; i < depth; i++) fakeDir = path.join(fakeDir, urlParts[i] || '__scope__');
+    return fakeDir;
+  };
+
   // Serve a resolved file or directory (fileStat already known).
   // Returns true if handled, null if directory has no matching route/index file.
   const serveResolvedPath = async (filePath, fileStat, params, req, res) => {
@@ -419,7 +431,7 @@ export default async (flags, log) => {
         if(candidate.endsWith('.page.html')) {
           log(`Rendering page template: ${candidatePath}`, 2);
           const {globals, state, maxFragmentDepth} = config.templating;
-          const resolveDir = candidatePath.startsWith(rootPath) ? path.dirname(candidatePath) : rootPath;
+          const resolveDir = getResolveDir(candidatePath, req.url);
           const html = await renderExternalPage(candidatePath, rootPath, resolveDir, globals, state, maxFragmentDepth);
           res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
           res.end(html);
@@ -441,7 +453,7 @@ export default async (flags, log) => {
     if(fileName.endsWith('.page.html')) {
       log(`Rendering page template: ${filePath}`, 2);
       const {globals, state, maxFragmentDepth} = config.templating;
-      const resolveDir = filePath.startsWith(rootPath) ? path.dirname(filePath) : rootPath;
+      const resolveDir = getResolveDir(filePath, req.url);
       const html = await renderExternalPage(filePath, rootPath, resolveDir, globals, state, maxFragmentDepth);
       res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
       res.end(html);
@@ -499,7 +511,7 @@ export default async (flags, log) => {
       for(const pageFile of [base + '.page.html', path.join(base, 'index.page.html')]) {
         try {
           await stat(pageFile);
-          const resolveDir = pageFile.startsWith(rootPath) ? path.dirname(pageFile) : rootPath;
+          const resolveDir = getResolveDir(pageFile, req.url);
           const html = await renderExternalPage(pageFile, rootPath, resolveDir, globals, state, maxFragmentDepth);
           res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
           res.end(html);
@@ -532,7 +544,7 @@ export default async (flags, log) => {
         log(`Serving catch fallback: ${candidatePath}`, 2);
         if(candidate === 'CATCH.page.html') {
           const {globals, state, maxFragmentDepth} = config.templating;
-          const resolveDir = candidatePath.startsWith(rootPath) ? path.dirname(candidatePath) : rootPath;
+          const resolveDir = getResolveDir(candidatePath, req.url);
           const html = await renderExternalPage(candidatePath, rootPath, resolveDir, globals, state, maxFragmentDepth);
           res.writeHead(404, {'Content-Type': 'text/html; charset=utf-8'});
           res.end(html);
