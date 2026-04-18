@@ -17,7 +17,7 @@ import {
   loggingMiddleware 
 } from './builtinMiddleware.js';
 import { onRescan } from './rescan.js';
-import { renderDir, renderPage } from './templating/index.js';
+import { renderDir, renderPage, renderExternalPage } from './templating/index.js';
 
 export default async (flags, log) => {
   log('Initializing router', 3);
@@ -496,7 +496,7 @@ export default async (flags, log) => {
       for(const pageFile of [base + '.page.html', path.join(base, 'index.page.html')]) {
         try {
           await stat(pageFile);
-          const html = await renderPage(pageFile, customRootDir, globals, state, maxFragmentDepth);
+          const html = await renderExternalPage(pageFile, rootPath, path.dirname(pageFile), globals, state, maxFragmentDepth);
           res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
           res.end(html);
           log(`SSR rendered custom route: ${pageFile}`, 2);
