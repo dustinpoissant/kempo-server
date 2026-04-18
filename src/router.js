@@ -513,15 +513,15 @@ export default async (flags, log) => {
   // Track 404 attempts to avoid unnecessary rescans
   const rescanAttempts = new Map(); // path -> attempt count
 
-  // Walk up the directory tree from requestPath looking for CATCH.js, CATCH.html, CATCH.page.html.
+  // Walk up the directory tree looking for CATCH.js, CATCH.html, CATCH.page.html.
+  // startDir: absolute path to begin the walk. boundDir: walk stops here (inclusive).
   // Returns true if a catch fallback handler was found and served, false otherwise.
-  const serveCatchFallback = async (requestPath, req, res) => {
+  const serveCatchFallbackFrom = async (startDir, boundDir, req, res) => {
     const candidates = ['CATCH.js', 'CATCH.html', 'CATCH.page.html'];
-    let dir = path.join(rootPath, requestPath.startsWith('/') ? requestPath.slice(1) : requestPath);
-    // Start from the requested directory (or its parent if it's a file path)
-    if(path.extname(dir)) dir = path.dirname(dir);
+    let dir = path.extname(startDir) ? path.dirname(startDir) : startDir;
+    const bound = path.resolve(boundDir);
 
-    while(dir.startsWith(rootPath)) {
+    while(path.resolve(dir).startsWith(bound)) {
       for(const candidate of candidates) {
         const candidatePath = path.join(dir, candidate);
         try { await stat(candidatePath); } catch { continue; }
@@ -549,6 +549,12 @@ export default async (flags, log) => {
     }
     return false;
   };
+
+  const serveCatchFallback = (requestPath, req, res) => {
+    const startDir = path.join(rootPath, requestPath.startsWith('/') ? requestPath.slice(1) : requestPath);
+    return serveCatchFallbackFrom(startDir, rootPath, req, res);
+  };
+
   const dynamicNoRescanPaths = new Set(); // paths that have exceeded max attempts
   
   // Helper function to check if a path should skip rescanning
@@ -692,6 +698,7 @@ export default async (flags, log) => {
           const result = await serveCustomRoutePath(resolvedFilePath, req, res, customRootDir);
           if(result) return;
           log(`Wildcard route path not found: ${requestPath}`, 2);
+          if(await serveCatchFallbackFrom(resolvedFilePath, customRootDir, req, res)) return;
         } catch(error) {
           log(`Error serving wildcard route ${requestPath}: ${error.message}`, 1);
           enhancedResponse.writeHead(500, { 'Content-Type': 'text/plain' });
