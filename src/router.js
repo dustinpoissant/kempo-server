@@ -269,8 +269,9 @@ export default async (flags, log) => {
     // Convert wildcard pattern to regex
     // IMPORTANT: Replace ** BEFORE * to avoid replacing both * in **
     const regexPattern = normalizedPattern
-      .replace(/\*\*/g, '(.*?)')    // Replace ** with capture group for zero or more segments
-      .replace(/\*/g, '([^/]+)');   // Replace * with capture group for single segment
+      .replace(/\*\*/g, '\x00GLOBSTAR\x00') // placeholder to avoid double-replace
+      .replace(/\*/g, '([^/]+)')            // single * — one path segment
+      .replace(/\x00GLOBSTAR\x00/g, '(.*)'); // ** — zero or more segments including slashes
     
     const regex = new RegExp(`^${regexPattern}$`);
     return regex.exec(requestPath);
