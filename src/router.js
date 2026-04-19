@@ -218,7 +218,7 @@ export default async (flags, log) => {
         const customMiddleware = middlewareModule.default;
         
         if (typeof customMiddleware === 'function') {
-          middlewareRunner.use(customMiddleware(config.middleware));
+          middlewareRunner.use(customMiddleware({ ...config.middleware, rootPath }));
           log(`Custom middleware loaded: ${middlewarePath}`, 3);
         } else {
           log(`Custom middleware error: ${middlewarePath} does not export a default function`, 1);

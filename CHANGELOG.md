@@ -2,6 +2,11 @@
 
 All notable changes to `kempo-server` are documented in this file.
 
+## [3.1.0] - 2026-04-19
+
+### Added
+- **`rootPath` injected into custom middleware config.** When the server loads custom middleware, it now merges `rootPath` (the absolute path to the server root directory) into the config object passed to each middleware factory. Previously middleware received only the raw `middleware` config section; now it receives `{ ...middlewareConfig, rootPath }`. This allows middleware to resolve files relative to the project root without hardcoding paths.
+
 ## [3.0.12] - 2026-04-17
 
 ### Added
