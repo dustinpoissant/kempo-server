@@ -37,13 +37,35 @@
       class="d-if ph"
       style="align-items: center"
     >
-      <img src="./media/icon32.png" alt="Kempo Server Icon" class="pr" />
+      <img
+        src="./media/icon32.png"
+        alt="Kempo Server Icon"
+        class="pr"
+      />
       Kempo Server
     </a>
     <div class="flex"></div>
-    <a href="https://github.com/dustinpoissant/kempo-ui?tab=License-1-ov-file#creative-commons-attribution-noncommercial-sharealike-20" target="_blank"><k-icon name="license"></k-icont></a>
-    <a href="https://github.com/dustinpoissant/kempo-ui" target="_blank"><k-icon name="github-mark"></k-icont></a>
-    <k-theme-switcher></k-theme-switcher>
+    <a
+      href="https://github.com/dustinpoissant/kempo-server?tab=License-1-ov-file#creative-commons-attribution-noncommercial-sharealike-20"
+      target="_blank"
+    ><k-icon name="license"></k-icon></a>
+    <a
+      href="https://www.npmjs.com/package/kempo-server"
+      target="_blank"
+    ><k-icon name="npm"></k-icon></a>
+    <a
+      href="https://github.com/dustinpoissant/kempo-server"
+      target="_blank"
+    ><k-icon name="github-mark"></k-icon></a>
+    <k-theme-switcher
+      class="mr"
+      style="
+        --padding: 0.5rem;
+        --c_active: var(--tc_on_primary);
+        --tc_active: var(--c_primary);
+        --c_inactive__hover: rgba(255, 255, 255, 0.1);
+      "
+    ></k-theme-switcher>
   </k-nav>
   <div style="width: 100%; height: 4rem;"></div>
   <k-aside
@@ -51,9 +73,15 @@
     state="offscreen"
   >
     <menu>
-      <a href="./" class="ta-center bb mb r0">
+      <a
+        href="./"
+        class="ta-center bb mb r0"
+      >
         <h1 class="tc-primary">Kempo Server</h1>
-        <img src="./media/icon128.png" alt="Kempo UI Icon" />
+        <img
+          src="./media/icon128.png"
+          alt="Kempo UI Icon"
+        />
       </a>
       
 	<h3 class="mt mb0">Advanced Features</h3>
@@ -72,18 +100,38 @@
 	<br /><br />
 
     </menu>
+    <k-aside-spacer></k-aside-spacer>
+    <k-theme-switcher
+      labels
+      style="--padding:var(--spacer_h);margin:var(--spacer_h) auto"
+    ></k-theme-switcher>
   </k-aside>
-  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/src/components/Aside.js" type="module"></script>
-  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/src/components/Main.js" type="module"></script>
-  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/src/components/Nav.js" type="module"></script>
-  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/src/components/Icon.js" type="module"></script>
-  <script src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/src/components/ThemeSwitcher.js" type="module"></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/src/components/Aside.js"
+    type="module"
+  ></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/src/components/Main.js"
+    type="module"
+  ></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/src/components/Nav.js"
+    type="module"
+  ></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/src/components/Icon.js"
+    type="module"
+  ></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/src/components/ThemeSwitcher.js"
+    type="module"
+  ></script>
   <script>
     document.getElementById('toggleNavSideMenu').addEventListener('click', async () => {
       await window.customElements.whenDefined('k-aside');
       document.getElementById('navSideMenu').toggle();
     });
-    document.addEventListener('click', function(e) {
+    document.addEventListener('click', function (e) {
       if (e.target.matches('a[href^="#"]')) {
         e.preventDefault();
         const targetId = e.target.getAttribute('href').replace('#', '');
@@ -336,7 +384,7 @@
 		</div>
 		<p>A common use case is sending templated emails. Create a dedicated email directory with a shared template, per-email pages, reusable fragments, and optional global content:</p>
 		<pre><code class="hljs javascript"><span class="hljs-keyword">import</span> { renderPageToString } <span class="hljs-keyword">from</span> <span class="hljs-string">'kempo-server/templating'</span>;<br /><span class="hljs-keyword">import</span> path <span class="hljs-keyword">from</span> <span class="hljs-string">'path'</span>;<br /><br /><span class="hljs-keyword">const</span> emailsDir = path.resolve(<span class="hljs-string">'./emails'</span>);<br /><span class="hljs-keyword">const</span> html = <span class="hljs-keyword">await</span> renderPageToString(<br />  path.join(emailsDir, <span class="hljs-string">'welcome.page.html'</span>),<br />  { userName: <span class="hljs-string">'Alice'</span>, orderId: <span class="hljs-string">'1234'</span> }<br />);</code></pre>
-		<p>Built-in vars (<code>2026</code>, <code>2026-04-19</code>, <code>2026-04-19T16:44:23.257Z</code>, <code>1776617063257</code>) are always available. Note that <code>&lt;page&gt;</code> tag attributes take highest priority and override <code>vars</code> with the same key.</p>
+		<p>Built-in vars (<code>2026</code>, <code>2026-04-20</code>, <code>2026-04-20T01:59:55.019Z</code>, <code>1776650395019</code>) are always available. Note that <code>&lt;page&gt;</code> tag attributes take highest priority and override <code>vars</code> with the same key.</p>
 
 		<h3 id="render-external-page">renderExternalPage</h3>
 		<p>Identical pipeline to <code>renderPage</code>, but decouples the page file's physical location from where templates and fragments are resolved. Use this when a page file lives outside <code>rootDir</code> — for example, in a plugin or extension package — but should be rendered using the host project's templates, fragments, and globals.</p>

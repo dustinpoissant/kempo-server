@@ -32,5 +32,8 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/dustinpoissant/kempo-server"
+  },
+  "dependencies": {
+    "kempo-ui": "^0.3.17"
   }
 }

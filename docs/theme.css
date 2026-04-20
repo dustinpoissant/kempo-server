@@ -1,7 +1,7 @@
 :root {
 	--c_primary: hsl(262, 52%, 47%);
 	--c_secondary: rgb(51, 102, 255);
-	--tc_primary: light-dark(#93f, rgb(187, 102, 255));
+	--tc_primary: light-dark(hsl(262, 52%, 47%), rgb(187, 102, 255));
 	--tc_secondary: light-dark(#36f, rgb(138, 180, 248));
 	--c_highlight: light-dark(rgba(153, 51, 255, 0.25), rgba(153, 51, 255, 0.25));
 }
