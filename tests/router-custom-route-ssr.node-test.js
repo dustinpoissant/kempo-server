@@ -23,7 +23,7 @@ export default {
         const template = '<html><body><location name="main" /></body></html>';
         const page = '<page template="default"><content location="main"><h1>Admin Page</h1></content></page>';
 
-        await write(dir, 'admin/default.template.html', template);
+        await write(dir, 'public/default.template.html', template);
         await write(dir, 'admin/dashboard.page.html', page);
         await write(dir, 'public/index.html', '<h1>root</h1>');
 
@@ -57,7 +57,7 @@ export default {
         const template = '<html><body><location name="main" /></body></html>';
         const page = '<page template="default"><content location="main"><h1>Section Index</h1></content></page>';
 
-        await write(dir, 'admin/default.template.html', template);
+        await write(dir, 'public/default.template.html', template);
         await write(dir, 'admin/users/index.page.html', page);
         await write(dir, 'public/index.html', '<h1>root</h1>');
 
@@ -115,15 +115,15 @@ export default {
     }
   },
 
-  'wildcard custom route SSR uses custom root for template/fragment lookup': async ({pass, fail}) => {
+  'wildcard custom route SSR uses public root for template/fragment lookup': async ({pass, fail}) => {
     try {
       await withTempDir(async (dir) => {
         const template = '<html><fragment name="nav" /><location name="main" /></html>';
         const fragment = '<nav>Custom Nav</nav>';
         const page = '<page template="default"><content location="main"><p>Content</p></content></page>';
 
-        await write(dir, 'admin/default.template.html', template);
-        await write(dir, 'admin/nav.fragment.html', fragment);
+        await write(dir, 'public/default.template.html', template);
+        await write(dir, 'public/nav.fragment.html', fragment);
         await write(dir, 'admin/about.page.html', page);
         await write(dir, 'public/index.html', '<h1>root</h1>');
 
