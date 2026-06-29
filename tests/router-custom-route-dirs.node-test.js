@@ -390,6 +390,45 @@ export default {
     }
   },
 
+  'wildcard route serves static binary files via Range requests': async ({pass, fail, log}) => {
+    try {
+      await withTempDir(async (dir) => {
+        await write(dir, 'media/clip.mp4', Buffer.from('0123456789'));
+        await write(dir, 'docs/index.html', '<html></html>');
+        await write(dir, 'docs/.config.json', JSON.stringify({
+          customRoutes: { '/media/**': '../media/**' }
+        }));
+
+        const prev = process.cwd();
+        process.chdir(dir);
+        const handler = await router({root: 'docs', logging: 0}, () => {});
+        const server = http.createServer(handler);
+        const port = randomPort();
+        await new Promise(r => server.listen(port, r));
+        await new Promise(r => setTimeout(r, 50));
+
+        try {
+          const full = await httpGet(`http://localhost:${port}/media/clip.mp4`);
+          log('full status: ' + full.res.statusCode);
+          if(full.res.statusCode !== 200) throw new Error('expected 200, got ' + full.res.statusCode);
+          if(full.res.headers['accept-ranges'] !== 'bytes') throw new Error('expected Accept-Ranges: bytes on custom-route static file');
+
+          const ranged = await httpGet(`http://localhost:${port}/media/clip.mp4`, {range: 'bytes=2-4'});
+          log('ranged status: ' + ranged.res.statusCode);
+          if(ranged.res.statusCode !== 206) throw new Error('expected 206, got ' + ranged.res.statusCode);
+          if(ranged.res.headers['content-range'] !== 'bytes 2-4/10') throw new Error('unexpected Content-Range: ' + ranged.res.headers['content-range']);
+          if(ranged.body.toString() !== '234') throw new Error('unexpected body: ' + ranged.body.toString());
+        } finally {
+          server.close();
+          process.chdir(prev);
+        }
+      });
+      pass('wildcard route honors Range requests for static binary files');
+    } catch(e) {
+      fail(e.message);
+    }
+  },
+
   'wildcard route [param] exact match takes priority over [param]': async ({pass, fail, log}) => {
     try {
       await withTempDir(async (dir) => {

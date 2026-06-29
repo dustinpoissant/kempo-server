@@ -5,6 +5,7 @@ import defaultConfig from './defaultConfig.js';
 import getFiles from './getFiles.js';
 import findFile from './findFile.js';
 import serveFile from './serveFile.js';
+import serveStaticFile from './serveStaticFile.js';
 import MiddlewareRunner from './middlewareRunner.js';
 import ModuleCache from './moduleCache.js';
 import createRequestWrapper, { readRawBody, parseBody } from './requestWrapper.js';
@@ -313,24 +314,8 @@ export default async (flags, log) => {
   /*
     Custom Route Helpers
   */
-  const serveStaticCustomFile = async (filePath, res) => {
-    const fileExtension = path.extname(filePath).toLowerCase().slice(1);
-    const mimeConfig = config.allowedMimes[fileExtension];
-    let mimeType, encoding;
-    if(typeof mimeConfig === 'string') {
-      mimeType = mimeConfig;
-      encoding = mimeType.startsWith('text/') ? 'utf8' : undefined;
-    } else {
-      mimeType = mimeConfig?.mime || 'application/octet-stream';
-      encoding = mimeConfig?.encoding === 'utf8' ? 'utf8' : undefined;
-    }
-    const fileContent = await readFile(filePath, encoding);
-    log(`Serving custom file as ${mimeType} (${fileContent.length} bytes)`, 2);
-    const contentType = encoding === 'utf8' && mimeType.startsWith('text/')
-      ? `${mimeType}; charset=utf-8`
-      : mimeType;
-    res.writeHead(200, { 'Content-Type': contentType });
-    res.end(fileContent);
+  const serveStaticCustomFile = async (filePath, req, res) => {
+    await serveStaticFile(filePath, req, res, config, log);
   };
 
   const executeRouteModule = async (filePath, req, res, params = {}) => {
@@ -443,7 +428,7 @@ export default async (flags, log) => {
           return true;
         }
         log(`Serving index file: ${candidatePath}`, 2);
-        await serveStaticCustomFile(candidatePath, res);
+        await serveStaticCustomFile(candidatePath, req, res);
         return true;
       }
       return null;
@@ -464,7 +449,7 @@ export default async (flags, log) => {
       await executeRouteModule(filePath, req, res, params);
       return true;
     }
-    await serveStaticCustomFile(filePath, res);
+    await serveStaticCustomFile(filePath, req, res);
     return true;
   };
 

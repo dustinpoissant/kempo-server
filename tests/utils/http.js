@@ -1,6 +1,6 @@
-export const httpGet = (url) => new Promise((resolve, reject) => {
+export const httpGet = (url, headers) => new Promise((resolve, reject) => {
   import('http').then(({get}) => {
-    get(url, res => {
+    get(url, headers ? {headers} : undefined, res => {
       const chunks = [];
       res.on('data', c => chunks.push(c));
       res.on('end', () => resolve({res, body: Buffer.concat(chunks)}));
