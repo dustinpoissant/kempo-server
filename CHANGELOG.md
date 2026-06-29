@@ -2,6 +2,11 @@
 
 All notable changes to `kempo-server` are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- **HTTP Range (`206 Partial Content`) support for binary static files.** Previously every static file was read into memory in full and sent back with a flat `200`, even when the client sent a `Range` header. This made it impossible for browsers to seek inside large media files (e.g. `<video>`/`<audio>` scrubbing), since seeking depends on the server honoring byte-range requests. Binary files (anything whose MIME config isn't `utf8`-encoded — images, video, audio, fonts, etc.) now advertise `Accept-Ranges: bytes` and respond to `Range: bytes=...` requests (including open-ended `start-` and suffix `-N` forms) with `206 Partial Content` and the requested slice, streamed via `fs.createReadStream` instead of buffered into memory. Unsatisfiable ranges return `416 Range Not Satisfiable`. Text files are unaffected and continue to be served in full.
+
 ## [3.1.0] - 2026-04-19
 
 ### Added
