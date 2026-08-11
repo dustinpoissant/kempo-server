@@ -43,7 +43,13 @@ const loadVersion = rootDir => {
   Walk Directory for *.global.html Files
 */
 const walkGlobals = async dir => {
-  const entries = await readdir(dir, {withFileTypes: true});
+  let entries;
+  try {
+    entries = await readdir(dir, {withFileTypes: true});
+  } catch {
+    // Extra global dirs are optional — a package that ships no globals is the common case
+    return [];
+  }
   const results = [];
   for(const entry of entries){
     const full = path.join(dir, entry.name);
@@ -56,8 +62,15 @@ const walkGlobals = async dir => {
   return results;
 };
 
-const loadGlobalContent = async rootDir => {
-  const files = await walkGlobals(rootDir);
+/*
+  Collects *.global.html from rootDir plus any extraGlobalDirs. Extra dirs let a host scan
+  global content that lives outside rootDir — e.g. plugin packages contributing content to a
+  render whose root is the host's own directory. Later dirs merge over earlier ones, and
+  mergeContentBlocks still applies each entry's priority within a location.
+*/
+const loadGlobalContent = async (rootDir, extraGlobalDirs = []) => {
+  const dirs = [rootDir, ...extraGlobalDirs];
+  const files = (await Promise.all(dirs.map(walkGlobals))).flat();
   const maps = await Promise.all(files.map(async f => extractContentBlocks(await readFile(f, 'utf8'))));
   return mergeContentBlocks(...maps);
 };
@@ -65,7 +78,7 @@ const loadGlobalContent = async rootDir => {
 /*
   Render a Single Page (internal — accepts explicit resolveDir)
 */
-const renderPageCore = async (pageFilePath, rootDir, resolveDir, globals = {}, state = {}, maxDepth = 10, preloadedGlobalContent = null) => {
+const renderPageCore = async (pageFilePath, rootDir, resolveDir, globals = {}, state = {}, maxDepth = 10, preloadedGlobalContent = null, extraGlobalDirs = []) => {
   const pageContent = await readFile(pageFilePath, 'utf8');
   const pageTagMatch = pageContent.match(/^[\s\S]*?<page((?:[^>"']|"[^"]*"|'[^']*')*)>/);
   if(!pageTagMatch) throw new Error(`Invalid page file: missing <page> root element in ${pageFilePath}`);
@@ -82,7 +95,7 @@ const renderPageCore = async (pageFilePath, rootDir, resolveDir, globals = {}, s
 
   if(!templateFile) throw new Error(`Template not found: ${templateName}.template.html or default.template.html (searched from ${resolveDir} to ${rootDir})`);
 
-  const globalContent = preloadedGlobalContent ?? await loadGlobalContent(rootDir);
+  const globalContent = preloadedGlobalContent ?? await loadGlobalContent(rootDir, extraGlobalDirs);
   const rawPageBlocks = extractContentBlocks(pageContent);
 
   // Allow <location> tags inside page content blocks to be filled by global content
@@ -141,8 +154,8 @@ const renderPage = (pageFilePath, rootDir, globals = {}, state = {}, maxDepth = 
 /*
   Render a Page File That Lives Outside rootDir
 */
-const renderExternalPage = (pageFilePath, rootDir, resolveDir, globals = {}, state = {}, maxDepth = 10) =>
-  renderPageCore(pageFilePath, rootDir, resolveDir, globals, state, maxDepth, null);
+const renderExternalPage = (pageFilePath, rootDir, resolveDir, globals = {}, state = {}, maxDepth = 10, extraGlobalDirs = []) =>
+  renderPageCore(pageFilePath, rootDir, resolveDir, globals, state, maxDepth, null, extraGlobalDirs);
 
 /*
   Recursively Walk Directory for *.page.html

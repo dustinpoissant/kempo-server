@@ -215,5 +215,82 @@ export default {
         pass();
       });
     });
+  },
+
+  'renderExternalPage picks up globals from extraGlobalDirs': async ({pass, fail}) => {
+    await withTempDir(async rootDir => {
+      await withTempDir(async pluginDir => {
+        await setupFiles(rootDir, {
+          'default.template.html': '<html><body><location name="nav" /><location name="main" /></body></html>'
+        });
+        await setupFiles(pluginDir, {
+          'nav.global.html': '<content name="plugin-nav" location="nav"><a href="/plugin">Plugin</a></content>',
+          'page.page.html': '<page><content location="main"><h1>Page</h1></content></page>'
+        });
+        const html = await renderExternalPage(
+          path.join(pluginDir, 'page.page.html'),
+          rootDir,
+          rootDir,
+          {},
+          {},
+          10,
+          [pluginDir]
+        );
+        if(!html.includes('href="/plugin"')) return fail(`extra global dir content missing: ${html}`);
+        if(!html.includes('<h1>Page</h1>')) return fail(`page content missing: ${html}`);
+        pass();
+      });
+    });
+  },
+
+  'renderExternalPage merges rootDir globals with extraGlobalDirs globals': async ({pass, fail}) => {
+    await withTempDir(async rootDir => {
+      await withTempDir(async pluginDir => {
+        await setupFiles(rootDir, {
+          'default.template.html': '<html><body><location name="nav" /></body></html>',
+          'core.global.html': '<content name="core-nav" location="nav"><a href="/home">Home</a></content>'
+        });
+        await setupFiles(pluginDir, {
+          'nav.global.html': '<content name="plugin-nav" location="nav"><a href="/plugin">Plugin</a></content>',
+          'page.page.html': '<page></page>'
+        });
+        const html = await renderExternalPage(
+          path.join(pluginDir, 'page.page.html'),
+          rootDir,
+          rootDir,
+          {},
+          {},
+          10,
+          [pluginDir]
+        );
+        if(!html.includes('href="/home"')) return fail(`rootDir global missing: ${html}`);
+        if(!html.includes('href="/plugin"')) return fail(`extra global dir content missing: ${html}`);
+        pass();
+      });
+    });
+  },
+
+  'renderExternalPage ignores extraGlobalDirs that do not exist': async ({pass, fail}) => {
+    await withTempDir(async rootDir => {
+      await withTempDir(async externalDir => {
+        await setupFiles(rootDir, {
+          'default.template.html': '<html><body><location name="main" /></body></html>'
+        });
+        await setupFiles(externalDir, {
+          'page.page.html': '<page><content location="main"><h1>Page</h1></content></page>'
+        });
+        const html = await renderExternalPage(
+          path.join(externalDir, 'page.page.html'),
+          rootDir,
+          rootDir,
+          {},
+          {},
+          10,
+          [path.join(externalDir, 'does-not-exist')]
+        );
+        if(!html.includes('<h1>Page</h1>')) return fail(`render failed on missing extra dir: ${html}`);
+        pass();
+      });
+    });
   }
 };

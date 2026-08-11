@@ -389,7 +389,7 @@ Use `renderExternalPage` when a page file lives outside `rootDir` — for exampl
 ```javascript
 import { renderExternalPage } from 'kempo-server/templating';
 
-const html = await renderExternalPage(pageFilePath, rootDir, resolveDir, globals, state, maxDepth);
+const html = await renderExternalPage(pageFilePath, rootDir, resolveDir, globals, state, maxDepth, extraGlobalDirs);
 ```
 
 **Parameters:**
@@ -402,6 +402,29 @@ const html = await renderExternalPage(pageFilePath, rootDir, resolveDir, globals
 | `globals` | `object` | Global variables available to all pages |
 | `state` | `object` | Per-render variables |
 | `maxDepth` | `number` | Max fragment nesting depth (default `10`) |
+| `extraGlobalDirs` | `string[]` | *(optional)* Additional directories to scan for `*.global.html`, on top of `rootDir`. Directories that do not exist are skipped. |
+
+### Global content from outside `rootDir`
+
+`*.global.html` files are normally collected by walking `rootDir`. `extraGlobalDirs` lets other
+directories contribute global content to the same render — for example a plugin package pushing a
+nav entry into the host's admin pages, without anything being written into the host's directory:
+
+```javascript
+const html = await renderExternalPage(
+  path.resolve('./node_modules/kempo/dist/admin/index.page.html'),
+  adminRoot,
+  adminRoot,
+  {},
+  {},
+  10,
+  enabledPlugins.map(name => path.resolve('./node_modules', name, 'admin'))
+);
+```
+
+Entries from every directory are merged, and each entry's `priority` still orders it within its
+`location`. Because the plugin's file is read at render time, enabling, disabling, upgrading, or
+removing the plugin takes effect immediately with no install-time file copying to keep in sync.
 
 The behavior is identical to `renderPage` called on a hypothetical page file physically located at `resolveDir/<filename>.page.html`. The only difference is that the page content is read from `pageFilePath` regardless of where it lives on disk.
 
