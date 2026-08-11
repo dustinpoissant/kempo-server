@@ -529,7 +529,11 @@ export default async (flags, log) => {
         log(`Serving catch fallback: ${candidatePath}`, 2);
         if(candidate === 'CATCH.page.html') {
           const {globals, state, maxFragmentDepth} = config.templating;
-          const resolveDir = getResolveDir(candidatePath, req.url);
+          // Use URL-based resolveDir so {{pathToRoot}} reflects the requested URL depth,
+          // not the depth of the CATCH file itself (which may be in a parent directory).
+          const urlParts = req.url.split('?')[0].replace(/\/+$/, '').split('/').filter(Boolean);
+          let resolveDir = rootPath;
+          for(const part of urlParts) resolveDir = path.join(resolveDir, part);
           const html = await renderExternalPage(candidatePath, rootPath, resolveDir, globals, state, maxFragmentDepth);
           res.writeHead(404, {'Content-Type': 'text/html; charset=utf-8'});
           res.end(html);

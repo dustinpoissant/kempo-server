@@ -26,14 +26,12 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "kempo-testing-framework": "^1.4.4",
+    "kempo-testing-framework": "^1.4.7",
+    "kempo-ui": "^0.4.38",
     "terser": "^5.43.1"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/dustinpoissant/kempo-server"
-  },
-  "dependencies": {
-    "kempo-ui": "^0.3.17"
   }
 }

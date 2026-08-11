@@ -1,1 +1,2 @@
-export const randomPort = () => 1024 + Math.floor(Math.random() * 50000);
+// Stay below 32768 — Windows reserves large blocks of the 49152+ ephemeral range (see `netsh int ipv4 show excludedportrange`)
+export const randomPort = () => 10000 + Math.floor(Math.random() * 20000);
