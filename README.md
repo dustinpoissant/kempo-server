@@ -211,7 +211,14 @@ Kempo Server can be customized with a `.config.js` file (or `.config.json` as fa
 
 For detailed configuration options and examples, see **[CONFIG.md](./CONFIG.md)**.
 
-**Important:** The config file must be placed **inside the server root directory** (the `--root` folder). All paths in the config (like `customRoutes`) are resolved relative to the config file location.
+**Important:** Relative paths inside the config — `customRoutes` targets and `middleware.custom` entries — are resolved against the **server root** (the `--root` folder), not against the config file's own location. Absolute paths are used as given.
+
+This distinction only shows up when the config lives somewhere other than the root, which is allowed when `--config` is an absolute path. Keeping the config inside the root makes the two the same thing:
+
+```
+public/                 ← --root
+├─ .config.js           ← "../node_modules/x" means public/../node_modules/x
+```
 
 Quick start:
 ```bash
