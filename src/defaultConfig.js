@@ -1,3 +1,5 @@
+import { DEFAULT_MAX_BODY_SIZE } from './requestWrapper.js';
+
 export default {
   allowedMimes: {
     html: { mime: "text/html", encoding: "utf8" },
@@ -40,7 +42,13 @@ export default {
     ppt: { mime: "application/vnd.ms-powerpoint", encoding: "binary" },
     pptx: { mime: "application/vnd.openxmlformats-officedocument.presentationml.presentation", encoding: "binary" },
     avif: { mime: "image/avif", encoding: "binary" },
-    wasm: { mime: "application/wasm", encoding: "binary" }
+    wasm: { mime: "application/wasm", encoding: "binary" },
+    zip: { mime: "application/zip", encoding: "binary" },
+    // 3D models. .gltf is a JSON manifest; the rest are binary container formats.
+    glb: { mime: "model/gltf-binary", encoding: "binary" },
+    gltf: { mime: "model/gltf+json", encoding: "utf8" },
+    obj: { mime: "model/obj", encoding: "binary" },
+    fbx: { mime: "application/octet-stream", encoding: "binary" }
   },
   disallowedRegex: [
     "^/\\..*",
@@ -143,7 +151,13 @@ export default {
       // Example: "./middleware/auth.js"
     ]
   },
-  maxBodySize: 1048576,              // 1MB default max body size
+  /*
+    500MB, sized so media uploads work without per-site configuration. Bodies are buffered fully in
+    memory before a route runs, so this is also the per-request memory ceiling: worst-case use is
+    this value times the number of requests in flight, on any URL. Lower it on sites that do not
+    accept large uploads; see CONFIG.md.
+  */
+  maxBodySize: DEFAULT_MAX_BODY_SIZE,
   cache: {
     enabled: false,                  // Disabled by default - opt-in for performance  
     maxSize: 100,                    // Maximum number of cached modules

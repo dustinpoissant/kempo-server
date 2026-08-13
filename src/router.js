@@ -341,7 +341,7 @@ export default async (flags, log) => {
     }
     const enhancedReq = createRequestWrapper(req, params);
     const enhancedRes = createResponseWrapper(res);
-    const rawBody = await readRawBody(req);
+    const rawBody = await readRawBody(req, config.maxBodySize);
     enhancedReq._rawBody = rawBody;
     enhancedReq.body = parseBody(rawBody, req.headers['content-type']);
     if(moduleCache) enhancedReq._kempoCache = moduleCache;
@@ -609,10 +609,14 @@ export default async (flags, log) => {
       return;
     }
 
+    /*
+      Accumulated as Buffers, not concatenated into a string: decoding each chunk as UTF-8 on the
+      way in corrupts any binary body irreversibly. See the note in requestWrapper.js.
+    */
     const rawBody = await new Promise((resolve, reject) => {
       const noBody = ['GET', 'HEAD'].includes(req.method) && !req.headers['content-length'];
-      if(noBody) return resolve('');
-      let body = '';
+      if(noBody) return resolve(Buffer.alloc(0));
+      const chunks = [];
       let size = 0;
       req.on('data', chunk => {
         size += chunk.length;
@@ -621,9 +625,9 @@ export default async (flags, log) => {
           reject(new Error('Payload Too Large'));
           return;
         }
-        body += chunk.toString();
+        chunks.push(chunk);
       });
-      req.on('end', () => resolve(body));
+      req.on('end', () => resolve(Buffer.concat(chunks)));
       req.on('error', reject);
     }).catch(err => {
       if(err.message === 'Payload Too Large') {

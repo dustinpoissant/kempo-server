@@ -1,29 +1,71 @@
 import { URL } from 'url';
 
-export const readRawBody = req => {
+/*
+  Request bodies are accumulated as Buffers, never as strings.
+
+  `chunk.toString()` decodes as UTF-8, which destroys binary payloads two separate ways: bytes that
+  are not valid UTF-8 are replaced with U+FFFD, and a multi-byte character split across two chunks
+  is decoded independently on each side of the split. Both are lossy — re-encoding the resulting
+  string does not recover the original bytes — so uploaded images, video and multipart bodies
+  arrived corrupted. Decoding is deferred to the point where text is actually wanted.
+*/
+
+/*
+  500MB. Also the default for `maxBodySize`, so a direct caller of readRawBody is held to the same
+  ceiling the router applies. Bodies are buffered in memory in full before a route runs, so this is
+  the per-request memory ceiling — see the caution in CONFIG.md.
+*/
+export const DEFAULT_MAX_BODY_SIZE = 524288000;
+
+export const readRawBody = (req, maxBodySize = DEFAULT_MAX_BODY_SIZE) => {
   if(req._bufferedBody !== undefined) return Promise.resolve(req._bufferedBody);
   return new Promise((resolve, reject) => {
-    let body = '';
-    req.on('data', chunk => { body += chunk.toString(); });
-    req.on('end', () => { resolve(body); });
+    const chunks = [];
+    let size = 0;
+    req.on('data', chunk => {
+      /*
+        Bounded here as well as in the router. This path only runs for a request the router did not
+        already buffer, and previously had no limit at all — an unbounded read in a function two
+        other call sites depend on.
+      */
+      size += chunk.length;
+      if(size > maxBodySize){
+        req.destroy();
+        reject(new Error('Payload Too Large'));
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('end', () => { resolve(Buffer.concat(chunks)); });
     req.on('error', reject);
   });
 };
 
+/*
+  Accepts a Buffer (every caller inside this package) or a string (direct callers), and always
+  decodes explicitly rather than leaning on implicit coercion — `new URLSearchParams(buffer)` does
+  not stringify a Buffer, it iterates it as bytes and throws.
+*/
 export const parseBody = (rawBody, contentType) => {
-  if(!rawBody) return null;
+  // An empty Buffer is truthy, so "no body" needs a length check rather than a falsy check
+  if(!rawBody || rawBody.length === 0) return null;
   const ct = (contentType || '').toLowerCase();
   if(ct.includes('application/json')) {
     try {
-      return JSON.parse(rawBody);
+      return JSON.parse(rawBody.toString('utf8'));
     } catch {
       return null;
     }
   }
   if(ct.includes('application/x-www-form-urlencoded')) {
-    return Object.fromEntries(new URLSearchParams(rawBody));
+    return Object.fromEntries(new URLSearchParams(rawBody.toString('utf8')));
   }
-  return rawBody;
+  /*
+    Every other content type is handed back as text, which is the documented contract. A binary
+    body — multipart uploads above all — must be read with request.buffer() instead: decoding it
+    to a string here is exactly the corruption described at the top of this file.
+  */
+  return rawBody.toString('utf8');
 };
 
 /**
@@ -68,13 +110,17 @@ export function createRequestWrapper(request, params = {}) {
     _rawBody: '',
 
     async json() {
-      return JSON.parse(this._rawBody);
+      return JSON.parse(this._rawBody.toString('utf8'));
     },
 
     async text() {
-      return this._rawBody;
+      return this._rawBody.toString('utf8');
     },
 
+    /*
+      The only accessor that preserves the bytes exactly as they arrived, and so the one a route
+      handling an upload must use — `body` and `text()` decode as UTF-8, which mangles binary.
+    */
     async buffer() {
       return Buffer.from(this._rawBody);
     },

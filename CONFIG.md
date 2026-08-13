@@ -417,13 +417,25 @@ export default {
 
 ### maxBodySize
 
-Maximum allowed request body size in bytes. If a request body exceeds this limit, the server responds with `413 Payload Too Large` before the route handler runs. Defaults to `1048576` (1 MB).
+Maximum allowed request body size in bytes. If a request body exceeds this limit, the server responds with `413 Payload Too Large` before the route handler runs. Defaults to `524288000` (500 MB), chosen so that media uploads work without per-site configuration.
 
 ```javascript
 export default {
-  maxBodySize: 1048576
+  maxBodySize: 524288000
 };
 ```
+
+**Lower this if your site does not accept large uploads.** Request bodies are buffered fully in memory before routing happens, so this value is the per-request memory ceiling, and worst-case memory use is roughly `maxBodySize` × the number of requests in flight. That applies to every URL, including ones that match no route and require no authentication, so a permissive limit is something the whole server absorbs rather than something only your upload endpoint pays for. For comparison, nginx's `client_max_body_size` defaults to 1 MB.
+
+A site with no upload feature wants something much smaller:
+
+```javascript
+export default {
+  maxBodySize: 1048576  // 1 MB
+};
+```
+
+If only one endpoint should accept anything large, keep the global limit low and enforce the larger allowance in that route handler instead. A reverse proxy in front of the server is another good place to cap this — nginx's `client_max_body_size` will reject an oversized body before it ever reaches Node.
 
 ### templating
 

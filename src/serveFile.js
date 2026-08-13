@@ -103,7 +103,7 @@ export default async (files, rootPath, requestPath, method, config, req, res, lo
         const enhancedResponse = createResponseWrapper(res);
 
         // Populate body from buffered data
-        const rawBody = await readRawBody(req);
+        const rawBody = await readRawBody(req, config.maxBodySize);
         enhancedRequest._rawBody = rawBody;
         enhancedRequest.body = parseBody(rawBody, req.headers['content-type']);
         

@@ -114,12 +114,16 @@ Kempo Server provides a request object that makes working with HTTP requests eas
 - `request.headers` - Request headers object
 - `request.url` - Full request URL
 
-- `request.body` - Pre-parsed request body (JSON → object, form-urlencoded → object, other → raw string, no body → `null`)
+- `request.body` - Pre-parsed request body (JSON → object, form-urlencoded → object, other → raw string decoded as UTF-8, no body → `null`)
 
 ### Methods
 - `await request.json()` - Get cached body parsed as JSON
-- `await request.text()` - Get cached body as text
-- `await request.buffer()` - Get cached body as Buffer
+- `await request.text()` - Get cached body decoded as UTF-8 text
+- `await request.buffer()` - Get cached body as a `Buffer`, byte for byte
+
+**Reading an upload:** use `await request.buffer()` for any binary body — an image, a video, a `multipart/form-data` upload. `request.body` and `request.text()` decode as UTF-8, which is lossy for bytes that are not valid UTF-8, so a binary payload read through either one comes back corrupted. `request.buffer()` is the only accessor that preserves the bytes exactly.
+
+Bodies are read fully into memory before a route runs, bounded by [`maxBodySize`](CONFIG.md#maxbodysize) — raise it on sites that accept large uploads.
 - `request.get(headerName)` - Get specific header value
 - `request.is(type)` - Check if content-type contains specified type
 
