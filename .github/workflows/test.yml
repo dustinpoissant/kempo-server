@@ -1,12 +1,19 @@
 name: Run Unit Tests
 
 on:
+  # Releases happen by pushing straight to main, so running only on pull_request meant the suite
+  # never ran for the way this repository is actually used.
+  push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   test:
+    if: "github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -40,6 +40,10 @@ jobs:
         run: |
           npm run build
 
+      # Runs against the freshly built dist/, so a release cannot go out on a broken build.
+      - name: Run Unit Tests
+        run: npm test
+
       - name: Set version type
         id: version
         run: |
