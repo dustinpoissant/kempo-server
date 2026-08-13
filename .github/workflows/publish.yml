@@ -18,6 +18,9 @@ on:
 
 jobs:
   publish:
+    # Lets a commit land on main without releasing: tag the message [skip ci] and publish sits out,
+    # then run this workflow manually to choose the bump. A manual run always publishes.
+    if: "github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip ci]')"
     runs-on: ubuntu-latest
     permissions:
       contents: write
