@@ -25,9 +25,17 @@ export const parseRange = (rangeHeader, size) => {
 // audio/video). Shared by serveFile.js (static files found via the normal
 // file scan) and router.js's custom/wildcard route handling, which both
 // need identical behavior here.
-export default async (filePath, req, res, config, log) => {
+//
+// `overrides` lets a caller outside the static file scan reuse this exact
+// range/206 behavior while deciding the response headers itself:
+//   - `contentType` replaces the MIME derived from the extension
+//   - `headers` are merged into every response this sends (200, 206 and 416)
+// A caller that overrides `contentType` need not supply `allowedMimes` at
+// all, which is why the config lookup below is guarded. Both are optional and
+// omitting them leaves the original behavior untouched.
+export default async (filePath, req, res, config, log = () => {}, overrides = {}) => {
   const fileExtension = path.extname(filePath).toLowerCase().slice(1);
-  const mimeConfig = config.allowedMimes[fileExtension];
+  const mimeConfig = config?.allowedMimes?.[fileExtension];
   let mimeType, encoding;
   if(typeof mimeConfig === 'string') {
     mimeType = mimeConfig;
@@ -38,9 +46,11 @@ export default async (filePath, req, res, config, log) => {
     encoding = mimeConfig?.encoding === 'utf8' ? 'utf8' : undefined;
   }
   // Add charset=utf-8 for text MIME types when using UTF-8 encoding
-  const contentType = encoding === 'utf8' && mimeType.startsWith('text/')
+  const derivedContentType = encoding === 'utf8' && mimeType.startsWith('text/')
     ? `${mimeType}; charset=utf-8`
     : mimeType;
+  const contentType = overrides.contentType || derivedContentType;
+  const extraHeaders = overrides.headers || {};
 
   // Binary files (video/audio/etc.) support byte-range requests so
   // browsers can seek without downloading the whole file first. Text
@@ -51,13 +61,14 @@ export default async (filePath, req, res, config, log) => {
     const range = parseRange(rangeHeader, size);
     if(!range){
       log(`Unsatisfiable range "${rangeHeader}" for ${filePath}`, 2);
-      res.writeHead(416, { 'Content-Range': `bytes */${size}` });
+      res.writeHead(416, { ...extraHeaders, 'Content-Range': `bytes */${size}` });
       res.end();
       return;
     }
     const { start, end } = range;
     log(`Serving ${filePath} range ${start}-${end}/${size}`, 2);
     res.writeHead(206, {
+      ...extraHeaders,
       'Content-Type': contentType,
       'Content-Range': `bytes ${start}-${end}/${size}`,
       'Accept-Ranges': 'bytes',
@@ -74,7 +85,7 @@ export default async (filePath, req, res, config, log) => {
 
   const fileContent = await readFile(filePath, encoding);
   log(`Serving ${filePath} as ${mimeType} (${fileContent.length} bytes)`, 2);
-  const headers = { 'Content-Type': contentType };
+  const headers = { ...extraHeaders, 'Content-Type': contentType };
   if(encoding === undefined) headers['Accept-Ranges'] = 'bytes';
   res.writeHead(200, headers);
   res.end(fileContent);

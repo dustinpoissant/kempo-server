@@ -479,6 +479,31 @@ await rescan();
 // New page is now live
 ```
 
+## Serving a File Yourself
+
+Route handlers that serve a file from outside the static file scan — a download gated behind a permission check, for example — can reuse the server's own file-serving helper rather than reimplementing it. This is what gives `Range` / `206 Partial Content` support (video and audio seeking) to a file the scanner never sees:
+
+```javascript
+import serveStaticFile from 'kempo-server/serve-static-file';
+
+export default async (request, response) => {
+  if(!await userMayDownload(request)) return response.status(403).json({ error: 'Nope' });
+  await serveStaticFile('/var/data/files/clip.mp4', request, response, config);
+};
+```
+
+The last two arguments are optional. `log` may be omitted, and `overrides` lets the caller decide the response headers itself:
+
+```javascript
+// Serve a .js file as unexecutable plain text, while keeping range support
+await serveStaticFile(filePath, request, response, {}, undefined, {
+  contentType: 'text/plain',
+  headers: { 'X-Content-Type-Options': 'nosniff' }
+});
+```
+
+`contentType` replaces the MIME type that would otherwise be derived from the file extension, and `headers` are merged into the `200`, `206` and `416` responses. Range metadata (`Content-Range`, `Accept-Ranges`, `Content-Length`) is applied *after* that merge, so a caller cannot accidentally corrupt a partial response. When `contentType` is supplied the `allowedMimes` config is never consulted, so passing `{}` as the config is fine.
+
 ## Command Line Options
 
 Kempo Server supports several command line options to customize its behavior:

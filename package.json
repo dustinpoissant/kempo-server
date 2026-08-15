@@ -5,6 +5,7 @@
   "description": "A lightweight, zero-dependency, file based routing server.",
   "exports": {
     "./rescan": "./dist/rescan.js",
+    "./serve-static-file": "./dist/serveStaticFile.js",
     "./templating": "./dist/templating/index.js",
     "./utils/cli": "./dist/utils/cli.js",
     "./utils/fs-utils": "./dist/utils/fs-utils.js"
