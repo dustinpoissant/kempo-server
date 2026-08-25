@@ -2,7 +2,15 @@
 
 All notable changes to `kempo-server` are documented in this file.
 
-## [Unreleased]
+## [3.3.0] - 2026-08-25
+
+> **Why 3.3.0 and not another patch.** Everything below shipped across the 3.2.x line, but adding a
+> public export (`kempo-server/serve-static-file`) is a minor change, not a patch — so the version
+> number never reflected what was actually new. Consumers that legitimately need that export
+> (`kempo` for `route:unmatched` file streaming, and the `kempo-files` / `kempo-thumbs` extensions
+> built on it) had all declared `>=3.3.0` against a version that did not exist, leaving the peer
+> unsatisfiable. This release carries the same code under the number those consumers were already
+> asking for.
 
 ### Changed
 - **`maxBodySize` now defaults to 500 MB** (was 1 MB), so file uploads work without per-site configuration. Note that request bodies are buffered in memory in full before routing, which makes this the per-request memory ceiling for *every* URL — including ones that match no route and require no authentication — so worst-case memory use is roughly `maxBodySize` × requests in flight. Sites that do not accept large uploads should lower it, and a reverse proxy (nginx's `client_max_body_size`) is a good place to cap it before a body ever reaches Node. See CONFIG.md.
