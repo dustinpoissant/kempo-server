@@ -14,7 +14,7 @@
 						</ul>
 					</li>
 					<li><a href="#fragments">Fragments</a></li>
-					<li><a href="#extending-templates">Extending a Template</a></li>
+					<li><a href="#template-patches">Template Patches</a></li>
 					<li><a href="#global-files">Global Files</a></li>
 					<li><a href="#fragments-vs-globals">Fragments vs. Global Files</a></li>
 					<li><a href="#template-syntax">Template Syntax</a>
@@ -32,12 +32,13 @@
 		</k-accordion>
 
 		<h2 id="overview">Overview</h2>
-		<p>The templating system uses four file types that work together:</p>
+		<p>The templating system uses five file types that work together:</p>
 		<ul>
 			<li><strong>Templates</strong> (<code>*.template.html</code>) &mdash; Shared page layouts with named content slots</li>
 			<li><strong>Pages</strong> (<code>*.page.html</code>) &mdash; Individual pages that fill template slots with content</li>
 			<li><strong>Fragments</strong> (<code>*.fragment.html</code>) &mdash; Reusable HTML partials included in templates or other fragments</li>
 			<li><strong>Globals</strong> (<code>*.global.html</code>) &mdash; Site-wide content blocks automatically injected into every page render</li>
+			<li><strong>Template patches</strong> (<code>*.template-patch.html</code>) &mdash; Changes applied to another template, for building on one you do not own</li>
 		</ul>
 		<p>A typical project structure:</p>
 		<pre><code class="hljs markdown">my-site/<br />├─ default.template.html    # Shared layout<br />├─ nav.fragment.html        # Reusable navigation<br />├─ footer.fragment.html     # Reusable footer<br />├─ analytics.global.html    # Site-wide scripts injected into every page<br />├─ index.page.html          # Homepage → renders to index.html<br />├─ about.page.html          # About → renders to about.html<br />├─ blog/<br />│  ├─ index.page.html       # Blog index → blog/index.html<br />│  ├─ post-1.page.html      # Blog post → blog/post-1.html<br /></code></pre>
@@ -52,6 +53,7 @@
 				<tr><td><code>*.global.html</code></td><td>Recursive scan of the entire root directory tree &mdash; globals in any subdirectory are merged together automatically.</td></tr>
 				<tr><td><code>*.template.html</code></td><td>Walks <strong>up</strong> the directory tree from the page file&rsquo;s directory toward the root. The nearest match wins. A subdirectory template overrides the root one for pages below it.</td></tr>
 				<tr><td><code>*.fragment.html</code></td><td>Same up-walk as templates &mdash; starts at the including file&rsquo;s directory and searches each ancestor up to the root. Nearest match wins.</td></tr>
+				<tr><td><code>*.template-patch.html</code></td><td>Same up-walk as templates. A <code>template="x"</code> resolves to <code>x.template.html</code> first, then <code>x.template-patch.html</code>.</td></tr>
 			</tbody>
 		</table>
 		</div>
@@ -116,45 +118,37 @@
 		</ul>
 		<p>With no <code>extraFragmentDirs</code> passed, none of this applies and fragments resolve exactly as they always have.</p>
 
-		<h2 id="extending-templates">Extending a Template</h2>
-		<p>A template can build on another instead of standing alone. Wrap it in <code>&lt;template extends="name"&gt;</code> and fill the parent's locations with <code>&lt;content&gt;</code> blocks &mdash; the same relationship a page already has with a template, one level up.</p>
-		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- article.template.html --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">template</span> <span class="hljs-attr">extends</span>=<span class="hljs-string">"default"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">content</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">article</span>&gt;</span><br />      <span class="hljs-tag">&lt;<span class="hljs-name">header</span>&gt;</span>{{title}}<span class="hljs-tag">&lt;/<span class="hljs-name">header</span>&gt;</span><br />      <span class="hljs-tag">&lt;<span class="hljs-name">location</span> /&gt;</span><br />    <span class="hljs-tag">&lt;/<span class="hljs-name">article</span>&gt;</span><br />  <span class="hljs-tag">&lt;/<span class="hljs-name">content</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span></code></pre>
-		<p>The key is that a <code>&lt;location&gt;</code> inside the child's own content survives: the parent's slot is replaced with the child's markup, and that markup is not rescanned, so the inner slot is still there for the page. That is what lets a child <em>wrap</em> the page rather than replace it.</p>
-		<pre><code class="hljs xml">parent    <span class="hljs-tag">&lt;<span class="hljs-name">body</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">nav</span> /&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">location</span> /&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">body</span>&gt;</span><br />child     <span class="hljs-tag">&lt;<span class="hljs-name">content</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">article</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">location</span> /&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">article</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">content</span>&gt;</span><br />composed  <span class="hljs-tag">&lt;<span class="hljs-name">body</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">nav</span> /&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">article</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">location</span> /&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">article</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">body</span>&gt;</span><br />rendered  <span class="hljs-tag">&lt;<span class="hljs-name">body</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">nav</span> /&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">article</span>&gt;</span>…page body…<span class="hljs-tag">&lt;/<span class="hljs-name">article</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">body</span>&gt;</span></code></pre>
-		<p>Notes:</p>
-		<ul>
-			<li>A child may fill any number of the parent's named locations, not just the default one.</li>
-			<li>Slots the child does not fill stay open &mdash; the page and global content still reach them.</li>
-			<li>Extending chains as deep as you like, bounded by <code>maxFragmentDepth</code>. A cycle throws rather than hanging.</li>
-			<li>A template with no <code>&lt;template&gt;</code> wrapper is a complete document and behaves exactly as it always has.</li>
-		</ul>
-		<p><strong>Prefer this to copying a template.</strong> A copy is a snapshot: it stops matching the original the moment that original is edited, silently, with nothing to signal the drift. Composition happens on every render, so there is nothing to keep in step and no regeneration step to forget.</p>
+		<h2 id="template-patches">Template Patches</h2>
+		<p>A <code>*.template-patch.html</code> file is not a template. It describes changes to another template &mdash; named in its own frontmatter &mdash; and is applied to that template on every render.</p>
+		<p>It exists so a template can build on one it does not own. Copying the original and editing the copy is what this replaces: a copy is a snapshot, and it stops matching the original the moment that original is edited, silently and with nothing to signal the drift. Nor can that be papered over by regenerating on change, because the usual way a template is edited is somebody opening the file, which raises no event at all.</p>
+		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- default.template.html — an ordinary template --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">body</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">fragment</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"nav"</span> /&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">main</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"main"</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">location</span> /&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">main</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">body</span>&gt;</span></code></pre>
+		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- blog-post.template-patch.html --&gt;</span><br /><span class="hljs-comment">&lt;!--<br />  extends: default<br />--&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">replace</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"main"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">article</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">fragment</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"post-header"</span> /&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">location</span> /&gt;</span><br />  <span class="hljs-tag">&lt;/<span class="hljs-name">article</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">replace</span>&gt;</span></code></pre>
+		<p>A page reaches it the ordinary way &mdash; <code>&lt;page template="blog-post"&gt;</code>. A name resolves to <code>name.template.html</code> first, and to <code>name.template-patch.html</code> if there is no template by that name, so a page does not care which of the two answers.</p>
+		<p>The <code>&lt;location /&gt;</code> inside the replacement still receives the page body: replaced text is not rescanned, so a location the patch introduces survives for the page to fill. That is what lets a patch <em>wrap</em> the page rather than merely replace it.</p>
 
-		<h3 id="patching">Patching Markup the Parent Never Marked</h3>
-		<p><code>&lt;content location="…"&gt;</code> only reaches places the parent chose to mark with a <code>&lt;location&gt;</code>. A child can also target <em>any</em> element by CSS selector &mdash; the <code>&lt;title&gt;</code> a site never wrapped, a class on <code>&lt;body&gt;</code>, an insertion after some <code>&lt;h1&gt;</code>:</p>
-		<pre><code class="hljs xml"><span class="hljs-tag">&lt;<span class="hljs-name">template</span> <span class="hljs-attr">extends</span>=<span class="hljs-string">"default"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">replace</span> <span class="hljs-attr">selector</span>=<span class="hljs-string">"title"</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">title</span>&gt;</span>{{title}} — My Blog<span class="hljs-tag">&lt;/<span class="hljs-name">title</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">replace</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">attr</span> <span class="hljs-attr">selector</span>=<span class="hljs-string">"body"</span> <span class="hljs-attr">add-class</span>=<span class="hljs-string">"has-article"</span> /&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">after</span> <span class="hljs-attr">selector</span>=<span class="hljs-string">"h1"</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">p</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"byline"</span>&gt;</span>by {{author}}<span class="hljs-tag">&lt;/<span class="hljs-name">p</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">after</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span></code></pre>
+		<h3 id="patch-operations">Operations</h3>
+		<p>Every operation targets one element by <code>id</code>. There is no selector engine and no HTML parser: an id is unambiguous, and it forces the template being patched to have deliberately named what it is offering up.</p>
 		<div class="table-wrapper mb">
 		<table>
 			<thead><tr><th>Operation</th><th>Effect</th></tr></thead>
 			<tbody>
-				<tr><td><code>&lt;replace selector&gt;</code></td><td>Swaps the whole matched element</td></tr>
-				<tr><td><code>&lt;inner selector&gt;</code></td><td>Swaps its contents, keeping the element</td></tr>
+				<tr><td><code>&lt;replace id&gt;</code></td><td>Swaps the whole element</td></tr>
+				<tr><td><code>&lt;inner id&gt;</code></td><td>Swaps its contents, keeping the element</td></tr>
 				<tr><td><code>&lt;before&gt;</code> / <code>&lt;after&gt;</code></td><td>Inserts immediately outside it</td></tr>
 				<tr><td><code>&lt;prepend&gt;</code> / <code>&lt;append&gt;</code></td><td>Inserts at the start or end of its contents</td></tr>
-				<tr><td><code>&lt;remove selector /&gt;</code></td><td>Deletes it</td></tr>
-				<tr><td><code>&lt;attr selector …/&gt;</code></td><td>Sets attributes. <code>add-class</code> and <code>remove-class</code> adjust the class list without restating what is already there</td></tr>
+				<tr><td><code>&lt;remove id /&gt;</code></td><td>Deletes it</td></tr>
+				<tr><td><code>&lt;attr id …/&gt;</code></td><td>Sets attributes. <code>add-class</code> and <code>remove-class</code> adjust the class list without restating what is already there</td></tr>
 			</tbody>
 		</table>
 		</div>
-		<p>Supported selectors: <code>tag</code>, <code>#id</code>, <code>.class</code>, <code>[attr]</code>, <code>[attr="value"]</code> (also <code>~= ^= $= *= |=</code>), <code>*</code>, plus descendant (<code>a b</code>) and child (<code>a &gt; b</code>) combinators. Anything outside that subset throws when the selector is parsed rather than quietly matching nothing.</p>
+		<p>A patch may also carry <code>&lt;content location="…"&gt;</code> blocks, filling locations the template marked. Locations it leaves alone stay open for the page and for global content.</p>
 		<ul>
-			<li><strong>A patch applies to every match</strong>, like <code>querySelectorAll</code> &mdash; not just the first.</li>
-			<li><strong>A selector that matches nothing is an error.</strong> Patches are coupled to markup the parent never promised to keep, so failing loudly is the point: silent drift is exactly what this feature exists to replace.</li>
-			<li>Patches run after the child's <code>&lt;content&gt;</code> blocks, so a selector can target markup the child itself inserted.</li>
-			<li>Operations apply in the order written, each seeing the result of the last.</li>
+			<li><strong>An id the template does not have is an error.</strong> A patch is coupled to markup the template never promised to keep, so it fails loudly &mdash; failing invisibly is the behaviour this feature exists to replace.</li>
+			<li>Operations apply in the order written, each seeing the result of the last, so one can target markup an earlier one introduced.</li>
+			<li>Patches chain: a patch may extend another patch. A cycle throws rather than hanging.</li>
+			<li>A real template wins over a patch of the same name.</li>
 		</ul>
-		<p>Elements are located, and edits are spliced into the original text &mdash; nothing is re-serialised, so markup outside the targeted range (including <code>&lt;if&gt;</code>, <code>&lt;foreach&gt;</code>, <code>&lt;location&gt;</code> and <code>&#123;&#123;vars&#125;&#125;</code>) comes through byte for byte.</p>
-		<p><strong>Use a <code>&lt;location&gt;</code> where you can.</strong> A marked region is a promise the parent makes; a selector is a guess about markup it never promised. Reach for a patch when the parent is not yours to change.</p>
+		<p>Elements are located and edits are spliced into the original text &mdash; nothing is re-serialised, so markup outside the targeted element (including <code>&lt;if&gt;</code>, <code>&lt;foreach&gt;</code>, <code>&lt;location&gt;</code> and <code>&#123;&#123;vars&#125;&#125;</code>) comes through byte for byte. Nesting is handled by depth counting, so <code>&lt;div id="main"&gt;</code> containing further divs ends where it actually ends.</p>
 
 		<h2 id="global-files">Global Files</h2>
 		<p>Any file named <code>*.global.html</code> anywhere under the root directory is automatically loaded and its <code>&lt;content&gt;</code> blocks are injected into every page render. This is the right place to put site-wide scripts, meta tags, nav links, or anything else that should appear across all pages without touching every template or page file.</p>

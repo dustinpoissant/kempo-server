@@ -250,7 +250,7 @@ kempo-server --root public --config dev.config.js
 - **Security** - Built-in protection against serving sensitive files plus security headers middleware
 - **Performance** - Smart file system caching, rescan optimization, and optional compression
 - **Programmatic Rescan** - Trigger a file rescan from anywhere in the Node process without restarting
-- **Templating** - XML-based templating with templates (which can extend one another), pages, fragments, variables, conditionals, and loops
+- **Templating** - XML-based templating with templates, template patches, pages, fragments, variables, conditionals, and loops
 
 ## Examples
 
@@ -438,77 +438,69 @@ Entries from every directory are merged, and each entry's `priority` still order
 `location`. Because the plugin's file is read at render time, enabling, disabling, upgrading, or
 removing the plugin takes effect immediately with no install-time file copying to keep in sync.
 
-### Extending a template
+### Template patches
 
-A template can build on another rather than standing alone. Wrap it in
-`<template extends="name">` and fill the parent's locations with `<content>` blocks — the same
-relationship a page already has with a template, one level up:
+A `*.template-patch.html` file is not a template. It describes changes to another template — named
+in its own frontmatter — and is applied to that template on every render.
 
-```html
-<!-- article.template.html -->
-<template extends="default">
-  <content>
-    <article>
-      <header>{{title}}</header>
-      <location />
-    </article>
-  </content>
-</template>
-```
-
-A `<location>` inside the child's own content survives composition, which is what lets the child
-*wrap* the page instead of replacing it:
-
-```
-parent    <body><nav /><location /></body>
-child     <content><article><location /></article></content>
-composed  <body><nav /><article><location /></article></body>
-rendered  <body><nav /><article>…page body…</article></body>
-```
-
-A child may fill any number of the parent's named locations, and slots it does not fill stay open
-for the page and for global content. Chains nest to `maxFragmentDepth`; a cycle throws rather than
-hanging. A template with no `<template>` wrapper is a complete document and behaves as it always has.
-
-**Prefer this to copying a template.** A copy is a snapshot — it stops matching the original the
-moment that original is edited, silently. Composition happens per render, so there is nothing to
-regenerate and nothing to keep in step.
-
-#### Patching markup the parent never marked
-
-`<content location="…">` only reaches places the parent marked with a `<location>`. A child can
-also target *any* element by CSS selector:
+It exists so a template can build on one it does not own. Copying the original and editing the copy
+is what it replaces: a copy is a snapshot, and it stops matching the original the moment that
+original is edited, silently. Nor can that be papered over by regenerating on change, since the
+usual way a template is edited is somebody opening the file, which raises no event at all.
 
 ```html
-<template extends="default">
-  <replace selector="title"><title>{{title}} — My Blog</title></replace>
-  <attr selector="body" add-class="has-article" />
-  <after selector="h1"><p class="byline">by {{author}}</p></after>
-</template>
+<!-- default.template.html — an ordinary template -->
+<body>
+  <fragment name="nav" />
+  <main id="main"><location /></main>
+</body>
 ```
+
+```html
+<!-- blog-post.template-patch.html -->
+<!--
+  extends: default
+-->
+<replace id="main">
+  <article>
+    <fragment name="post-header" />
+    <location />
+  </article>
+</replace>
+```
+
+A page reaches it the ordinary way — `<page template="blog-post">`. A name resolves to
+`name.template.html` first, and to `name.template-patch.html` if there is no template by that name.
+
+The `<location />` inside the replacement still receives the page body: replaced text is not
+rescanned, so a location the patch introduces survives for the page to fill. That is what lets a
+patch *wrap* the page rather than merely replace it.
+
+**Operations** — each targets one element by `id`. There is no selector engine and no HTML parser:
+an id is unambiguous, and it forces the template being patched to have deliberately named what it
+is offering up.
 
 | Operation | Effect |
 |---|---|
-| `<replace selector>` | Swaps the whole matched element |
-| `<inner selector>` | Swaps its contents, keeping the element |
+| `<replace id>` | Swaps the whole element |
+| `<inner id>` | Swaps its contents, keeping the element |
 | `<before>` / `<after>` | Inserts immediately outside it |
 | `<prepend>` / `<append>` | Inserts at the start or end of its contents |
-| `<remove selector />` | Deletes it |
-| `<attr selector …/>` | Sets attributes; `add-class` / `remove-class` adjust the class list without restating it |
+| `<remove id />` | Deletes it |
+| `<attr id …/>` | Sets attributes; `add-class` / `remove-class` adjust the class list without restating it |
 
-Selectors cover `tag`, `#id`, `.class`, `[attr]`, `[attr="value"]` (plus `~= ^= $= *= |=`), `*`, and
-the descendant (`a b`) and child (`a > b`) combinators. Anything else throws at parse time.
+A patch may also carry `<content location="…">` blocks, filling locations the template marked.
+Locations it leaves alone stay open for the page and for global content.
 
-- A patch applies to **every** match, like `querySelectorAll`.
-- **A selector matching nothing is an error.** A patch is coupled to markup the parent never
-  promised to keep, so it fails loudly rather than drifting quietly.
-- Patches run after the child's `<content>` blocks, so they can target markup the child inserted.
+- **An id the template does not have is an error.** A patch is coupled to markup the template never
+  promised to keep, so it fails loudly — failing invisibly is what this replaces.
+- Operations apply in the order written, each seeing the result of the last.
+- Patches chain: a patch may extend another patch. A cycle throws rather than hanging.
+- A real template wins over a patch of the same name.
 
 Elements are located and edits are spliced into the original text — nothing is re-serialised, so
-markup outside the targeted range comes through byte for byte.
-
-**Use a `<location>` where you can.** A marked region is a promise the parent makes; a selector is a
-guess about markup it never promised. Reach for a patch when the parent is not yours to change.
+markup outside the targeted element comes through byte for byte. Nesting is handled by depth
+counting, so `<div id="main">` containing further divs ends where it actually ends.
 
 ### Fragments from outside `rootDir`
 

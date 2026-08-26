@@ -5,29 +5,26 @@ All notable changes to `kempo-server` are documented in this file.
 ## [Unreleased]
 
 ### Added
-- **Templates can extend one another: `<template extends="name">`.** A template was either a complete standalone document or nothing, so anything wanting a site's chrome plus its own wrapper had to *copy* that chrome. A copy is a snapshot — it stops matching the original the moment the original is edited, silently, with nothing to signal the drift, and no amount of regenerating-on-change closes it because a developer editing the file in an editor triggers nothing at all.
+- **Template patches: `*.template-patch.html`.** A template was either a complete standalone document or nothing, so anything wanting a site's chrome plus its own wrapper had to *copy* that chrome. A copy is a snapshot: it stops matching the original the moment the original is edited, silently, with nothing to signal the drift — and regenerating on change does not close it, because the usual way a template is edited is somebody opening the file, which raises no event at all.
 
-  A template may now wrap itself in `<template extends="name">` and fill the parent's `<location>` tags with its own `<content>` blocks — the same relationship a page already has with a template, one level up. What makes it useful is that a `<location>` inside the child's own content survives composition, so a child can *wrap* the page rather than replace it:
+  A patch file is not a template. It names the template it applies to in its own frontmatter (`extends: default`) and describes changes to it, applied on every render:
 
+  ```html
+  <!--
+    extends: default
+  -->
+  <replace id="main">
+    <article><fragment name="post-header" /><location /></article>
+  </replace>
   ```
-  parent    <body><nav /><location /></body>
-  child     <content><article><location /></article></content>
-  composed  <body><nav /><article><location /></article></body>
-  rendered  <body><nav /><article>…page body…</article></body>
-  ```
 
-  A child may fill any number of the parent's named locations; slots it does not fill stay open for the page and for global content. Chains nest to `maxFragmentDepth`, and a cycle (including a template extending itself) throws rather than hanging. A template with no `<template>` wrapper is a complete document and renders exactly as before, which is every template written until now.
+  A page reaches it the ordinary way — `<page template="blog-post">`. A name resolves to `name.template.html` first, then `name.template-patch.html`, so a page does not care which of the two answers. The `<location />` inside a replacement still receives the page body, since replaced text is not rescanned — which is what lets a patch *wrap* the page rather than merely replace it.
 
-- **Selector-based patching of a parent template.** `<content location="…">` only reaches places the parent chose to mark. A child can now also target *any* element by CSS selector — the `<title>` a site never wrapped, a class on `<body>`, an insertion after some `<h1>` — via `<replace>`, `<inner>`, `<before>`, `<after>`, `<prepend>`, `<append>`, `<remove>` and `<attr>` (whose `add-class` / `remove-class` adjust the class list without restating what is already there).
+  Operations: `<replace>`, `<inner>`, `<before>`, `<after>`, `<prepend>`, `<append>`, `<remove>` and `<attr>` (whose `add-class` / `remove-class` adjust the class list without restating what is already there). A patch may also carry `<content location="…">` blocks; locations it leaves alone stay open for the page and for global content.
 
-  Selectors cover `tag`, `#id`, `.class`, `[attr]`, `[attr="value"]` (plus `~= ^= $= *= |=`), `*`, and the descendant and child combinators. Anything outside that subset throws when parsed, and **a selector that matches nothing is an error** — patches are coupled to markup the parent never promised to keep, so failing loudly is the point.
+  **Every operation targets one element by `id`** — no selector engine and no HTML parser. An id is unambiguous, and it forces the template being patched to have deliberately named what it is offering up. **An id the template does not have is an error**, never a quiet no-op: a patch is coupled to markup the template never promised to keep, so failing invisibly is precisely the behaviour being replaced. Patches chain, and a cycle throws rather than hanging. A real template wins over a patch of the same name.
 
-  Implemented without adding a dependency, and deliberately not with an HTML parser: parsers perform tree construction — relocating elements, inserting implied tags, closing what they think is unclosed — and a template is not HTML but a partial document full of `<location />`, `<if>`, `<foreach>` and `{{vars}}` that such a parser is entitled to rearrange. Elements are instead *located*, and every edit is a splice of the original text, so anything not explicitly targeted survives byte for byte.
-- **`extraFragmentDirs` on `renderExternalPage(pageFilePath, rootDir, resolveDir, globals, state, maxDepth, extraGlobalDirs, extraFragmentDirs)`.** `extraGlobalDirs` (3.3.0) let a package outside `rootDir` *push* content into a host's render; there was no pull-side equivalent, so a package could never *supply* a fragment the host asks for by name, nor override one the host already has. Fragments were resolved by a single walk up from `resolveDir` to `rootDir` and nothing else. Directories listed here are now searched recursively for `*.fragment.html` in addition to that walk-up.
-
-  Because a `<fragment>` tag inserts exactly one thing, same-named files from different sources compete rather than merge, and a fragment file's own `<fragment>` wrapper may carry a **`priority`** (higher wins, default `0`) to say how hard it competes. Resolution: the walk-up runs unchanged and yields at most one candidate — the nearest match — then each extra directory contributes at most one more; the highest priority wins; a tie keeps the site's own file, and a tie between two extra directories keeps whichever was listed first. Extra directories compete on priority alone, never on proximity, since they sit outside the directory chain. If no source has the fragment, the calling tag's inline fallback renders as before. Directories that do not exist are skipped, since a package shipping no fragments is the common case.
-
-  **Nothing changes for existing callers.** `extraFragmentDirs` defaults to `[]`, and with no extra directories a fragment resolves through exactly the path it always did — including the "a more specific copy shadows a more general one" behaviour that walk-up exists for. The `priority` attribute is optional and absent means `0`, so every fragment file written before this release keeps its current behaviour.
+  Implemented with no new dependency and deliberately without an HTML parser: parsers perform tree construction — relocating elements, inserting implied tags, closing what they believe unclosed — and a template is not HTML but a partial document full of `<location />`, `<fragment />`, `<if>`, `<foreach>` and `{{vars}}` that such a parser is entitled to rearrange. Elements are instead *located*, and every edit is a splice of the original text, so anything not explicitly targeted survives byte for byte. Nesting is resolved by depth counting, so `<div id="main">` containing further divs ends where it actually ends.
 
 ### Fixed
 - **`<fragment>` tags inside a page's `<content>` block are now resolved.** Fragments were only ever resolved in templates: `resolveFragmentTags` ran against the template, and page content was injected afterwards by `replaceLocations`, so a `<fragment name="…">` written in a page was never looked up. It did not error — the raw tag and its fallback content were emitted into the HTML, where the browser silently dropped the unknown element and rendered the fallback, which reads as "the fragment could not be found" rather than "pages cannot do this".

@@ -131,55 +131,70 @@ const loadExtraFragments = async (extraFragmentDirs = []) => {
 };
 
 /*
-  Template Composition
+  Template Patches
 
-  A template may extend another by wrapping itself in <template extends="name">, filling the parent's
-  <location> tags with its own <content> blocks — the same relationship a page already has with a
-  template, one level up.
+  A *.template-patch.html file is not a template. It describes changes to another template — named
+  in its own frontmatter — and is applied to that template on every render.
 
-  What makes it work is that a <location> in the child's own content survives the substitution: the
-  parent's slot is replaced with the child's markup as a string, and that markup is not rescanned,
-  so a <location> inside it is still there for the page to fill afterwards. That is what lets a
-  child wrap the page rather than merely replace it:
+  It exists so a template can build on one it does not own. The alternative, copying the original
+  and editing the copy, is what this replaces: a copy is a snapshot, and it stops matching the
+  original the moment that original is edited, silently, with nothing to signal the drift. Nor can
+  that be patched over by regenerating on change, because the edit is often somebody opening the
+  file in an editor, which raises no event at all.
 
-    parent   <body><nav/><location /></body>
-    child    <content><article><location /></article></content>
-    composed <body><nav/><article><location /></article></body>
-    page     <body><nav/><article>…page body…</article></body>
+  A patch may do two things, and usually does both:
 
-  The alternative — copying the parent and editing it — is what this exists to avoid: a copy is a
-  snapshot, and it goes stale the moment the original changes, silently and with nothing to notice
-  it. Composing happens per render, so there is nothing to keep in step.
+    <content location="…">   fill a <location> the template deliberately marked
+    <replace id="…"> etc.    change an element by id, marked or not
 
-  A template with no <template> wrapper is a complete document and is returned untouched, which is
-  every template written before this existed.
+  Filling a location leaves a <location> inside the patch's own content intact, since replaced text
+  is not rescanned. That is what lets a patch wrap the page rather than merely replace it:
+
+    template  <body><nav/><location /></body>
+    patch     <content><article><location /></article></content>
+    composed  <body><nav/><article><location /></article></body>
+    page      <body><nav/><article>…page body…</article></body>
 */
-const TEMPLATE_WRAPPER = /^[\s\S]*?<template((?:[^>"']|"[^"]*"|'[^']*')*)>([\s\S]*)<\/template>/;
+const FRONTMATTER = /^\s*<!--([\s\S]*?)-->/;
 
-const composeTemplate = (templateFile, findTemplateFile, depth, maxDepth) => {
-  if(depth > maxDepth) throw new Error(`Template extends depth exceeded maximum of ${maxDepth}`);
+const parseFrontmatter = raw => {
+  const match = raw.match(FRONTMATTER);
+  if(!match) return { meta: {}, body: raw };
+  const meta = {};
+  for(const line of match[1].split('\n')){
+    const idx = line.indexOf(':');
+    if(idx === -1) continue;
+    const key = line.slice(0, idx).trim();
+    if(key) meta[key] = line.slice(idx + 1).trim();
+  }
+  return { meta, body: raw.slice(match[0].length) };
+};
 
-  const html = readFileSync(templateFile, 'utf8');
-  const match = html.match(TEMPLATE_WRAPPER);
-  if(!match) return html;
+const resolveTemplate = (name, find, depth, maxDepth) => {
+  if(depth > maxDepth) throw new Error(`Template patch depth exceeded maximum of ${maxDepth} at "${name}"`);
 
-  const parentName = extractAttrs(match[1] || '').extends;
-  if(!parentName) throw new Error(`<template> in ${templateFile} has no "extends" — a template that does not extend another needs no <template> wrapper`);
+  const templateFile = find(`${name}.template`);
+  if(templateFile) return readFileSync(templateFile, 'utf8');
 
-  const parentFile = findTemplateFile(parentName);
-  if(!parentFile) throw new Error(`Template not found: ${parentName}.template.html, extended by ${templateFile}`);
-  if(parentFile === templateFile) throw new Error(`Template ${templateFile} extends itself`);
+  const patchFile = find(`${name}.template-patch`);
+  if(!patchFile) return null;
 
-  const parentHtml = composeTemplate(parentFile, findTemplateFile, depth + 1, maxDepth);
+  const { meta, body } = parseFrontmatter(readFileSync(patchFile, 'utf8'));
+  const parentName = meta.extends;
+  if(!parentName) throw new Error(`${patchFile} has no "extends" in its frontmatter — a patch must name the template it applies to`);
+  if(parentName === name) throw new Error(`${patchFile} extends itself`);
 
-  // Slots the child does not fill stay open for the page and for global content
-  const filled = replaceLocations(parentHtml, extractContentBlocks(match[2]), true);
+  const parentHtml = resolveTemplate(parentName, find, depth + 1, maxDepth);
+  if(parentHtml === null) throw new Error(`Template not found: ${parentName}, extended by ${patchFile}`);
+
+  // Locations the patch does not fill stay open for the page and for global content
+  const filled = replaceLocations(parentHtml, extractContentBlocks(body), true);
 
   /*
-    Patches run after the child's content blocks, so a selector sees the template as composed so
-    far and can target markup the child itself just inserted.
+    Patch operations run after the content blocks, so an id can target markup the patch itself just
+    inserted.
   */
-  return applyPatchOps(filled, extractPatchOps(match[2]), templateFile);
+  return applyPatchOps(filled, extractPatchOps(body), patchFile);
 };
 
 /*
@@ -193,16 +208,20 @@ const renderPageCore = async (pageFilePath, rootDir, resolveDir, globals = {}, s
   const templateName = pageAttrs.template || 'default';
   delete pageAttrs.template;
 
-  const findTemplateFile = name => findFileUpSync(`${name}.template.html`, resolveDir, rootDir);
+  /*
+    `template="x"` resolves to x.template.html, or to x.template-patch.html if there is no template
+    by that name — so a page names what it wants and does not care which of the two provides it.
+  */
+  const find = stem => findFileUpSync(`${stem}.html`, resolveDir, rootDir);
 
-  let templateFile = findTemplateFile(templateName);
+  let templateHtml = resolveTemplate(templateName, find, 0, maxDepth);
 
-  // If the specified template is not found, fall back to default.template.html
-  if(!templateFile && templateName !== 'default'){
-    templateFile = findTemplateFile('default');
+  // If the specified template is not found, fall back to the default one
+  if(templateHtml === null && templateName !== 'default'){
+    templateHtml = resolveTemplate('default', find, 0, maxDepth);
   }
 
-  if(!templateFile) throw new Error(`Template not found: ${templateName}.template.html or default.template.html (searched from ${resolveDir} to ${rootDir})`);
+  if(templateHtml === null) throw new Error(`Template not found: ${templateName}.template.html, ${templateName}.template-patch.html or default.template.html (searched from ${resolveDir} to ${rootDir})`);
 
   const globalContent = preloadedGlobalContent ?? await loadGlobalContent(rootDir, extraGlobalDirs);
   const rawPageBlocks = extractContentBlocks(pageContent);
@@ -242,7 +261,6 @@ const renderPageCore = async (pageFilePath, rootDir, resolveDir, globals = {}, s
   }
 
   const contentBlocks = mergeContentBlocks(pageBlocks, globalContent);
-  let templateHtml = composeTemplate(templateFile, findTemplateFile, 0, maxDepth);
 
   templateHtml = resolveFragmentTags(templateHtml, findFragmentFile, 0, maxDepth);
   templateHtml = replaceLocations(templateHtml, contentBlocks);
