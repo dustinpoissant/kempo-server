@@ -291,7 +291,7 @@
 		</div>
 		<p>A patch may also carry <code>&lt;content location="…"&gt;</code> blocks, filling locations the template marked. Locations it leaves alone stay open for the page and for global content.</p>
 		<ul>
-			<li><strong>An id the template does not have is an error.</strong> A patch is coupled to markup the template never promised to keep, so it fails loudly &mdash; failing invisibly is the behaviour this feature exists to replace.</li>
+			<li><strong>An id the template does not have is skipped, not fatal.</strong> A patch and the template it patches ship on different release cycles &mdash; core changes a template and removes a section an extension still targets, before that extension has an update out &mdash; and a section going missing does not justify failing every page that uses the patch. The operation is skipped, the rest of the patch still applies, and the reason is logged once (not once per render) where a developer will see it rather than where a visitor will.</li>
 			<li>Operations apply in the order written, each seeing the result of the last, so one can target markup an earlier one introduced.</li>
 			<li>Patches chain: a patch may extend another patch. A cycle throws rather than hanging.</li>
 			<li>A real template wins over a patch of the same name.</li>
@@ -435,7 +435,7 @@
 		</div>
 		<p>A common use case is sending templated emails. Create a dedicated email directory with a shared template, per-email pages, reusable fragments, and optional global content:</p>
 		<pre><code class="hljs javascript"><span class="hljs-keyword">import</span> { renderPageToString } <span class="hljs-keyword">from</span> <span class="hljs-string">'kempo-server/templating'</span>;<br /><span class="hljs-keyword">import</span> path <span class="hljs-keyword">from</span> <span class="hljs-string">'path'</span>;<br /><br /><span class="hljs-keyword">const</span> emailsDir = path.resolve(<span class="hljs-string">'./emails'</span>);<br /><span class="hljs-keyword">const</span> html = <span class="hljs-keyword">await</span> renderPageToString(<br />  path.join(emailsDir, <span class="hljs-string">'welcome.page.html'</span>),<br />  { userName: <span class="hljs-string">'Alice'</span>, orderId: <span class="hljs-string">'1234'</span> }<br />);</code></pre>
-		<p>Built-in vars (<code>2026</code>, <code>2026-08-26</code>, <code>2026-08-26T16:24:39.542Z</code>, <code>1787761479542</code>) are always available. Note that <code>&lt;page&gt;</code> tag attributes take highest priority and override <code>vars</code> with the same key.</p>
+		<p>Built-in vars (<code>2026</code>, <code>2026-08-26</code>, <code>2026-08-26T18:32:50.881Z</code>, <code>1787769170881</code>) are always available. Note that <code>&lt;page&gt;</code> tag attributes take highest priority and override <code>vars</code> with the same key.</p>
 
 		<h3 id="render-external-page">renderExternalPage</h3>
 		<p>Identical pipeline to <code>renderPage</code>, but decouples the page file's physical location from where templates and fragments are resolved. Use this when a page file lives outside <code>rootDir</code> — for example, in a plugin or extension package — but should be rendered using the host project's templates, fragments, and globals.</p>

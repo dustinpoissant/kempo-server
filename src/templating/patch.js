@@ -14,6 +14,10 @@ import { extractAttrs } from './parse.js';
   template is not HTML but a partial document full of <location />, <fragment />, <if>, <foreach>
   and {{vars}} — or a selector engine of our own. An id is unambiguous, needs neither, and forces
   the template being patched to have deliberately named the thing it is offering up.
+
+  An operation whose target is missing is skipped and warned about, not thrown. A patch and the
+  template it patches ship on different release cycles, so a vanished id is a version-skew problem
+  and does not justify failing the page a visitor asked for. See applyOp.
 */
 
 // No closing tag to look for
@@ -212,18 +216,45 @@ const serialiseAttrs = (existing, ops, selfClosed) => {
   return `${rendered}${close}`;
 };
 
+/*
+  Warnings are printed once per distinct problem rather than once per render. A patch that cannot
+  apply is a property of the files, not of the request, so warning on every render of every page
+  using it would bury the message in its own repetition.
+*/
+const warned = new Set();
+
+const warnOnce = message => {
+  if(warned.has(message)) return;
+  warned.add(message);
+  console.warn(`[kempo-server] ${message}`);
+};
+
 const applyOp = (html, { op, id, attrs, markup }, describe) => {
   const where = describe ? ` in ${describe}` : '';
-  if(!id) throw new Error(`<${op}> requires an id${where}`);
-
-  const el = findById(html, id);
 
   /*
-    A patch naming an id the template does not have is an error, never a quiet no-op. A patch is
-    coupled to markup the template never promised to keep, so the one thing it must not do is fail
-    the way the copying it replaces failed — invisibly.
+    An operation that cannot apply is skipped, and the rest of the patch still runs.
+
+    Throwing would be the stricter reading, and it is tempting: a patch is coupled to markup the
+    template never promised to keep, so a target that has vanished usually means something drifted.
+    But the page is the wrong place to report that. A patch and the template it patches ship in
+    different packages on different release cycles — core changes a template, removes a section, and
+    an extension pinning that id has no update out yet — and the cost of being strict there is every
+    page using the patch failing to render, for a section that has merely gone missing.
+
+    So it degrades: the page renders without that one change, and the reason is logged where a
+    developer will see it rather than where a visitor will.
   */
-  if(!el) throw new Error(`<${op} id="${id}"> found no element with that id${where}`);
+  if(!id){
+    warnOnce(`<${op}> has no id and was skipped${where}`);
+    return html;
+  }
+
+  const el = findById(html, id);
+  if(!el){
+    warnOnce(`<${op} id="${id}"> found no element with that id and was skipped${where}`);
+    return html;
+  }
 
   switch(op){
     case 'replace': return html.slice(0, el.outerStart) + markup + html.slice(el.outerEnd);
@@ -234,7 +265,10 @@ const applyOp = (html, { op, id, attrs, markup }, describe) => {
     case 'append':  return html.slice(0, el.innerEnd) + markup + html.slice(el.innerEnd);
     case 'remove':  return html.slice(0, el.outerStart) + html.slice(el.outerEnd);
     case 'attr':    return html.slice(0, el.attrStart) + serialiseAttrs(el.attrs, attrs, el.selfClosed) + html.slice(el.attrEnd);
-    default: throw new Error(`Unknown patch operation: ${op}${where}`);
+    default:
+      // Unreachable via extractPatchOps, which only matches the operations named in OPS
+      warnOnce(`Unknown patch operation <${op}> was skipped${where}`);
+      return html;
   }
 };
 

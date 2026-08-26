@@ -492,8 +492,11 @@ is offering up.
 A patch may also carry `<content location="…">` blocks, filling locations the template marked.
 Locations it leaves alone stay open for the page and for global content.
 
-- **An id the template does not have is an error.** A patch is coupled to markup the template never
-  promised to keep, so it fails loudly — failing invisibly is what this replaces.
+- **An id the template does not have is skipped, not fatal.** A patch and the template it patches
+  ship on different release cycles — core changes a template and removes a section an extension
+  still targets, before that extension has an update out. A missing section does not justify failing
+  every page using the patch, so the operation is skipped, the rest of the patch still applies, and
+  the reason is logged once (not once per render) rather than shown to a visitor.
 - Operations apply in the order written, each seeing the result of the last.
 - Patches chain: a patch may extend another patch. A cycle throws rather than hanging.
 - A real template wins over a patch of the same name.

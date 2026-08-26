@@ -211,27 +211,56 @@ export default {
     });
   },
 
-  'an id the template does not have fails loudly': async ({pass, fail}) => {
+  'an id the template does not have is skipped, not fatal': async ({pass, fail}) => {
     await withTempDir(async dir => {
-      try {
-        await render(dir, '<replace id="nope">x</replace>');
-        fail('should have thrown — a silent no-op is the drift this feature exists to prevent');
-      } catch(e){
-        if(!/found no element with that id/.test(e.message)) return fail(`wrong error: ${e.message}`);
-        pass();
-      }
+      /*
+        A patch and the template it patches ship on different release cycles. Core removing a
+        section an extension still targets must not take the page down with it.
+      */
+      const html = await render(dir, '<replace id="nope">GONE</replace>');
+      if(html.includes('GONE')) return fail(`a missing target should apply nothing: ${html}`);
+      if(!html.includes('BODY')) return fail(`the page should still render: ${html}`);
+      if(!html.includes('NAV')) return fail(`the template should be intact: ${html}`);
+      pass();
     });
   },
 
-  'an operation with no id throws': async ({pass, fail}) => {
+  'the rest of a patch still applies when one operation is skipped': async ({pass, fail}) => {
     await withTempDir(async dir => {
-      try {
-        await render(dir, '<replace>x</replace>');
-        fail('should have thrown');
-      } catch(e){
-        if(!/requires an id/.test(e.message)) return fail(`wrong error: ${e.message}`);
-        pass();
-      }
+      const html = await render(dir,
+        '<replace id="nope">GONE</replace>' +
+        '<replace id="main"><article id="post"><location /></article></replace>'
+      );
+      if(html.includes('GONE')) return fail(`skipped op leaked: ${html}`);
+      if(!html.includes('<article id="post">BODY</article>')) return fail(`the applicable op did not run: ${html}`);
+      pass();
+    });
+  },
+
+  'a skipped operation is reported rather than passing in silence': async ({pass, fail}) => {
+    const seen = [];
+    const original = console.warn;
+    console.warn = msg => seen.push(String(msg));
+    try {
+      await withTempDir(async dir => {
+        // A unique id so the once-per-problem warning is not suppressed by an earlier test
+        await render(dir, '<replace id="absent-in-this-test">x</replace>');
+      });
+    } finally {
+      console.warn = original;
+    }
+    if(!seen.some(m => m.includes('absent-in-this-test'))){
+      return fail(`nothing was logged; a patch that stops applying must not do so invisibly: ${JSON.stringify(seen)}`);
+    }
+    pass();
+  },
+
+  'an operation with no id is skipped too': async ({pass, fail}) => {
+    await withTempDir(async dir => {
+      const html = await render(dir, '<replace>GONE</replace>');
+      if(html.includes('GONE')) return fail(`an op with no id should apply nothing: ${html}`);
+      if(!html.includes('BODY')) return fail(`the page should still render: ${html}`);
+      pass();
     });
   },
 
