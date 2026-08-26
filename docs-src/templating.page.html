@@ -130,6 +130,32 @@
 		</ul>
 		<p><strong>Prefer this to copying a template.</strong> A copy is a snapshot: it stops matching the original the moment that original is edited, silently, with nothing to signal the drift. Composition happens on every render, so there is nothing to keep in step and no regeneration step to forget.</p>
 
+		<h3 id="patching">Patching Markup the Parent Never Marked</h3>
+		<p><code>&lt;content location="…"&gt;</code> only reaches places the parent chose to mark with a <code>&lt;location&gt;</code>. A child can also target <em>any</em> element by CSS selector &mdash; the <code>&lt;title&gt;</code> a site never wrapped, a class on <code>&lt;body&gt;</code>, an insertion after some <code>&lt;h1&gt;</code>:</p>
+		<pre><code class="hljs xml"><span class="hljs-tag">&lt;<span class="hljs-name">template</span> <span class="hljs-attr">extends</span>=<span class="hljs-string">"default"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">replace</span> <span class="hljs-attr">selector</span>=<span class="hljs-string">"title"</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">title</span>&gt;</span>{{title}} — My Blog<span class="hljs-tag">&lt;/<span class="hljs-name">title</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">replace</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">attr</span> <span class="hljs-attr">selector</span>=<span class="hljs-string">"body"</span> <span class="hljs-attr">add-class</span>=<span class="hljs-string">"has-article"</span> /&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">after</span> <span class="hljs-attr">selector</span>=<span class="hljs-string">"h1"</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">p</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"byline"</span>&gt;</span>by {{author}}<span class="hljs-tag">&lt;/<span class="hljs-name">p</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">after</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span></code></pre>
+		<div class="table-wrapper mb">
+		<table>
+			<thead><tr><th>Operation</th><th>Effect</th></tr></thead>
+			<tbody>
+				<tr><td><code>&lt;replace selector&gt;</code></td><td>Swaps the whole matched element</td></tr>
+				<tr><td><code>&lt;inner selector&gt;</code></td><td>Swaps its contents, keeping the element</td></tr>
+				<tr><td><code>&lt;before&gt;</code> / <code>&lt;after&gt;</code></td><td>Inserts immediately outside it</td></tr>
+				<tr><td><code>&lt;prepend&gt;</code> / <code>&lt;append&gt;</code></td><td>Inserts at the start or end of its contents</td></tr>
+				<tr><td><code>&lt;remove selector /&gt;</code></td><td>Deletes it</td></tr>
+				<tr><td><code>&lt;attr selector …/&gt;</code></td><td>Sets attributes. <code>add-class</code> and <code>remove-class</code> adjust the class list without restating what is already there</td></tr>
+			</tbody>
+		</table>
+		</div>
+		<p>Supported selectors: <code>tag</code>, <code>#id</code>, <code>.class</code>, <code>[attr]</code>, <code>[attr="value"]</code> (also <code>~= ^= $= *= |=</code>), <code>*</code>, plus descendant (<code>a b</code>) and child (<code>a &gt; b</code>) combinators. Anything outside that subset throws when the selector is parsed rather than quietly matching nothing.</p>
+		<ul>
+			<li><strong>A patch applies to every match</strong>, like <code>querySelectorAll</code> &mdash; not just the first.</li>
+			<li><strong>A selector that matches nothing is an error.</strong> Patches are coupled to markup the parent never promised to keep, so failing loudly is the point: silent drift is exactly what this feature exists to replace.</li>
+			<li>Patches run after the child's <code>&lt;content&gt;</code> blocks, so a selector can target markup the child itself inserted.</li>
+			<li>Operations apply in the order written, each seeing the result of the last.</li>
+		</ul>
+		<p>Elements are located, and edits are spliced into the original text &mdash; nothing is re-serialised, so markup outside the targeted range (including <code>&lt;if&gt;</code>, <code>&lt;foreach&gt;</code>, <code>&lt;location&gt;</code> and <code>&#123;&#123;vars&#125;&#125;</code>) comes through byte for byte.</p>
+		<p><strong>Use a <code>&lt;location&gt;</code> where you can.</strong> A marked region is a promise the parent makes; a selector is a guess about markup it never promised. Reach for a patch when the parent is not yours to change.</p>
+
 		<h2 id="global-files">Global Files</h2>
 		<p>Any file named <code>*.global.html</code> anywhere under the root directory is automatically loaded and its <code>&lt;content&gt;</code> blocks are injected into every page render. This is the right place to put site-wide scripts, meta tags, nav links, or anything else that should appear across all pages without touching every template or page file.</p>
 		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- analytics.global.html --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">content</span> <span class="hljs-attr">location</span>=<span class="hljs-string">"scripts"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"analytics.js"</span> <span class="hljs-attr">defer</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">content</span>&gt;</span></code></pre>

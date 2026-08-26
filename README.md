@@ -474,6 +474,42 @@ hanging. A template with no `<template>` wrapper is a complete document and beha
 moment that original is edited, silently. Composition happens per render, so there is nothing to
 regenerate and nothing to keep in step.
 
+#### Patching markup the parent never marked
+
+`<content location="…">` only reaches places the parent marked with a `<location>`. A child can
+also target *any* element by CSS selector:
+
+```html
+<template extends="default">
+  <replace selector="title"><title>{{title}} — My Blog</title></replace>
+  <attr selector="body" add-class="has-article" />
+  <after selector="h1"><p class="byline">by {{author}}</p></after>
+</template>
+```
+
+| Operation | Effect |
+|---|---|
+| `<replace selector>` | Swaps the whole matched element |
+| `<inner selector>` | Swaps its contents, keeping the element |
+| `<before>` / `<after>` | Inserts immediately outside it |
+| `<prepend>` / `<append>` | Inserts at the start or end of its contents |
+| `<remove selector />` | Deletes it |
+| `<attr selector …/>` | Sets attributes; `add-class` / `remove-class` adjust the class list without restating it |
+
+Selectors cover `tag`, `#id`, `.class`, `[attr]`, `[attr="value"]` (plus `~= ^= $= *= |=`), `*`, and
+the descendant (`a b`) and child (`a > b`) combinators. Anything else throws at parse time.
+
+- A patch applies to **every** match, like `querySelectorAll`.
+- **A selector matching nothing is an error.** A patch is coupled to markup the parent never
+  promised to keep, so it fails loudly rather than drifting quietly.
+- Patches run after the child's `<content>` blocks, so they can target markup the child inserted.
+
+Elements are located and edits are spliced into the original text — nothing is re-serialised, so
+markup outside the targeted range comes through byte for byte.
+
+**Use a `<location>` where you can.** A marked region is a promise the parent makes; a selector is a
+guess about markup it never promised. Reach for a patch when the parent is not yours to change.
+
 ### Fragments from outside `rootDir`
 
 `extraFragmentDirs` is the pull-side counterpart: those directories are searched recursively for

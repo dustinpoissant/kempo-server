@@ -11,6 +11,7 @@ import {
   resolveFragmentTags,
   fragmentPriority
 } from './parse.js';
+import { extractPatchOps, applyPatchOps } from './patch.js';
 import { readFileSync, statSync } from 'fs';
 
 /*
@@ -170,8 +171,15 @@ const composeTemplate = (templateFile, findTemplateFile, depth, maxDepth) => {
   if(parentFile === templateFile) throw new Error(`Template ${templateFile} extends itself`);
 
   const parentHtml = composeTemplate(parentFile, findTemplateFile, depth + 1, maxDepth);
+
   // Slots the child does not fill stay open for the page and for global content
-  return replaceLocations(parentHtml, extractContentBlocks(match[2]), true);
+  const filled = replaceLocations(parentHtml, extractContentBlocks(match[2]), true);
+
+  /*
+    Patches run after the child's content blocks, so a selector sees the template as composed so
+    far and can target markup the child itself just inserted.
+  */
+  return applyPatchOps(filled, extractPatchOps(match[2]), templateFile);
 };
 
 /*
