@@ -2,6 +2,18 @@
 
 All notable changes to `kempo-server` are documented in this file.
 
+## [Unreleased]
+
+### Added
+- **`extraFragmentDirs` on `renderExternalPage(pageFilePath, rootDir, resolveDir, globals, state, maxDepth, extraGlobalDirs, extraFragmentDirs)`.** `extraGlobalDirs` (3.3.0) let a package outside `rootDir` *push* content into a host's render; there was no pull-side equivalent, so a package could never *supply* a fragment the host asks for by name, nor override one the host already has. Fragments were resolved by a single walk up from `resolveDir` to `rootDir` and nothing else. Directories listed here are now searched recursively for `*.fragment.html` in addition to that walk-up.
+
+  Because a `<fragment>` tag inserts exactly one thing, same-named files from different sources compete rather than merge, and a fragment file's own `<fragment>` wrapper may carry a **`priority`** (higher wins, default `0`) to say how hard it competes. Resolution: the walk-up runs unchanged and yields at most one candidate — the nearest match — then each extra directory contributes at most one more; the highest priority wins; a tie keeps the site's own file, and a tie between two extra directories keeps whichever was listed first. Extra directories compete on priority alone, never on proximity, since they sit outside the directory chain. If no source has the fragment, the calling tag's inline fallback renders as before. Directories that do not exist are skipped, since a package shipping no fragments is the common case.
+
+  **Nothing changes for existing callers.** `extraFragmentDirs` defaults to `[]`, and with no extra directories a fragment resolves through exactly the path it always did — including the "a more specific copy shadows a more general one" behaviour that walk-up exists for. The `priority` attribute is optional and absent means `0`, so every fragment file written before this release keeps its current behaviour.
+
+### Fixed
+- **`extraGlobalDirs` is now documented on `renderExternalPage`'s parameter table in the templating docs.** It shipped in 3.3.0 and was described in the README, but the docs site's parameter table stopped at `maxDepth`, so the argument looked like it did not exist.
+
 ## [3.3.0] - 2026-08-25
 
 > **Why 3.3.0 and not another patch.** Everything below shipped across the 3.2.x line, but adding a

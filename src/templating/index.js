@@ -8,7 +8,8 @@ import {
   resolveVars,
   resolveIfs,
   resolveForeach,
-  resolveFragmentTags
+  resolveFragmentTags,
+  fragmentPriority
 } from './parse.js';
 import { readFileSync, statSync } from 'fs';
 
@@ -76,9 +77,62 @@ const loadGlobalContent = async (rootDir, extraGlobalDirs = []) => {
 };
 
 /*
+  Walk Directory for *.fragment.html Files
+*/
+const walkFragments = async dir => {
+  let entries;
+  try {
+    entries = await readdir(dir, {withFileTypes: true});
+  } catch {
+    // Extra fragment dirs are optional — a package that ships no fragments is the common case
+    return [];
+  }
+  const results = [];
+  for(const entry of entries){
+    const full = path.join(dir, entry.name);
+    if(entry.isDirectory()){
+      results.push(...await walkFragments(full));
+    } else if(entry.name.endsWith('.fragment.html')){
+      results.push(full);
+    }
+  }
+  return results;
+};
+
+/*
+  Collects *.fragment.html from extraFragmentDirs into a name -> markup map, once per render rather
+  than once per <fragment> tag: a page with many tags and a host with many plugin dirs would
+  otherwise re-walk every directory for every tag.
+
+  Where global content merges every contribution into a location, a <fragment> tag inserts exactly
+  one thing, so same-named files compete instead of combining and only the winner is kept. Highest
+  `priority` wins; ties keep the earliest, making the caller's dir order the tiebreaker rather than
+  filesystem enumeration order.
+*/
+const loadExtraFragments = async (extraFragmentDirs = []) => {
+  const winners = new Map();
+  for(const dir of extraFragmentDirs){
+    const files = await walkFragments(dir);
+    // Shallowest first, then alphabetical, so collisions inside one dir resolve the same way twice
+    files.sort((a, b) => {
+      const depth = a.split(path.sep).length - b.split(path.sep).length;
+      return depth !== 0 ? depth : a.localeCompare(b);
+    });
+    for(const file of files){
+      const name = path.basename(file).slice(0, -'.fragment.html'.length);
+      const markup = await readFile(file, 'utf8');
+      const priority = fragmentPriority(markup);
+      const current = winners.get(name);
+      if(!current || priority > current.priority) winners.set(name, {markup, priority});
+    }
+  }
+  return winners;
+};
+
+/*
   Render a Single Page (internal — accepts explicit resolveDir)
 */
-const renderPageCore = async (pageFilePath, rootDir, resolveDir, globals = {}, state = {}, maxDepth = 10, preloadedGlobalContent = null, extraGlobalDirs = []) => {
+const renderPageCore = async (pageFilePath, rootDir, resolveDir, globals = {}, state = {}, maxDepth = 10, preloadedGlobalContent = null, extraGlobalDirs = [], extraFragmentDirs = []) => {
   const pageContent = await readFile(pageFilePath, 'utf8');
   const pageTagMatch = pageContent.match(/^[\s\S]*?<page((?:[^>"']|"[^"]*"|'[^']*')*)>/);
   if(!pageTagMatch) throw new Error(`Invalid page file: missing <page> root element in ${pageFilePath}`);
@@ -107,10 +161,25 @@ const renderPageCore = async (pageFilePath, rootDir, resolveDir, globals = {}, s
   const contentBlocks = mergeContentBlocks(pageBlocks, globalContent);
   let templateHtml = readFileSync(templateFile, 'utf8');
 
+  const extraFragments = await loadExtraFragments(extraFragmentDirs);
+
+  /*
+    The walk up from resolveDir to rootDir is unchanged and still yields at most one candidate — the
+    nearest match — so with no extraFragmentDirs a fragment resolves exactly as it always has,
+    including the "a more specific copy shadows a more general one" behaviour walk-up exists for.
+
+    Extra dirs then compete with that match on `priority` alone, never on proximity: an extra dir
+    sits outside the directory chain, so there is no distance to compare it by. Highest priority
+    wins, and a tie keeps the local file — which is what makes overriding something the site
+    already has a deliberate act rather than an accident of which plugin was installed.
+  */
   const findFragmentFile = name => {
     const filePath = findFileUpSync(name + '.fragment.html', resolveDir, rootDir);
-    if(!filePath) return null;
-    return readFileSync(filePath, 'utf8');
+    const local = filePath ? readFileSync(filePath, 'utf8') : null;
+    const extra = extraFragments.get(name);
+    if(!extra) return local;
+    if(local === null) return extra.markup;
+    return extra.priority > fragmentPriority(local) ? extra.markup : local;
   };
 
   templateHtml = resolveFragmentTags(templateHtml, findFragmentFile, 0, maxDepth);
@@ -154,8 +223,8 @@ const renderPage = (pageFilePath, rootDir, globals = {}, state = {}, maxDepth = 
 /*
   Render a Page File That Lives Outside rootDir
 */
-const renderExternalPage = (pageFilePath, rootDir, resolveDir, globals = {}, state = {}, maxDepth = 10, extraGlobalDirs = []) =>
-  renderPageCore(pageFilePath, rootDir, resolveDir, globals, state, maxDepth, null, extraGlobalDirs);
+const renderExternalPage = (pageFilePath, rootDir, resolveDir, globals = {}, state = {}, maxDepth = 10, extraGlobalDirs = [], extraFragmentDirs = []) =>
+  renderPageCore(pageFilePath, rootDir, resolveDir, globals, state, maxDepth, null, extraGlobalDirs, extraFragmentDirs);
 
 /*
   Recursively Walk Directory for *.page.html

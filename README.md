@@ -400,7 +400,7 @@ Use `renderExternalPage` when a page file lives outside `rootDir` — for exampl
 ```javascript
 import { renderExternalPage } from 'kempo-server/templating';
 
-const html = await renderExternalPage(pageFilePath, rootDir, resolveDir, globals, state, maxDepth, extraGlobalDirs);
+const html = await renderExternalPage(pageFilePath, rootDir, resolveDir, globals, state, maxDepth, extraGlobalDirs, extraFragmentDirs);
 ```
 
 **Parameters:**
@@ -414,6 +414,7 @@ const html = await renderExternalPage(pageFilePath, rootDir, resolveDir, globals
 | `state` | `object` | Per-render variables |
 | `maxDepth` | `number` | Max fragment nesting depth (default `10`) |
 | `extraGlobalDirs` | `string[]` | *(optional)* Additional directories to scan for `*.global.html`, on top of `rootDir`. Directories that do not exist are skipped. |
+| `extraFragmentDirs` | `string[]` | *(optional)* Additional directories to search recursively for `*.fragment.html`. A match here competes with `rootDir`'s own walk-up match on `priority`. Directories that do not exist are skipped. |
 
 ### Global content from outside `rootDir`
 
@@ -436,6 +437,35 @@ const html = await renderExternalPage(
 Entries from every directory are merged, and each entry's `priority` still orders it within its
 `location`. Because the plugin's file is read at render time, enabling, disabling, upgrading, or
 removing the plugin takes effect immediately with no install-time file copying to keep in sync.
+
+### Fragments from outside `rootDir`
+
+`extraFragmentDirs` is the pull-side counterpart: those directories are searched recursively for
+`*.fragment.html`, letting a plugin *supply* a fragment the host asks for by name — or *override*
+one the host already has.
+
+Because a `<fragment>` tag inserts exactly one thing, same-named files compete rather than merge.
+A fragment file's own `<fragment>` wrapper can carry a `priority` (higher wins, default `0`):
+
+```html
+<!-- my-plugin/nav.fragment.html -->
+<fragment priority="10">
+  <nav>Replacement nav</nav>
+</fragment>
+```
+
+Resolution order:
+
+1. `rootDir`'s walk-up from `resolveDir` runs unchanged, producing at most one candidate — the
+   nearest match. Directory overrides within the site behave exactly as they always have.
+2. Each extra directory contributes at most one more candidate.
+3. Highest `priority` wins. Extra directories compete on priority alone, never on proximity — they
+   sit outside the directory chain, so there is no distance to compare them by.
+4. A tie keeps the site's own file; a tie between two extra directories keeps whichever was listed
+   first. Overriding something the site already has is therefore always deliberate.
+5. If no source has it, the calling tag's inline fallback renders as before.
+
+Pass no `extraFragmentDirs` and none of this applies — fragments resolve exactly as they always have.
 
 The behavior is identical to `renderPage` called on a hypothetical page file physically located at `resolveDir/<filename>.page.html`. The only difference is that the page content is read from `pageFilePath` regardless of where it lives on disk.
 

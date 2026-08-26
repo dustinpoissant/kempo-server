@@ -56,11 +56,30 @@ const replaceLocations = (html, contentMap) =>
   );
 
 /*
-  Fragment Wrapper Stripping
+  Fragment Wrapper Parsing
+
+  A fragment file may wrap its markup in a <fragment> root element carrying metadata. The wrapper is
+  optional — a file of bare markup is a perfectly good fragment — so everything read from it has to
+  degrade to a sensible default rather than being required.
 */
+const FRAGMENT_WRAPPER = /^\s*<fragment((?:[^>"']|"[^"]*"|'[^']*')*)>([\s\S]*)<\/fragment>\s*$/;
+
 const stripFragmentWrapper = xml => {
-  const match = xml.match(/^\s*<fragment(?:[^>"']|"[^"]*"|'[^']*')*>([\s\S]*)<\/fragment>\s*$/);
-  return match ? match[1] : xml;
+  const match = xml.match(FRAGMENT_WRAPPER);
+  return match ? match[2] : xml;
+};
+
+/*
+  A fragment's `priority` decides which file wins when more than one source offers a fragment of the
+  same name — see findFragmentFile in ./index.js. Read from the wrapper only: an unwrapped file, a
+  wrapper with no priority, and a priority that is not a number all mean 0, the same as every
+  fragment written before this attribute existed.
+*/
+const fragmentPriority = xml => {
+  const match = xml.match(FRAGMENT_WRAPPER);
+  if(!match) return 0;
+  const priority = parseInt(extractAttrs(match[1]).priority || '0', 10);
+  return Number.isNaN(priority) ? 0 : priority;
 };
 
 /*
@@ -297,6 +316,7 @@ export {
   mergeContentBlocks,
   replaceLocations,
   stripFragmentWrapper,
+  fragmentPriority,
   resolveVars,
   resolveIfs,
   resolveForeach,

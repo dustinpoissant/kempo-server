@@ -100,6 +100,20 @@
 			<li>A subdirectory can provide its own version to override the parent</li>
 		</ul>
 
+		<h3 id="fragment-priority">Fragment Priority</h3>
+		<p>A host can offer fragments from directories outside the root &mdash; plugin or extension packages contributing to a render &mdash; by passing <code>extraFragmentDirs</code> to <a href="#render-external-page"><code>renderExternalPage</code></a>. Those directories are searched recursively for a matching <code>*.fragment.html</code>, which means a name can now be offered by more than one source at once.</p>
+		<p>A <code>&lt;fragment&gt;</code> tag inserts exactly one thing, so those sources compete rather than combine. Add a <code>priority</code> attribute to a fragment file's own <code>&lt;fragment&gt;</code> wrapper to say how hard it competes &mdash; higher wins, and the default is <code>0</code>:</p>
+		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- my-plugin/nav.fragment.html — overrides the site's own nav --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">fragment</span> <span class="hljs-attr">priority</span>=<span class="hljs-string">"10"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">nav</span>&gt;</span>Replacement nav<span class="hljs-tag">&lt;/<span class="hljs-name">nav</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">fragment</span>&gt;</span></code></pre>
+		<p>Resolution runs in this order:</p>
+		<ul>
+			<li>The walk up from the page's directory to the root is unchanged, and still produces at most one candidate &mdash; the nearest match. Directory overrides behave exactly as described above.</li>
+			<li>Each extra directory contributes at most one more candidate.</li>
+			<li>The highest <code>priority</code> wins. Extra directories compete on priority alone, never on proximity &mdash; they sit outside the directory chain, so there is no distance to compare them by.</li>
+			<li>A tie keeps the site's own file, and a tie between two extra directories keeps whichever was listed first. Overriding something a site already has is therefore always deliberate, never an accident of install order.</li>
+			<li>If no source has the fragment, the calling tag's inline fallback content renders as before.</li>
+		</ul>
+		<p>With no <code>extraFragmentDirs</code> passed, none of this applies and fragments resolve exactly as they always have.</p>
+
 		<h2 id="global-files">Global Files</h2>
 		<p>Any file named <code>*.global.html</code> anywhere under the root directory is automatically loaded and its <code>&lt;content&gt;</code> blocks are injected into every page render. This is the right place to put site-wide scripts, meta tags, nav links, or anything else that should appear across all pages without touching every template or page file.</p>
 		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- analytics.global.html --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">content</span> <span class="hljs-attr">location</span>=<span class="hljs-string">"scripts"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"analytics.js"</span> <span class="hljs-attr">defer</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">content</span>&gt;</span></code></pre>
@@ -126,6 +140,7 @@
 			<tbody>
 				<tr><td>Direction</td><td>Pull — caller decides what to include</td><td>Push — file injects itself automatically</td></tr>
 				<tr><td>How many per location</td><td>One (the named file)</td><td>Many — all globals targeting the same location are merged</td></tr>
+				<tr><td>What <code>priority</code> does</td><td>Picks the single winner when several sources offer the same name</td><td>Orders the merged output within a location</td></tr>
 				<tr><td>Page can contribute too?</td><td>No — the fragment replaces the tag entirely</td><td>Yes — page <code>&lt;content&gt;</code> blocks merge with global content</td></tr>
 				<tr><td>Requires template change?</td><td>Yes — caller must add <code>&lt;fragment name="..." /&gt;</code></td><td>No — just add a <code>&lt;location&gt;</code> and the globals fill it</td></tr>
 				<tr><td>Good for</td><td>Reusable structural blocks (nav, footer, sidebar)</td><td>Site-wide injections (scripts, meta tags, nav links)</td></tr>
@@ -252,9 +267,12 @@
 				<tr><td><code>globals</code></td><td><code>object</code></td><td><code>{}</code></td><td>Global variables available to all pages</td></tr>
 				<tr><td><code>state</code></td><td><code>object</code></td><td><code>{}</code></td><td>Per-render variables</td></tr>
 				<tr><td><code>maxDepth</code></td><td><code>number</code></td><td><code>10</code></td><td>Maximum fragment nesting depth</td></tr>
+				<tr><td><code>extraGlobalDirs</code></td><td><code>string[]</code></td><td><code>[]</code></td><td>Extra directories to scan for <code>*.global.html</code>, on top of <code>rootDir</code>. Their <code>&lt;content&gt;</code> blocks merge with the root's and are ordered by <code>priority</code> like any other global content. Missing directories are ignored.</td></tr>
+				<tr><td><code>extraFragmentDirs</code></td><td><code>string[]</code></td><td><code>[]</code></td><td>Extra directories to search recursively for <code>*.fragment.html</code>. A fragment found here competes with the root's own walk-up match on <code>priority</code> &mdash; see <a href="#fragment-priority">Fragment Priority</a>. Missing directories are ignored.</td></tr>
 			</tbody>
 		</table>
 		</div>
+		<p>The two <code>extra*Dirs</code> lists are separate parameters so a host can offer push content, pull content, or both from a given directory. Passing the same directory to each is the common case: a plugin package that ships both <code>*.global.html</code> and <code>*.fragment.html</code> files.</p>
 		<pre><code class="hljs javascript"><span class="hljs-keyword">import</span> { renderExternalPage } <span class="hljs-keyword">from</span> <span class="hljs-string">'kempo-server/templating'</span>;<br /><span class="hljs-keyword">import</span> path <span class="hljs-keyword">from</span> <span class="hljs-string">'path'</span>;<br /><br /><span class="hljs-comment">// Page lives in an extension package, rendered with the host app's templates</span><br /><span class="hljs-keyword">const</span> html = <span class="hljs-keyword">await</span> renderExternalPage(<br />  path.resolve(<span class="hljs-string">'./node_modules/my-ext/admin/dashboard.page.html'</span>),<br />  path.resolve(<span class="hljs-string">'./public'</span>),         <span class="hljs-comment">// rootDir</span><br />  path.resolve(<span class="hljs-string">'./public/admin'</span>),    <span class="hljs-comment">// resolveDir</span><br />  globals,<br />  state<br />);</code></pre>
 
 		<h2 id="ssr">Server-Side Rendering</h2>
