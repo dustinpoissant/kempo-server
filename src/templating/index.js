@@ -130,6 +130,51 @@ const loadExtraFragments = async (extraFragmentDirs = []) => {
 };
 
 /*
+  Template Composition
+
+  A template may extend another by wrapping itself in <template extends="name">, filling the parent's
+  <location> tags with its own <content> blocks — the same relationship a page already has with a
+  template, one level up.
+
+  What makes it work is that a <location> in the child's own content survives the substitution: the
+  parent's slot is replaced with the child's markup as a string, and that markup is not rescanned,
+  so a <location> inside it is still there for the page to fill afterwards. That is what lets a
+  child wrap the page rather than merely replace it:
+
+    parent   <body><nav/><location /></body>
+    child    <content><article><location /></article></content>
+    composed <body><nav/><article><location /></article></body>
+    page     <body><nav/><article>…page body…</article></body>
+
+  The alternative — copying the parent and editing it — is what this exists to avoid: a copy is a
+  snapshot, and it goes stale the moment the original changes, silently and with nothing to notice
+  it. Composing happens per render, so there is nothing to keep in step.
+
+  A template with no <template> wrapper is a complete document and is returned untouched, which is
+  every template written before this existed.
+*/
+const TEMPLATE_WRAPPER = /^[\s\S]*?<template((?:[^>"']|"[^"]*"|'[^']*')*)>([\s\S]*)<\/template>/;
+
+const composeTemplate = (templateFile, findTemplateFile, depth, maxDepth) => {
+  if(depth > maxDepth) throw new Error(`Template extends depth exceeded maximum of ${maxDepth}`);
+
+  const html = readFileSync(templateFile, 'utf8');
+  const match = html.match(TEMPLATE_WRAPPER);
+  if(!match) return html;
+
+  const parentName = extractAttrs(match[1] || '').extends;
+  if(!parentName) throw new Error(`<template> in ${templateFile} has no "extends" — a template that does not extend another needs no <template> wrapper`);
+
+  const parentFile = findTemplateFile(parentName);
+  if(!parentFile) throw new Error(`Template not found: ${parentName}.template.html, extended by ${templateFile}`);
+  if(parentFile === templateFile) throw new Error(`Template ${templateFile} extends itself`);
+
+  const parentHtml = composeTemplate(parentFile, findTemplateFile, depth + 1, maxDepth);
+  // Slots the child does not fill stay open for the page and for global content
+  return replaceLocations(parentHtml, extractContentBlocks(match[2]), true);
+};
+
+/*
   Render a Single Page (internal — accepts explicit resolveDir)
 */
 const renderPageCore = async (pageFilePath, rootDir, resolveDir, globals = {}, state = {}, maxDepth = 10, preloadedGlobalContent = null, extraGlobalDirs = [], extraFragmentDirs = []) => {
@@ -140,11 +185,13 @@ const renderPageCore = async (pageFilePath, rootDir, resolveDir, globals = {}, s
   const templateName = pageAttrs.template || 'default';
   delete pageAttrs.template;
 
-  let templateFile = findFileUpSync(`${templateName}.template.html`, resolveDir, rootDir);
+  const findTemplateFile = name => findFileUpSync(`${name}.template.html`, resolveDir, rootDir);
+
+  let templateFile = findTemplateFile(templateName);
 
   // If the specified template is not found, fall back to default.template.html
   if(!templateFile && templateName !== 'default'){
-    templateFile = findFileUpSync('default.template.html', resolveDir, rootDir);
+    templateFile = findTemplateFile('default');
   }
 
   if(!templateFile) throw new Error(`Template not found: ${templateName}.template.html or default.template.html (searched from ${resolveDir} to ${rootDir})`);
@@ -187,7 +234,7 @@ const renderPageCore = async (pageFilePath, rootDir, resolveDir, globals = {}, s
   }
 
   const contentBlocks = mergeContentBlocks(pageBlocks, globalContent);
-  let templateHtml = readFileSync(templateFile, 'utf8');
+  let templateHtml = composeTemplate(templateFile, findTemplateFile, 0, maxDepth);
 
   templateHtml = resolveFragmentTags(templateHtml, findFragmentFile, 0, maxDepth);
   templateHtml = replaceLocations(templateHtml, contentBlocks);

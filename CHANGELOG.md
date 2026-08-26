@@ -5,6 +5,18 @@ All notable changes to `kempo-server` are documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Templates can extend one another: `<template extends="name">`.** A template was either a complete standalone document or nothing, so anything wanting a site's chrome plus its own wrapper had to *copy* that chrome. A copy is a snapshot — it stops matching the original the moment the original is edited, silently, with nothing to signal the drift, and no amount of regenerating-on-change closes it because a developer editing the file in an editor triggers nothing at all.
+
+  A template may now wrap itself in `<template extends="name">` and fill the parent's `<location>` tags with its own `<content>` blocks — the same relationship a page already has with a template, one level up. What makes it useful is that a `<location>` inside the child's own content survives composition, so a child can *wrap* the page rather than replace it:
+
+  ```
+  parent    <body><nav /><location /></body>
+  child     <content><article><location /></article></content>
+  composed  <body><nav /><article><location /></article></body>
+  rendered  <body><nav /><article>…page body…</article></body>
+  ```
+
+  A child may fill any number of the parent's named locations; slots it does not fill stay open for the page and for global content. Chains nest to `maxFragmentDepth`, and a cycle (including a template extending itself) throws rather than hanging. A template with no `<template>` wrapper is a complete document and renders exactly as before, which is every template written until now.
 - **`extraFragmentDirs` on `renderExternalPage(pageFilePath, rootDir, resolveDir, globals, state, maxDepth, extraGlobalDirs, extraFragmentDirs)`.** `extraGlobalDirs` (3.3.0) let a package outside `rootDir` *push* content into a host's render; there was no pull-side equivalent, so a package could never *supply* a fragment the host asks for by name, nor override one the host already has. Fragments were resolved by a single walk up from `resolveDir` to `rootDir` and nothing else. Directories listed here are now searched recursively for `*.fragment.html` in addition to that walk-up.
 
   Because a `<fragment>` tag inserts exactly one thing, same-named files from different sources compete rather than merge, and a fragment file's own `<fragment>` wrapper may carry a **`priority`** (higher wins, default `0`) to say how hard it competes. Resolution: the walk-up runs unchanged and yields at most one candidate — the nearest match — then each extra directory contributes at most one more; the highest priority wins; a tie keeps the site's own file, and a tie between two extra directories keeps whichever was listed first. Extra directories compete on priority alone, never on proximity, since they sit outside the directory chain. If no source has the fragment, the calling tag's inline fallback renders as before. Directories that do not exist are skipped, since a package shipping no fragments is the common case.

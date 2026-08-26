@@ -50,10 +50,20 @@ const resolveLocation = (entries) => {
   return [...entries].sort((a, b) => b.priority - a.priority).map(e => e.html).join('');
 };
 
-const replaceLocations = (html, contentMap) =>
-  html.replace(/<location((?:[^>"']|"[^"]*"|'[^']*')*?)(?:\s*\/>|>([\s\S]*?)<\/location>)/g, (_, attrStr, fallback) =>
-    resolveLocation(contentMap[extractAttrs(attrStr).name || 'default']) ?? fallback ?? ''
-  );
+/*
+  `keepUnmatched` decides what happens to a <location> nothing has filled.
+
+  Rendering a page is the last word, so an unfilled slot collapses to its fallback (or nothing) and
+  never reaches the browser. Composing one template onto another is not the last word: the slots a
+  child does not fill still belong to whoever comes next — the page, and global content — so they
+  have to survive untouched rather than being consumed by the pass that happened to run first.
+*/
+const replaceLocations = (html, contentMap, keepUnmatched = false) =>
+  html.replace(/<location((?:[^>"']|"[^"]*"|'[^']*')*?)(?:\s*\/>|>([\s\S]*?)<\/location>)/g, (match, attrStr, fallback) => {
+    const resolved = resolveLocation(contentMap[extractAttrs(attrStr).name || 'default']);
+    if(resolved !== null) return resolved;
+    return keepUnmatched ? match : (fallback ?? '');
+  });
 
 /*
   Fragment Wrapper Parsing

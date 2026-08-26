@@ -14,6 +14,7 @@
 						</ul>
 					</li>
 					<li><a href="#fragments">Fragments</a></li>
+					<li><a href="#extending-templates">Extending a Template</a></li>
 					<li><a href="#global-files">Global Files</a></li>
 					<li><a href="#fragments-vs-globals">Fragments vs. Global Files</a></li>
 					<li><a href="#template-syntax">Template Syntax</a>
@@ -114,6 +115,20 @@
 			<li>If no source has the fragment, the calling tag's inline fallback content renders as before.</li>
 		</ul>
 		<p>With no <code>extraFragmentDirs</code> passed, none of this applies and fragments resolve exactly as they always have.</p>
+
+		<h2 id="extending-templates">Extending a Template</h2>
+		<p>A template can build on another instead of standing alone. Wrap it in <code>&lt;template extends="name"&gt;</code> and fill the parent's locations with <code>&lt;content&gt;</code> blocks &mdash; the same relationship a page already has with a template, one level up.</p>
+		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- article.template.html --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">template</span> <span class="hljs-attr">extends</span>=<span class="hljs-string">"default"</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">content</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">article</span>&gt;</span><br />      <span class="hljs-tag">&lt;<span class="hljs-name">header</span>&gt;</span>{{title}}<span class="hljs-tag">&lt;/<span class="hljs-name">header</span>&gt;</span><br />      <span class="hljs-tag">&lt;<span class="hljs-name">location</span> /&gt;</span><br />    <span class="hljs-tag">&lt;/<span class="hljs-name">article</span>&gt;</span><br />  <span class="hljs-tag">&lt;/<span class="hljs-name">content</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span></code></pre>
+		<p>The key is that a <code>&lt;location&gt;</code> inside the child's own content survives: the parent's slot is replaced with the child's markup, and that markup is not rescanned, so the inner slot is still there for the page. That is what lets a child <em>wrap</em> the page rather than replace it.</p>
+		<pre><code class="hljs xml">parent    <span class="hljs-tag">&lt;<span class="hljs-name">body</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">nav</span> /&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">location</span> /&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">body</span>&gt;</span><br />child     <span class="hljs-tag">&lt;<span class="hljs-name">content</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">article</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">location</span> /&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">article</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">content</span>&gt;</span><br />composed  <span class="hljs-tag">&lt;<span class="hljs-name">body</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">nav</span> /&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">article</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">location</span> /&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">article</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">body</span>&gt;</span><br />rendered  <span class="hljs-tag">&lt;<span class="hljs-name">body</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">nav</span> /&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">article</span>&gt;</span>…page body…<span class="hljs-tag">&lt;/<span class="hljs-name">article</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">body</span>&gt;</span></code></pre>
+		<p>Notes:</p>
+		<ul>
+			<li>A child may fill any number of the parent's named locations, not just the default one.</li>
+			<li>Slots the child does not fill stay open &mdash; the page and global content still reach them.</li>
+			<li>Extending chains as deep as you like, bounded by <code>maxFragmentDepth</code>. A cycle throws rather than hanging.</li>
+			<li>A template with no <code>&lt;template&gt;</code> wrapper is a complete document and behaves exactly as it always has.</li>
+		</ul>
+		<p><strong>Prefer this to copying a template.</strong> A copy is a snapshot: it stops matching the original the moment that original is edited, silently, with nothing to signal the drift. Composition happens on every render, so there is nothing to keep in step and no regeneration step to forget.</p>
 
 		<h2 id="global-files">Global Files</h2>
 		<p>Any file named <code>*.global.html</code> anywhere under the root directory is automatically loaded and its <code>&lt;content&gt;</code> blocks are injected into every page render. This is the right place to put site-wide scripts, meta tags, nav links, or anything else that should appear across all pages without touching every template or page file.</p>

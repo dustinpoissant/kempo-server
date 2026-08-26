@@ -250,7 +250,7 @@ kempo-server --root public --config dev.config.js
 - **Security** - Built-in protection against serving sensitive files plus security headers middleware
 - **Performance** - Smart file system caching, rescan optimization, and optional compression
 - **Programmatic Rescan** - Trigger a file rescan from anywhere in the Node process without restarting
-- **Templating** - XML-based templating with templates, pages, fragments, variables, conditionals, and loops
+- **Templating** - XML-based templating with templates (which can extend one another), pages, fragments, variables, conditionals, and loops
 
 ## Examples
 
@@ -437,6 +437,42 @@ const html = await renderExternalPage(
 Entries from every directory are merged, and each entry's `priority` still orders it within its
 `location`. Because the plugin's file is read at render time, enabling, disabling, upgrading, or
 removing the plugin takes effect immediately with no install-time file copying to keep in sync.
+
+### Extending a template
+
+A template can build on another rather than standing alone. Wrap it in
+`<template extends="name">` and fill the parent's locations with `<content>` blocks — the same
+relationship a page already has with a template, one level up:
+
+```html
+<!-- article.template.html -->
+<template extends="default">
+  <content>
+    <article>
+      <header>{{title}}</header>
+      <location />
+    </article>
+  </content>
+</template>
+```
+
+A `<location>` inside the child's own content survives composition, which is what lets the child
+*wrap* the page instead of replacing it:
+
+```
+parent    <body><nav /><location /></body>
+child     <content><article><location /></article></content>
+composed  <body><nav /><article><location /></article></body>
+rendered  <body><nav /><article>…page body…</article></body>
+```
+
+A child may fill any number of the parent's named locations, and slots it does not fill stay open
+for the page and for global content. Chains nest to `maxFragmentDepth`; a cycle throws rather than
+hanging. A template with no `<template>` wrapper is a complete document and behaves as it always has.
+
+**Prefer this to copying a template.** A copy is a snapshot — it stops matching the original the
+moment that original is edited, silently. Composition happens per render, so there is nothing to
+regenerate and nothing to keep in step.
 
 ### Fragments from outside `rootDir`
 
