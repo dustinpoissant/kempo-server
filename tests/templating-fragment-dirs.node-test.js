@@ -295,6 +295,67 @@ export default {
     });
   },
 
+  'a page content block can pull a fragment': async ({pass, fail}) => {
+    await withTempDir(async rootDir => {
+      await setupFiles(rootDir, {
+        'default.template.html': '<html><body><location /></body></html>',
+        'sig.fragment.html': '<p>Signed</p>',
+        'page.page.html': '<page><content>Body <fragment name="sig">unsigned</fragment></content></page>'
+      });
+      const html = await renderPage(path.join(rootDir, 'page.page.html'), rootDir);
+      if(!html.includes('<p>Signed</p>')) return fail(`fragment in page content not resolved: ${html}`);
+      if(html.includes('unsigned')) return fail(`fallback rendered instead of the fragment: ${html}`);
+      if(html.includes('<fragment')) return fail(`raw fragment tag leaked into output: ${html}`);
+      pass();
+    });
+  },
+
+  'a page content block falls back when the fragment is missing': async ({pass, fail}) => {
+    await withTempDir(async rootDir => {
+      await setupFiles(rootDir, {
+        'default.template.html': '<html><body><location /></body></html>',
+        'page.page.html': '<page><content><fragment name="nope">no such fragment</fragment></content></page>'
+      });
+      const html = await renderPage(path.join(rootDir, 'page.page.html'), rootDir);
+      if(!html.includes('no such fragment')) return fail(`fallback missing: ${html}`);
+      if(html.includes('<fragment')) return fail(`raw fragment tag leaked into output: ${html}`);
+      pass();
+    });
+  },
+
+  'a page content block can pull a fragment from an extra dir': async ({pass, fail}) => {
+    await withTempDir(async rootDir => {
+      await withTempDir(async pluginDir => {
+        await setupFiles(rootDir, {
+          'default.template.html': '<html><body><location /></body></html>',
+          'page.page.html': '<page><content><fragment name="badge">none</fragment></content></page>'
+        });
+        await setupFiles(pluginDir, {
+          'badge.fragment.html': '<fragment><span>Plugin badge</span></fragment>'
+        });
+        const html = await renderExternalPage(
+          path.join(rootDir, 'page.page.html'), rootDir, rootDir, {}, {}, 10, [], [pluginDir]
+        );
+        if(!html.includes('Plugin badge')) return fail(`extension fragment did not reach page content: ${html}`);
+        pass();
+      });
+    });
+  },
+
+  'a fragment pulled into page content can itself contain a location': async ({pass, fail}) => {
+    await withTempDir(async rootDir => {
+      await setupFiles(rootDir, {
+        'default.template.html': '<html><body><location /></body></html>',
+        'links.global.html': '<content location="links"><a href="/about">About</a></content>',
+        'nav.fragment.html': '<fragment><nav><location name="links" /></nav></fragment>',
+        'page.page.html': '<page><content><fragment name="nav" /></content></page>'
+      });
+      const html = await renderPage(path.join(rootDir, 'page.page.html'), rootDir);
+      if(!html.includes('href="/about"')) return fail(`location inside a page-pulled fragment not filled: ${html}`);
+      pass();
+    });
+  },
+
   'extraGlobalDirs and extraFragmentDirs work together': async ({pass, fail}) => {
     await withTempDir(async rootDir => {
       await withTempDir(async pluginDir => {

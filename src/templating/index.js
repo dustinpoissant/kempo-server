@@ -152,15 +152,6 @@ const renderPageCore = async (pageFilePath, rootDir, resolveDir, globals = {}, s
   const globalContent = preloadedGlobalContent ?? await loadGlobalContent(rootDir, extraGlobalDirs);
   const rawPageBlocks = extractContentBlocks(pageContent);
 
-  // Allow <location> tags inside page content blocks to be filled by global content
-  const pageBlocks = {};
-  for(const [name, entries] of Object.entries(rawPageBlocks)){
-    pageBlocks[name] = entries.map(e => ({...e, html: replaceLocations(e.html, globalContent)}));
-  }
-
-  const contentBlocks = mergeContentBlocks(pageBlocks, globalContent);
-  let templateHtml = readFileSync(templateFile, 'utf8');
-
   const extraFragments = await loadExtraFragments(extraFragmentDirs);
 
   /*
@@ -181,6 +172,22 @@ const renderPageCore = async (pageFilePath, rootDir, resolveDir, globals = {}, s
     if(local === null) return extra.markup;
     return extra.priority > fragmentPriority(local) ? extra.markup : local;
   };
+
+  /*
+    Page content blocks get the same two passes a template does: <fragment> tags resolved, then
+    <location> tags filled from global content. A page asking for a fragment by name is the whole
+    point of the pull model, so it cannot be a thing only templates may do.
+  */
+  const pageBlocks = {};
+  for(const [name, entries] of Object.entries(rawPageBlocks)){
+    pageBlocks[name] = entries.map(e => ({
+      ...e,
+      html: replaceLocations(resolveFragmentTags(e.html, findFragmentFile, 0, maxDepth), globalContent)
+    }));
+  }
+
+  const contentBlocks = mergeContentBlocks(pageBlocks, globalContent);
+  let templateHtml = readFileSync(templateFile, 'utf8');
 
   templateHtml = resolveFragmentTags(templateHtml, findFragmentFile, 0, maxDepth);
   templateHtml = replaceLocations(templateHtml, contentBlocks);

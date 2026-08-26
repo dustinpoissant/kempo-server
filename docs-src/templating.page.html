@@ -92,6 +92,7 @@
 		<p>Include it in a template:</p>
 		<pre><code class="hljs xml"><span class="hljs-comment">&lt;!-- Self-closing: renders empty if fragment file not found --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">fragment</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"nav"</span> /&gt;</span><br /><br /><span class="hljs-comment">&lt;!-- With fallback content if fragment file not found --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">fragment</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"nav"</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">nav</span>&gt;</span>Fallback Nav<span class="hljs-tag">&lt;/<span class="hljs-name">nav</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">fragment</span>&gt;</span></code></pre>
 		<p>Fragments can include other fragments. The maximum nesting depth is controlled by <code>maxFragmentDepth</code> (default: 10).</p>
+		<p><code>&lt;fragment&gt;</code> tags work in templates, in other fragments, and inside a page's own <code>&lt;content&gt;</code> blocks &mdash; so a page can pull in a fragment by name without the template having to know about it.</p>
 
 		<h3>Directory Overrides</h3>
 		<p>When a page references a template or a template includes a fragment, the system searches for the file starting in the page's directory and walking up to the root. This means:</p>

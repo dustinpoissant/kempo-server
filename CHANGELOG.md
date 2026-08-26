@@ -12,6 +12,11 @@ All notable changes to `kempo-server` are documented in this file.
   **Nothing changes for existing callers.** `extraFragmentDirs` defaults to `[]`, and with no extra directories a fragment resolves through exactly the path it always did — including the "a more specific copy shadows a more general one" behaviour that walk-up exists for. The `priority` attribute is optional and absent means `0`, so every fragment file written before this release keeps its current behaviour.
 
 ### Fixed
+- **`<fragment>` tags inside a page's `<content>` block are now resolved.** Fragments were only ever resolved in templates: `resolveFragmentTags` ran against the template, and page content was injected afterwards by `replaceLocations`, so a `<fragment name="…">` written in a page was never looked up. It did not error — the raw tag and its fallback content were emitted into the HTML, where the browser silently dropped the unknown element and rendered the fallback, which reads as "the fragment could not be found" rather than "pages cannot do this".
+
+  This was an asymmetry rather than a deliberate limit: `<location>` tags inside page content were already being filled, on the line directly above. Page content blocks now get both passes, in the same order a template does — fragments resolved, then locations filled. A page can therefore ask for a fragment by name, which is the whole point of the pull model and something only templates could do before.
+
+  Pages that already contained a `<fragment>` tag were emitting broken markup, so anything that changes here was not working to begin with. `maxFragmentDepth` applies to page content exactly as it does to templates.
 - **`extraGlobalDirs` is now documented on `renderExternalPage`'s parameter table in the templating docs.** It shipped in 3.3.0 and was described in the README, but the docs site's parameter table stopped at `maxDepth`, so the argument looked like it did not exist.
 
 ## [3.3.0] - 2026-08-25
