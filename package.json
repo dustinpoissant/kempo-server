@@ -28,7 +28,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "kempo-testing-framework": "^1.4.7",
+    "kempo-testing-framework": "^1.5.0",
     "kempo-ui": "^0.4.38",
     "terser": "^5.43.1"
   },
