@@ -2,7 +2,7 @@ import http from 'http';
 import KempoSocket from './socket.js';
 import { validateHandshake } from './handshake.js';
 import { CLOSE_CODES } from './frames.js';
-import { sockets, broadcast, closeAll } from './registry.js';
+import { sockets, closeAll } from './registry.js';
 import createRequestWrapper from '../requestWrapper.js';
 
 export { sockets, broadcast, closeAll } from './registry.js';
@@ -77,17 +77,26 @@ const writeUpgradeResponse = (socket, accept, extraHeaders) => {
 */
 export const createUpgradeHandler = ({ resolveRoute, loadModule, runMiddleware, config, log }) => {
   const websocketConfig = { ...defaultWebsocketConfig, ...(config.websocket || {}) };
-  let hookedServer = null;
+  const hookedServers = new WeakSet();
 
   return async (request, socket, head) => {
     /*
       Hooked from the first upgrade rather than at construction, because the router builds this handler
-      before any http.Server exists to listen to. Covers an embedded server closed programmatically as
-      well as a CLI process closing on a signal.
+      before any http.Server exists. `close` is wrapped rather than listened for: the server only emits its
+      'close' event once every connection has ended, and an open socket is such a connection, so waiting
+      on the event would wait on the very thing it is meant to trigger. Only this server's sockets are
+      closed, so two servers in one process do not close each other's connections.
     */
-    if(!hookedServer && socket.server){
-      hookedServer = socket.server;
-      hookedServer.once('close', () => closeAllSockets());
+    const server = socket.server;
+    if(server && !hookedServers.has(server)){
+      hookedServers.add(server);
+      const close = server.close.bind(server);
+      server.close = (...args) => {
+        for(const open of sockets({ filter: (candidate) => candidate.server === server })){
+          open.close(CLOSE_CODES.GOING_AWAY, 'Server shutting down');
+        }
+        return close(...args);
+      };
     }
 
     /*
@@ -171,6 +180,7 @@ export const createUpgradeHandler = ({ resolveRoute, loadModule, runMiddleware, 
     const enhancedRequest = createRequestWrapper(request, route.params);
     const kempoSocket = new KempoSocket({
       socket,
+      server,
       path: requestPath,
       params: route.params,
       query: enhancedRequest.query,

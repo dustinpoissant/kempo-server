@@ -164,7 +164,7 @@
       <li><strong>Only a file named exactly <code>WS.js</code> is ever run for an upgrade.</strong> Directory requests normally fall back to <code>index.js</code> and then <code>CATCH.js</code>; upgrades do not. A handshake at a path with no <code>WS.js</code> gets <code>404</code> and the connection closes, even if that path has a working <code>GET.js</code>.</li>
       <li><strong>Dynamic segments work.</strong> <code>room/[id]/WS.js</code> answers <code>/room/abc</code> with <code>request.params.id</code> set to <code>"abc"</code>.</li>
       <li><strong>A normal HTTP request never executes <code>WS.js</code>.</strong> It is a route file, so it is never served as source either.</li>
-      <li><strong>Custom and wildcard routes do not apply to upgrades.</strong> Those map URLs onto files outside the root for static and HTTP serving; a socket route must live in the served tree.</li>
+      <li><strong>Custom and wildcard routes work.</strong> A <code>WS.js</code> in a directory mapped in through <code>customRoutes</code> answers an upgrade the way it would answer an HTTP request, in the same order: an exact custom route, then a wildcard route, then the served tree. This is how a package in <code>node_modules</code> can ship a socket route. A path containing a <code>..</code> segment is refused outright, since a mapped directory can sit outside the root.</li>
     </ul>
     <p>An open connection keeps the copy of <code>WS.js</code> it started with. Editing the file only affects connections opened afterwards, so reconnect (or restart) to pick up a change.</p>
     <h2 id="socket">The Socket Object</h2>
@@ -188,7 +188,7 @@
     <h3>Events</h3>
     <ul>
       <li><code>message</code> &mdash; <code>(data, isBinary)</code>. Text arrives as a string, binary as a <code>Buffer</code>. Fragmented messages are reassembled before this fires, so you always get whole messages.</li>
-      <li><code>close</code> &mdash; <code>(code, reason)</code></li>
+      <li><code>close</code> &mdash; <code>(code, reason)</code>. The code is <code>1006</code> when the connection dropped without a close frame, for instance a closed tab or a lost network.</li>
       <li><code>error</code> &mdash; <code>(error)</code></li>
       <li><code>open</code> &mdash; fires once the handshake has completed</li>
       <li><code>ping</code> / <code>pong</code> &mdash; <code>(payload)</code>. Pings are answered automatically; these are informational.</li>

@@ -790,11 +790,83 @@ export default async (flags, log) => {
   };
 
   /*
-    Resolves an upgrade to a file named exactly WS.js, using the same static and [param] rules as HTTP
-    routes. findFile falls back to index.js / CATCH.js for a directory request, which would hand an
-    upgrade to a handler written for HTTP, so the basename is verified rather than trusted.
+    Finds the WS.js inside a directory a custom or wildcard route mapped the request onto, with the same
+    [param] traversal HTTP custom routes get. The file name is fixed here rather than searched for, so
+    no fallback to index.js or CATCH.js is possible.
+  */
+  const findSocketFileIn = async (resolvedPath) => {
+    const inDir = async (dir, params) => {
+      const filePath = path.join(dir, 'WS.js');
+      try {
+        if((await stat(filePath)).isFile()) return { filePath, params };
+      } catch { /* no WS.js in this directory */ }
+      return null;
+    };
+
+    let literal = null;
+    try {
+      literal = await stat(resolvedPath);
+    } catch(error) {
+      if(error.code !== 'ENOENT') throw error;
+    }
+    if(literal) return literal.isDirectory() ? inDir(resolvedPath, {}) : null;
+
+    // The path does not exist literally, so find the nearest existing ancestor and traverse forward with [param] support
+    let current = resolvedPath;
+    const remaining = [];
+    while(current !== path.dirname(current)){
+      remaining.unshift(path.basename(current));
+      current = path.dirname(current);
+      let ancestor;
+      try {
+        ancestor = await stat(current);
+      } catch(error) {
+        if(error.code === 'ENOENT') continue;
+        throw error;
+      }
+      if(!ancestor.isDirectory()) return null;
+      const walked = await walkDynamic(current, remaining);
+      if(!walked) return null;
+      const walkedStat = await stat(walked.filePath);
+      return walkedStat.isDirectory() ? inDir(walked.filePath, walked.params) : null;
+    }
+    return null;
+  };
+
+  /*
+    Resolves an upgrade to a file named exactly WS.js. Precedence matches HTTP: an exact custom route,
+    then a wildcard route, then the served tree, so a package mapped in through customRoutes (kempo
+    serves its whole API this way) can ship a WS.js just as the site itself can. findFile falls back to
+    index.js / CATCH.js for a directory request, which would hand an upgrade to a handler written for
+    HTTP, so the basename is verified rather than trusted.
   */
   const resolveSocketRoute = async (requestPath) => {
+    /*
+      WS.js is executed, and a mapped directory can sit outside rootPath, so a path that could climb out
+      of it is refused outright rather than resolved.
+    */
+    let decoded;
+    try {
+      decoded = decodeURIComponent(requestPath);
+    } catch {
+      return null;
+    }
+    if(decoded.split(/[\\/]/).includes('..')) return null;
+
+    const normalized = ('/' + decoded.replace(/^\/+/, '')).replace(/(.)\/+$/, '$1');
+    for(const [key, mappedPath] of customRoutes){
+      if(('/' + key.replace(/^\/+/, '')).replace(/(.)\/+$/, '$1') !== normalized) continue;
+      const route = await findSocketFileIn(mappedPath);
+      if(route) return route;
+      break;
+    }
+
+    const wildcardMatch = findWildcardRoute(requestPath);
+    if(wildcardMatch){
+      const route = await findSocketFileIn(resolveWildcardPath(wildcardMatch.filePath, wildcardMatch.matches));
+      if(route) return route;
+    }
+
     const match = (searchFiles) => {
       const [filePath, params] = findFile(searchFiles, rootPath, requestPath, 'WS', log);
       if(!filePath || path.basename(filePath) !== 'WS.js') return null;

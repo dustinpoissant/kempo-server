@@ -220,7 +220,7 @@ export default async (request, socket) => {
 
 Socket API: `send(data)` (string → text, Buffer/Uint8Array → binary, else JSON; returns false when closed, never throws), `close(code, reason)`, `terminate()`, `ping(payload)`, `reject(status, message)`, `on/off(event, handler)`. Properties: `path`, `params`, `query`, `headers`, `cookies`, `data`, `readyState`. Events: `message(data, isBinary)`, `open`, `close(code, reason)`, `error`, `ping`, `pong`.
 
-Routing: only a file named exactly `WS.js` runs for an upgrade — no `index.js`/`CATCH.js` fallback, so a path without one gets 404. `[param]` segments work. Custom/wildcard routes do not apply. A normal HTTP request never executes `WS.js`.
+Routing: only a file named exactly `WS.js` runs for an upgrade — no `index.js`/`CATCH.js` fallback, so a path without one gets 404. `[param]` segments work. Custom and wildcard routes resolve too, in HTTP order (exact custom route, then wildcard, then the served tree), so a package mapped from `node_modules` can ship a `WS.js`; a path containing `..` is refused. A normal HTTP request never executes `WS.js`.
 
 The handshake runs the middleware chain (minus compression) and gets the same enhanced request HTTP routes get; `request.body` is null. Fragmented messages are reassembled before `message` fires. A throwing handler closes only its own connection with 1011.
 

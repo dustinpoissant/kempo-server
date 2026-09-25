@@ -1,9 +1,13 @@
 import http from 'http';
+import {mkdtemp, rm} from 'fs/promises';
+import os from 'os';
+import path from 'path';
 import {withTestDir} from './utils/test-dir.js';
 import {write} from './utils/file-writer.js';
 import {rawHandshake, clientFrame, oversizedHeader} from './utils/ws-raw.js';
 import {OPCODES, CLOSE_CODES} from '../src/websocket/frames.js';
 import router from '../src/router.js';
+import {sockets} from '../src/websocket/index.js';
 
 /*
   Route files are written into a temp dir, so a relative import of the registry would not resolve from
@@ -44,6 +48,8 @@ const withServer = async (dir, fn, {config} = {}) => {
   }
 };
 
+const toPosix = (value) => value.split(path.sep).join('/');
+
 const openSocket = (port, path) => new Promise((resolve, reject) => {
   const socket = new WebSocket(`ws://localhost:${port}${path}`);
   socket.binaryType = 'arraybuffer';
@@ -77,7 +83,7 @@ export default {
         return null;
       });
 
-      if(problem) return fail(problem);
+      if(problem) throw new Error(problem);
     });
     pass('text and binary echo');
   },
@@ -100,7 +106,7 @@ export default {
         return null;
       });
 
-      if(problem) return fail(problem);
+      if(problem) throw new Error(problem);
     });
     pass('dynamic segment and query');
   },
@@ -143,7 +149,7 @@ export default {
         return null;
       });
 
-      if(problem) return fail(problem);
+      if(problem) throw new Error(problem);
     });
     pass('WS.js only, no index/CATCH fallback');
   },
@@ -163,8 +169,9 @@ export default {
         ok.socket.destroy();
 
         const cases = [
-          [{Upgrade: null}, 400, 'no Upgrade'],
-          [{Connection: 'keep-alive'}, 400, 'wrong Connection'],
+          [{Upgrade: 'h2c'}, 400, 'wrong Upgrade'],
+          // Node only raises 'upgrade' when Connection names it, so this is an ordinary GET and gets the HTTP router's 404
+          [{Connection: 'keep-alive'}, 404, 'Connection without upgrade is not an upgrade request'],
           [{'Sec-WebSocket-Key': null}, 400, 'no key'],
           [{'Sec-WebSocket-Key': 'not-sixteen-bytes'}, 400, 'malformed key'],
           [{'Sec-WebSocket-Version': '8'}, 426, 'old version'],
@@ -182,7 +189,7 @@ export default {
         return null;
       });
 
-      if(problem) return fail(problem);
+      if(problem) throw new Error(problem);
     });
     pass('handshake and its rejections');
   },
@@ -197,7 +204,7 @@ export default {
         if(same.status !== 101) return `same origin got ${same.status}`;
         return null;
       });
-      if(problem) return fail(problem);
+      if(problem) throw new Error(problem);
     });
 
     await withTestDir(async (dir) => {
@@ -214,7 +221,7 @@ export default {
         return null;
       }, {config: {websocket: {allowedOrigins: ['http://allowed.test']}}});
 
-      if(problem) return fail(problem);
+      if(problem) throw new Error(problem);
     });
     pass('origin enforcement end to end');
   },
@@ -243,7 +250,7 @@ export default {
         return null;
       });
 
-      if(problem) return fail(problem);
+      if(problem) throw new Error(problem);
     });
     pass('cookie auth and reject()');
   },
@@ -273,7 +280,7 @@ export default {
         }
       });
 
-      if(problem) return fail(problem);
+      if(problem) throw new Error(problem);
     });
     pass('middleware chain on upgrade');
   },
@@ -297,7 +304,7 @@ export default {
         return null;
       });
 
-      if(problem) return fail(problem);
+      if(problem) throw new Error(problem);
     });
     pass('fragment reassembly');
   },
@@ -320,7 +327,7 @@ export default {
         return null;
       });
 
-      if(problem) return fail(problem);
+      if(problem) throw new Error(problem);
     });
     pass('ping/pong');
   },
@@ -356,7 +363,7 @@ export default {
         return null;
       }, {config: {websocket: {maxMessageSize: 1024}}});
 
-      if(problem) return fail(problem);
+      if(problem) throw new Error(problem);
     });
     pass('close codes 1002, 1007 and 1009');
   },
@@ -395,7 +402,7 @@ export default {
         return null;
       });
 
-      if(problem) return fail(problem);
+      if(problem) throw new Error(problem);
     });
     pass('bidirectional close');
   },
@@ -428,18 +435,20 @@ export default {
         return null;
       });
 
-      if(problem) return fail(problem);
+      if(problem) throw new Error(problem);
     });
     pass('1011 and isolation');
   },
 
   'sending on a closed socket returns false instead of throwing': async ({pass, fail}) => {
+    const RESULT = Symbol.for('kempo.test.sendAfterClose');
+    delete globalThis[RESULT];
+
     await withTestDir(async (dir) => {
       await write(dir, 'late/WS.js', `export default async (request, socket) => {
         socket.on('close', () => {
-          // Must not throw, and must report that nothing was sent
-          const result = socket.send('after close');
-          if(result !== false) throw new Error('send() on a closed socket returned ' + result);
+          // Recorded rather than thrown, so a wrong answer is visible to the test instead of being swallowed
+          globalThis[Symbol.for('kempo.test.sendAfterClose')] = { returned: socket.send('after close') };
         });
       };
       `);
@@ -447,16 +456,50 @@ export default {
       const problem = await withServer(dir, async ({port}) => {
         const handshake = await rawHandshake({port, path: '/late'});
         if(handshake.status !== 101) return `handshake got ${handshake.status}`;
-        const client = handshake.client();
-        client.destroy();
-        // If the close handler threw, the process would have reported an unhandled error by now
-        await new Promise(resolve => setTimeout(resolve, 150));
+        handshake.client().destroy();
+        await new Promise(resolve => setTimeout(resolve, 250));
+
+        const outcome = globalThis[RESULT];
+        if(!outcome) return 'the close handler never ran, so nothing was tested';
+        if(outcome.returned !== false) return `send() on a closed socket returned ${outcome.returned}, expected false`;
         return null;
       });
 
-      if(problem) return fail(problem);
+      if(problem) throw new Error(problem);
     });
     pass('send after close is a no-op');
+  },
+
+  'a client that vanishes without a close frame is cleaned up': async ({pass, fail}) => {
+    /*
+      A clean TCP hang-up with no WebSocket close frame ends the client's side only. HTTP server sockets are
+      half-open, so unless the server notices the end and closes its own side, the socket, its timers and
+      its registry entry all stay until the heartbeat happens to fire.
+    */
+    await withTestDir(async (dir) => {
+      await write(dir, 'gone/WS.js', `export default async (request, socket) => {
+        socket.on('close', (code) => { globalThis[Symbol.for('kempo.test.goneCode')] = code; });
+      };
+      `);
+
+      const problem = await withServer(dir, async ({port}) => {
+        delete globalThis[Symbol.for('kempo.test.goneCode')];
+
+        for(let i = 0; i < 3; i++){
+          const handshake = await rawHandshake({port, path: '/gone'});
+          handshake.socket.destroy();
+        }
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        const remaining = sockets({path: '/gone'}).length;
+        if(remaining !== 0) return `${remaining} socket(s) still registered after the clients hung up`;
+        if(globalThis[Symbol.for('kempo.test.goneCode')] !== 1006) return `route saw close code ${globalThis[Symbol.for('kempo.test.goneCode')]}, expected 1006`;
+        return null;
+      }, {config: {websocket: {heartbeatInterval: 0}}});
+
+      if(problem) throw new Error(problem);
+    });
+    pass('half-open sockets are released');
   },
 
   'code outside the route can find and push to sockets': async ({pass, fail}) => {
@@ -468,7 +511,7 @@ export default {
       // An ordinary HTTP route reaching connected sockets, the way a webhook handler would
       await write(dir, 'push/POST.js', `import {sockets, broadcast} from '${REGISTRY_URL}';
       export default async (request, response) => {
-        const total = sockets().length;
+        const total = sockets({path: '/feed'}).length;
         const sent = broadcast('push:' + request.body.text, {path: '/feed', filter: s => s.data.room === request.body.room});
         response.writeHead(200, {'Content-Type': 'application/json'});
         response.end(JSON.stringify({total, sent}));
@@ -495,7 +538,7 @@ export default {
           req.end(JSON.stringify({text: 'hello', room: 'alpha'}));
         });
 
-        if(result.total !== 2) return `registry saw ${result.total} sockets, expected 2`;
+        if(result.total !== 2) return `registry saw ${result.total} /feed sockets, expected 2`;
         if(result.sent !== 1) return `broadcast reached ${result.sent} sockets, expected 1`;
         if(await alphaMessage !== 'push:hello') return 'the filtered socket did not receive the push';
 
@@ -504,7 +547,7 @@ export default {
         return null;
       });
 
-      if(problem) return fail(problem);
+      if(problem) throw new Error(problem);
     });
     pass('outside-the-route sending');
   },
@@ -528,9 +571,54 @@ export default {
         return null;
       });
 
-      if(problem) return fail(problem);
+      if(problem) throw new Error(problem);
     });
     pass('1001 on shutdown');
+  },
+
+  "closing one server leaves another server's sockets open": async ({pass, fail}) => {
+    const otherDir = await mkdtemp(path.join(os.tmpdir(), 'kempo-ws-other-'));
+    try {
+      await write(otherDir, 'chat/WS.js', ECHO_ROUTE);
+
+      await withTestDir(async (dir) => {
+        await write(dir, 'chat/WS.js', ECHO_ROUTE);
+
+        const problem = await withServer(dir, async ({port, server}) => {
+          const otherHandler = await router({root: otherDir, logging: 0}, () => {});
+          const other = http.createServer(otherHandler);
+          other.on('upgrade', otherHandler.upgrade);
+          await new Promise(resolve => other.listen(0, resolve));
+
+          try {
+            const mine = await rawHandshake({port, path: '/chat'});
+            const theirs = await rawHandshake({port: other.address().port, path: '/chat'});
+            const mineClient = mine.client();
+            const theirsClient = theirs.client();
+
+            server.close();
+            const closing = await mineClient.next();
+            if(!closing || closing.opcode !== OPCODES.CLOSE) return 'the closed server did not close its own socket';
+
+            // The other server's client gets nothing: no close frame arrives within the wait
+            const stray = await theirsClient.next(400);
+            if(stray) return `the other server's socket received opcode ${stray.opcode} when a different server closed`;
+            if(theirsClient.closed) return "the other server's socket was torn down";
+
+            mineClient.destroy();
+            theirsClient.destroy();
+            return null;
+          } finally {
+            other.close();
+          }
+        });
+
+        if(problem) throw new Error(problem);
+      });
+    } finally {
+      await rm(otherDir, {recursive: true, force: true});
+    }
+    pass('shutdown is scoped to its own server');
   },
 
   'the heartbeat drops a connection that stops answering': async ({pass, fail}) => {
@@ -550,9 +638,96 @@ export default {
         return null;
       }, {config: {websocket: {heartbeatInterval: 120, heartbeatTimeout: 150}}});
 
-      if(problem) return fail(problem);
+      if(problem) throw new Error(problem);
     });
     pass('heartbeat timeout');
+  },
+
+  'a WS.js reached through a custom or wildcard route connects': async ({pass, fail}) => {
+    /*
+      Kempo serves its whole API through one wildcard mapping into node_modules, outside the site root, so
+      a package can only ship a socket route if upgrades resolve those mappings the way HTTP does.
+    */
+    const pkgDir = await mkdtemp(path.join(os.tmpdir(), 'kempo-ws-pkg-'));
+    try {
+      await write(pkgDir, 'chat/WS.js', `export default async (request, socket) => socket.send('wildcard:' + request.path);`);
+      await write(pkgDir, 'room/[id]/WS.js', `export default async (request, socket) => socket.send('param:' + request.params.id);`);
+      await write(pkgDir, 'exact/WS.js', `export default async (request, socket) => socket.send('exact');`);
+      await write(pkgDir, 'plain/GET.js', `export default async (req, res) => res.end('http');`);
+
+      await withTestDir(async (dir) => {
+        await write(dir, 'site/WS.js', `export default async (request, socket) => socket.send('site');`);
+
+        const problem = await withServer(dir, async ({port}) => {
+          const expectations = [
+            ['/pkg/chat', 'wildcard:/pkg/chat'],
+            ['/pkg/room/abc', 'param:abc'],
+            ['/mapped', 'exact'],
+            ['/site', 'site']
+          ];
+
+          for(const [urlPath, expected] of expectations){
+            const socket = await openSocket(port, urlPath);
+            const message = await nextMessage(socket);
+            socket.close();
+            if(message !== expected) return `${urlPath} sent "${message}", expected "${expected}"`;
+          }
+
+          // The same fixed-name rule holds through a mapping: GET.js, index.js and CATCH.js never run
+          const plain = await rawHandshake({port, path: '/pkg/plain'});
+          plain.socket.destroy();
+          if(plain.status !== 404) return `/pkg/plain returned ${plain.status}, expected 404`;
+
+          // And a normal HTTP request to a mapped socket route does not execute it
+          const body = await new Promise((resolve) => {
+            http.get(`http://localhost:${port}/pkg/plain`, (res) => {
+              let data = '';
+              res.on('data', c => { data += c; });
+              res.on('end', () => resolve(data));
+            });
+          });
+          if(body !== 'http') return `HTTP GET to a mapped route returned "${body}", expected "http"`;
+          return null;
+        }, {
+          config: {
+            customRoutes: {
+              '/pkg/**': toPosix(pkgDir) + '/**',
+              '/mapped': toPosix(pkgDir) + '/exact'
+            }
+          }
+        });
+
+        if(problem) throw new Error(problem);
+      });
+    } finally {
+      await rm(pkgDir, {recursive: true, force: true});
+    }
+    pass('custom and wildcard routes resolve for upgrades');
+  },
+
+  'a path that climbs out of a mapped directory is refused': async ({pass, fail}) => {
+    const pkgDir = await mkdtemp(path.join(os.tmpdir(), 'kempo-ws-pkg-'));
+    try {
+      await write(pkgDir, 'inner/chat/WS.js', `export default async (request, socket) => socket.send('should never run');`);
+
+      await withTestDir(async (dir) => {
+        const problem = await withServer(dir, async ({port}) => {
+          for(const urlPath of ['/pkg/../chat', '/pkg/%2e%2e/chat', '/pkg/inner/../inner/chat']){
+            const result = await rawHandshake({port, path: urlPath});
+            result.socket.destroy();
+            if(result.status !== 404) return `${urlPath} returned ${result.status}, expected 404`;
+          }
+          return null;
+        }, {
+          config: {customRoutes: {'/pkg/**': toPosix(pkgDir) + '/**'}}
+        });
+
+        if(problem) throw new Error(problem);
+      });
+    } finally {
+      await rm(pkgDir, {recursive: true, force: true});
+    }
+    pass('no traversal out of a mapping');
   },
 
   'websocket support can be turned off': async ({pass, fail}) => {
@@ -566,7 +741,7 @@ export default {
         return null;
       }, {config: {websocket: {enabled: false}}});
 
-      if(problem) return fail(problem);
+      if(problem) throw new Error(problem);
     });
     pass('websocket.enabled: false');
   }

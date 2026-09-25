@@ -46,8 +46,9 @@ export default class KempoSocket {
   */
   data = {};
 
-  constructor({ socket, path, params = {}, query = {}, headers = {}, cookies = {}, config = {}, log = () => {} }){
+  constructor({ socket, server = null, path, params = {}, query = {}, headers = {}, cookies = {}, config = {}, log = () => {} }){
     this.#socket = socket;
+    this.server = server;
     this.path = path;
     this.params = params;
     this.query = query;
@@ -134,6 +135,12 @@ export default class KempoSocket {
     this.#socket.setTimeout(0);
     this.#socket.on('data', this.#onData);
     this.#socket.on('close', this.#onSocketClose);
+    /*
+      HTTP server sockets are half-open, so a client that hangs up without a close frame produces 'end' and
+      never 'close' unless this side ends too. Without listening for it, that socket, its timers and its
+      registry entry would stay until the heartbeat happened to notice.
+    */
+    this.#socket.on('end', this.#onSocketClose);
     this.#socket.on('error', this.#onSocketError);
 
     for(const frame of this.#sendQueue) this.#write(frame);
@@ -359,7 +366,7 @@ export default class KempoSocket {
   }
 
   #onSocketClose = () => {
-    this.#destroy(CLOSE_CODES.GOING_AWAY, 'Socket closed');
+    this.#destroy(CLOSE_CODES.ABNORMAL, 'Connection lost');
   };
 
   #onSocketError = (error) => {
