@@ -75,7 +75,7 @@ export default {
   allowedMimes: { '.ext': { mime: 'type/subtype', encoding: 'utf8' } },
   disallowedRegex: ['pattern'],
   customRoutes: { '/old': '/new', '/spa/*': '/app.html' },
-  routeFiles: ['GET.js', 'index.js'],
+  routeFiles: ['GET.js', 'WS.js', 'index.js'],
   noRescanPaths: ['pattern'],
   maxRescanAttempts: 3,
   middleware: {
@@ -99,6 +99,14 @@ export default {
     globals: {},
     state: {},
     maxFragmentDepth: 10
+  },
+  websocket: {
+    enabled: true,
+    maxMessageSize: 1048576,   // bytes; exceeding closes with 1009
+    allowedOrigins: null,      // null = same-origin only, '*' = any, or an array of exact origins
+    requireOrigin: false,      // reject a handshake that sends no Origin header
+    heartbeatInterval: 30000,  // ms between pings on an idle connection; 0 disables
+    heartbeatTimeout: 10000    // ms to wait for the pong before dropping
   }
 };
 ```
@@ -191,6 +199,42 @@ import { renderPage, renderDir } from 'kempo-server/templating';
 const html = await renderPage(pageFilePath, rootDir, globals, state, maxDepth);
 const count = await renderDir(inputDir, outputDir, globals, state, maxDepth);
 ```
+
+## WebSockets
+
+A `WS.js` file accepts a WebSocket upgrade at its path, alongside `GET.js` etc. in the same directory.
+
+```js
+// chat/WS.js
+export default async (request, socket) => {
+  // Runs BEFORE the handshake completes, so it can refuse one
+  if(!request.cookies.session_token) return socket.reject(401, 'Unauthorized');
+
+  socket.data.userId = 'u1';          // scratch space; used to filter from outside
+
+  socket.on('message', (data, isBinary) => socket.send(`echo: ${data}`));
+  socket.on('close', (code, reason) => {});
+  socket.on('error', (error) => {});
+};
+```
+
+Socket API: `send(data)` (string → text, Buffer/Uint8Array → binary, else JSON; returns false when closed, never throws), `close(code, reason)`, `terminate()`, `ping(payload)`, `reject(status, message)`, `on/off(event, handler)`. Properties: `path`, `params`, `query`, `headers`, `cookies`, `data`, `readyState`. Events: `message(data, isBinary)`, `open`, `close(code, reason)`, `error`, `ping`, `pong`.
+
+Routing: only a file named exactly `WS.js` runs for an upgrade — no `index.js`/`CATCH.js` fallback, so a path without one gets 404. `[param]` segments work. Custom/wildcard routes do not apply. A normal HTTP request never executes `WS.js`.
+
+The handshake runs the middleware chain (minus compression) and gets the same enhanced request HTTP routes get; `request.body` is null. Fragmented messages are reassembled before `message` fires. A throwing handler closes only its own connection with 1011.
+
+Pushing from outside the route:
+
+```js
+import { sockets, broadcast, closeAll } from 'kempo-server/websocket';
+
+sockets({ path: '/chat', filter: s => s.data.userId === id });  // → array of sockets
+broadcast(message, { path, filter });                           // → number delivered
+closeAll(code, reason);
+```
+
+Single process only: a socket is reachable only from the process that accepted it. Not included: channels/rooms/presence, cross-process fan-out, `permessage-deflate`, subprotocol negotiation, client reconnection.
 
 ## Utility Modules
 

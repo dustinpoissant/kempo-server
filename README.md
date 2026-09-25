@@ -251,6 +251,7 @@ kempo-server --root public --config dev.config.js
 - **Performance** - Smart file system caching, rescan optimization, and optional compression
 - **Programmatic Rescan** - Trigger a file rescan from anywhere in the Node process without restarting
 - **Templating** - XML-based templating with templates, template patches, pages, fragments, variables, conditionals, and loops
+- **WebSockets** - A `WS.js` route file accepts socket connections, with an RFC 6455 implementation built on Node built-ins
 
 ## Examples
 
@@ -552,6 +553,52 @@ const html = await renderExternalPage(
 );
 ```
 
+## WebSockets
+
+A `WS.js` route file accepts a WebSocket connection at its path, alongside the HTTP route files in the same directory. It exports a default function like any other route, receiving the same enhanced `request` plus the socket:
+
+```javascript
+// chat/WS.js
+export default async (request, socket) => {
+  socket.on('message', (data, isBinary) => {
+    socket.send(`echo: ${data}`);
+  });
+};
+```
+
+```javascript
+// The browser side
+const socket = new WebSocket(`ws://${location.host}/chat`);
+socket.addEventListener('open', () => socket.send('hello'));
+socket.addEventListener('message', (event) => console.log(event.data));
+```
+
+The handshake runs your middleware chain and gives the route the usual `request.cookies`, `request.query` and `request.params`, so session auth works exactly as it does over HTTP. Because the route runs *before* the handshake completes, it can refuse one outright:
+
+```javascript
+export default async (request, socket) => {
+  const [error, session] = await getSession({ token: request.cookies.session_token });
+  if(error) return socket.reject(401, 'Unauthorized');
+
+  socket.data.userId = session.userId;
+};
+```
+
+Any other server code can reach connected sockets — an HTTP route, a webhook handler, an extension:
+
+```javascript
+import { sockets, broadcast } from 'kempo-server/websocket';
+
+const delivered = broadcast({ type: 'order.paid' }, {
+  path: '/chat',
+  filter: (socket) => socket.data.userId === userId
+});
+```
+
+Only a file named exactly `WS.js` is ever run for an upgrade — there is no `index.js` or `CATCH.js` fallback — and a server with no `WS.js` behaves exactly as before. The registry is single-process, so behind a load balancer a socket is only reachable from the process that accepted it.
+
+See **[WebSockets](./docs/websockets.html)** for the full socket API, the origin check, message limits and the heartbeat, and **[CONFIG.md](./CONFIG.md#websocket)** for the configuration options.
+
 ## Programmatic File Rescan
 
 When files are added or removed at runtime (e.g., by a CMS generating static pages), you can trigger a file rescan without restarting the server:
@@ -652,6 +699,7 @@ See **[SPA.md](./SPA.md)** for a full walkthrough.
 - **[Request & Response](./docs/request-response.html)** - Working with HTTP objects
 - **[Configuration](./docs/configuration.html)** - Server configuration options
 - **[Middleware](./docs/middleware.html)** - Built-in and custom middleware
+- **[WebSockets](./docs/websockets.html)** - Socket routes, the socket API, and pushing from elsewhere
 - **[Caching](./docs/caching.html)** - Cache configuration and management
 - **[CLI Utilities](./docs/cli-utils.html)** - Command-line argument parsing
 - **[File System Utilities](./docs/fs-utils.html)** - File and directory operations

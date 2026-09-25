@@ -6,7 +6,7 @@
 		name="viewport"
 		content="width=device-width, initial-scale=1.0"
 	/>
-	<title>CLI Utilities - Kempo Server</title>
+	<title>WebSocket Demo - Kempo Server</title>
 	<link rel="icon" type="image/svg+xml" href="./media/icon.svg" />
 	<link rel="icon" type="image/png" sizes="32x32" href="./media/icon32.png" />
 	<link rel="manifest" href="./manifest.json" />
@@ -147,76 +147,34 @@
   </script>
 
 	<main>
-		<h1 class="ta-center">CLI Utilities</h1>
+		<h1 class="ta-center">WebSocket Demo</h1>
 		
-    <p>The CLI utilities provide simple command-line argument parsing functionality for Node.js applications.</p>
+    <p>A live echo connection against <code>/echo</code>, with an HTTP endpoint at <code>/echo/push</code> that sends to it. See <a href="websockets.html">WebSockets</a> for how it works.</p>
+    <p class="small tc-muted">This page needs a running kempo-server. On static hosting the connection will simply fail &mdash; run <code>npm run dev</code> in the kempo-server repo and open this page from that server.</p>
 
-    <h2>Installation</h2>
-    <p>Import the utilities from the kempo-server package:</p>
-    <pre><code class="hljs javascript">import { getArgs } from 'kempo-server/utils/cli';</code></pre>
+    <div class="d-f my" style="gap: var(--spacer_h); align-items: center">
+      <strong id="status">Connecting&hellip;</strong>
+      <div class="flex"></div>
+      <button id="reconnect" class="link"><k-icon name="redo"></k-icon> Reconnect</button>
+    </div>
 
-    <h2>getArgs(mapping, argv)</h2>
-    <p>Parses command-line arguments into a key-value object.</p>
+    <h2>Send a message</h2>
+    <div class="d-f mb" style="gap: var(--spacer_h)">
+      <input id="text" class="flex-1" placeholder="Type something" value="hello" />
+      <button id="send">Send text</button>
+      <button id="sendBinary">Send bytes</button>
+    </div>
 
-    <h3>Parameters</h3>
-    <ul>
-      <li><code>mapping</code> (object, optional) - Maps short flag names to full names</li>
-      <li><code>argv</code> (array, optional) - Array of arguments to parse (defaults to <code>process.argv</code>)</li>
-    </ul>
+    <h2>Push over HTTP</h2>
+    <p>This does not use the socket at all &mdash; it posts to <code>/echo/push</code>, which finds this connection in the registry and sends to it.</p>
+    <div class="d-f mb" style="gap: var(--spacer_h)">
+      <input id="pushText" class="flex-1" placeholder="Message to push" value="pushed from an HTTP route" />
+      <button id="push">POST /echo/push</button>
+    </div>
 
-    <h3>Returns</h3>
-    <p>An object where keys are argument names and values are parsed argument values.</p>
-
-    <h3>Features</h3>
-    <ul>
-      <li>Supports both space-separated (<code>--flag value</code>) and equals-separated (<code>--flag=value</code>) formats</li>
-      <li>Automatically converts <code>"true"</code> and <code>"false"</code> strings to boolean values</li>
-      <li>Supports short flags with mapping (e.g., <code>-p</code> maps to <code>port</code>)</li>
-      <li>Handles multiple values for the same flag</li>
-      <li>Boolean flags without values are set to <code>true</code></li>
-    </ul>
-
-    <h3>Examples</h3>
-
-    <h4>Basic Usage</h4>
-    <pre><code class="hljs bash">node app.js --port 8080 --host localhost --verbose</code></pre>
-    <pre><code class="hljs javascript">const args = getArgs();
-// Result: { port: '8080', host: 'localhost', verbose: true }</code></pre>
-
-    <h4>With Short Flag Mapping</h4>
-    <pre><code class="hljs bash">node app.js -p 8080 -h localhost -v</code></pre>
-    <pre><code class="hljs javascript">const args = getArgs({
-  p: 'port',
-  h: 'host',
-  v: 'verbose'
-});
-// Result: { port: '8080', host: 'localhost', verbose: true }</code></pre>
-
-    <h4>Equals-Separated Values</h4>
-    <pre><code class="hljs bash">node app.js --port=8080 --enabled=true --disabled=false --name=John</code></pre>
-    <pre><code class="hljs javascript">const args = getArgs();
-// Result: { port: '8080', enabled: true, disabled: false, name: 'John' }</code></pre>
-
-    <h4>Mixed Formats</h4>
-    <pre><code class="hljs bash">node app.js --port=8080 -h localhost --verbose --config=prod.json</code></pre>
-    <pre><code class="hljs javascript">const args = getArgs({ h: 'host' });
-// Result: { port: '8080', host: 'localhost', verbose: true, config: 'prod.json' }</code></pre>
-
-    <h4>Values with Equals Signs</h4>
-    <pre><code class="hljs bash">node app.js --url=https://example.com?param=value</code></pre>
-    <pre><code class="hljs javascript">const args = getArgs();
-// Result: { url: 'https://example.com?param=value' }</code></pre>
-
-    <h2>Other Functions</h2>
-    <p>The CLI utilities module also exports other functions for running child processes and prompting users:</p>
-    <ul>
-      <li><code>runChildProcess(command)</code> - Run a shell command</li>
-      <li><code>runChildNodeProcess(scriptPath, argsObj)</code> - Run a Node.js script with arguments</li>
-      <li><code>runChildNodeProcessScript(scriptPath)</code> - Run a Node.js script</li>
-      <li><code>promptUser(query)</code> - Prompt user for input</li>
-      <li><code>promptYN(query, defaultValue)</code> - Prompt for yes/no with default</li>
-    </ul>
-	
+    <h2>Log</h2>
+    <pre id="log" class="full bg-alt p" style="min-height: 12rem; max-height: 24rem; overflow: auto"></pre>
+  
 	</main>
 	<div style="height:25vh"></div>
 	<script
@@ -224,5 +182,76 @@
 		src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/dist/components/Import.js"
 	></script>
 	
+    <script type="module" src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/src/components/Icon.js"></script>
+    <script type="module">
+      const log = document.getElementById('log');
+      const status = document.getElementById('status');
+      let socket = null;
+
+      const write = (direction, message) => {
+        const time = new Date().toLocaleTimeString();
+        log.textContent += `[${time}] ${direction} ${message}\n`;
+        log.scrollTop = log.scrollHeight;
+      };
+
+      const setStatus = (text, connected) => {
+        status.textContent = text;
+        status.className = connected ? 'tc-primary' : 'tc-muted';
+      };
+
+      const connect = () => {
+        if(socket && socket.readyState <= 1) socket.close();
+
+        setStatus('Connecting…', false);
+        socket = new WebSocket(`ws://${location.host}/echo?room=general`);
+        socket.binaryType = 'arraybuffer';
+
+        socket.addEventListener('open', () => {
+          setStatus(`Connected to /echo`, true);
+          write('--', 'socket open');
+        });
+
+        socket.addEventListener('message', (event) => {
+          write('<-', event.data);
+        });
+
+        socket.addEventListener('close', (event) => {
+          setStatus(`Closed (${event.code})`, false);
+          write('--', `socket closed with ${event.code}`);
+        });
+
+        socket.addEventListener('error', () => {
+          write('!!', 'socket error');
+        });
+      };
+
+      document.getElementById('send').addEventListener('click', () => {
+        const text = document.getElementById('text').value;
+        socket.send(text);
+        write('->', text);
+      });
+
+      document.getElementById('sendBinary').addEventListener('click', () => {
+        // 250 and 255 are not valid UTF-8, so they only survive a byte-preserving path
+        const bytes = new Uint8Array([0, 1, 2, 250, 255]);
+        socket.send(bytes);
+        write('->', `binary [${Array.from(bytes).join(', ')}]`);
+      });
+
+      document.getElementById('push').addEventListener('click', async () => {
+        const text = document.getElementById('pushText').value;
+        const response = await fetch('/echo/push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, room: 'general' })
+        });
+        write('->', `POST /echo/push ${JSON.stringify(await response.json())}`);
+      });
+
+      document.getElementById('reconnect').addEventListener('click', connect);
+
+      connect();
+    </script>
+  
 </body>
 </html>
