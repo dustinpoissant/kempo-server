@@ -4,6 +4,7 @@ import { validateHandshake } from './handshake.js';
 import { CLOSE_CODES } from './frames.js';
 import { sockets, closeAll } from './registry.js';
 import createRequestWrapper from '../requestWrapper.js';
+import createResponseWrapper from '../responseWrapper.js';
 
 export { sockets, broadcast, closeAll } from './registry.js';
 export { default as KempoSocket } from './socket.js';
@@ -133,32 +134,52 @@ export const createUpgradeHandler = ({ resolveRoute, loadModule, runMiddleware, 
     }
 
     /*
-      Existing middleware is written against `(req, res, next)` and calls `res.setHeader` / `res.writeHead`
-      / `res.end`, so a real ServerResponse bound to this socket lets the whole chain run unmodified and
-      reject the upgrade with a correct HTTP response. It is detached again before the 101 is written, so
-      the handshake bytes are ours alone.
+      Middleware gets the same enhanced request and response an HTTP request would, built once and up front.
+      Custom middleware relies on it: kempo's own reads `request.path` and `request.cookies` and calls
+      `response.redirect()`, none of which exist on a raw IncomingMessage / ServerResponse, so handing it
+      the raw objects made it throw and killed every handshake. The route then receives this same request
+      object rather than a fresh one, because middleware attaching data to the request (a user, a session)
+      is the documented convention and would otherwise be silently discarded.
+
+      The response is a real ServerResponse bound to the socket, so a middleware that ends it rejects the
+      upgrade with a correct HTTP response. It is detached before the 101 is written, so the handshake
+      bytes are ours alone.
     */
-    const response = new http.ServerResponse(request);
-    response.assignSocket(socket);
+    const enhancedRequest = createRequestWrapper(request, route.params);
+    const rawResponse = new http.ServerResponse(request);
+    rawResponse.assignSocket(socket);
+    /*
+      A rejected upgrade must not leave the connection open waiting for a next request. `shouldKeepAlive`
+      only decides the Connection header; closing the socket is normally done by the HTTP server's own
+      response plumbing, which a hand-made ServerResponse does not get, so it is ended here once the
+      response has been fully written. A handshake that succeeds never ends this response (the 101 is
+      written straight to the socket), so this only ever fires for a rejection.
+    */
+    rawResponse.shouldKeepAlive = false;
+    rawResponse.once('finish', () => socket.end());
+    const enhancedResponse = createResponseWrapper(rawResponse);
 
     let reached = false;
     try {
-      await runMiddleware(request, response, async () => { reached = true; });
+      await runMiddleware(enhancedRequest, enhancedResponse, async () => { reached = true; });
     } catch(error) {
       log(`WebSocket middleware threw for ${requestPath}: ${error.message}`, 0);
-      if(!response.writableEnded) response.end();
-      socket.destroy();
+      if(!rawResponse.headersSent){
+        rawResponse.statusCode = 500;
+        rawResponse.setHeader('Content-Type', 'text/plain');
+      }
+      if(!rawResponse.writableEnded) rawResponse.end('Internal Server Error');
       return;
     }
 
     if(!reached){
       log(`WebSocket upgrade rejected by middleware: ${requestPath}`, 2);
-      if(!response.writableEnded) response.end();
+      if(!rawResponse.writableEnded) rawResponse.end();
       return;
     }
 
-    const collectedHeaders = response.getHeaders();
-    response.detachSocket(socket);
+    const collectedHeaders = rawResponse.getHeaders();
+    rawResponse.detachSocket(socket);
 
     let handler;
     try {
@@ -173,11 +194,7 @@ export const createUpgradeHandler = ({ resolveRoute, loadModule, runMiddleware, 
       return writeHttpResponse(socket, 500, 'Route file does not export a function');
     }
 
-    /*
-      The same wrapper HTTP routes get, so `cookies`, `query`, `params` and `path` behave identically and
-      cookie-session auth needs no WebSocket-specific code. `body` stays null: an upgrade has no body.
-    */
-    const enhancedRequest = createRequestWrapper(request, route.params);
+    // `body` stays null: an upgrade has no body
     const kempoSocket = new KempoSocket({
       socket,
       server,
