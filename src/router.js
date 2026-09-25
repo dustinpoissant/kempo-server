@@ -176,7 +176,7 @@ export default async (flags, log) => {
   let files = await getFiles(rootPath, config, log);
   log(`Initial scan found ${files.length} files`, 2);
 
-  onRescan(async done => {
+  const stopRescan = onRescan(async done => {
     try {
       files = await getFiles(rootPath, config, log);
       log(`Rescan found ${files.length} files`, 2);
@@ -609,7 +609,7 @@ export default async (flags, log) => {
     const newAttempts = currentAttempts + 1;
     rescanAttempts.set(requestPath, newAttempts);
     
-    if (newAttempts > config.maxRescanAttempts) {
+    if (newAttempts >= config.maxRescanAttempts) {
       dynamicNoRescanPaths.add(requestPath);
       log(`Path ${requestPath} added to dynamic blacklist after ${newAttempts} failed attempts`, 1);
     }
@@ -618,7 +618,20 @@ export default async (flags, log) => {
     return newAttempts;
   };
   
+  /*
+    A router registers for rescans at construction but only learns its http.Server from the first request or
+    upgrade it sees. Tying the registration to that server's close is what stops a router from answering
+    rescans for a server that no longer exists.
+  */
+  const watchedServers = new WeakSet();
+  const watchServer = (server) => {
+    if(!server || watchedServers.has(server)) return;
+    watchedServers.add(server);
+    server.once('close', stopRescan);
+  };
+
   const requestHandler = async (req, res) => {
+    watchServer(req.socket?.server);
     // Buffer body once early so both middleware and route handlers can access it
     const contentLength = parseInt(req.headers['content-length'] || '0', 10);
     if(contentLength > config.maxBodySize) {
@@ -891,13 +904,18 @@ export default async (flags, log) => {
 
   // Return handler with cache instance for external access
   const handler = requestHandler;
-  handler.upgrade = createUpgradeHandler({
+  handler.dispose = stopRescan;
+  const handleUpgrade = createUpgradeHandler({
     resolveRoute: resolveSocketRoute,
     loadModule: loadRouteModule,
     runMiddleware: (req, res, next) => socketMiddlewareRunner.run(req, res, next),
     config,
     log
   });
+  handler.upgrade = (req, socket, head) => {
+    watchServer(socket.server);
+    return handleUpgrade(req, socket, head);
+  };
   handler.moduleCache = moduleCache;
   handler.getStats = () => moduleCache?.getStats() || null;
   handler.logCacheStats = () => moduleCache?.logStats(log);
