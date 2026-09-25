@@ -10,8 +10,8 @@ export default {
     let called = false;
     await mw(req, res, async () => { called = true; });
     
-    if(!called) return fail('next not called');
-    if(res.getHeader('Access-Control-Allow-Origin') !== 'http://b') return fail('allowed origin');
+    if(!called) throw new Error('next not called');
+    if(res.getHeader('Access-Control-Allow-Origin') !== 'http://b') throw new Error('allowed origin');
     
     pass('cors array');
   }

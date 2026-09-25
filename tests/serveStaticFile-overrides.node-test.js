@@ -21,8 +21,8 @@ export default {
         const file = await write(dir, 'script.js', 'alert(1)');
         const res = createMockRes();
         await serveStaticFile(file, createMockReq(), res, cfg, log, {contentType: 'text/plain'});
-        if(res.statusCode !== 200) return fail(`expected 200, got ${res.statusCode}`);
-        if(res.getHeader('Content-Type') !== 'text/plain') return fail(`expected the override, got ${res.getHeader('Content-Type')}`);
+        if(res.statusCode !== 200) throw new Error(`expected 200, got ${res.statusCode}`);
+        if(res.getHeader('Content-Type') !== 'text/plain') throw new Error(`expected the override, got ${res.getHeader('Content-Type')}`);
       });
       pass('contentType override');
     } catch(e){ fail(e.message); }
@@ -37,8 +37,8 @@ export default {
           contentType: 'text/plain',
           headers: {'X-Content-Type-Options': 'nosniff'}
         });
-        if(res.getHeader('X-Content-Type-Options') !== 'nosniff') return fail('nosniff header should be present');
-        if(res.getHeader('Content-Type') !== 'text/plain') return fail('content type should survive the merge');
+        if(res.getHeader('X-Content-Type-Options') !== 'nosniff') throw new Error('nosniff header should be present');
+        if(res.getHeader('Content-Type') !== 'text/plain') throw new Error('content type should survive the merge');
       });
       pass('headers merged on 200');
     } catch(e){ fail(e.message); }
@@ -55,10 +55,10 @@ export default {
           contentType: 'application/octet-stream',
           headers: {'X-Gated-By': 'test'}
         });
-        if(res.statusCode !== 206) return fail(`expected 206, got ${res.statusCode}`);
-        if(res.getHeader('X-Gated-By') !== 'test') return fail('extra header should survive on a range response');
-        if(res.getHeader('Content-Type') !== 'application/octet-stream') return fail('override should apply on a range response');
-        if(res.getBody().toString() !== '234') return fail(`wrong slice: ${res.getBody().toString()}`);
+        if(res.statusCode !== 206) throw new Error(`expected 206, got ${res.statusCode}`);
+        if(res.getHeader('X-Gated-By') !== 'test') throw new Error('extra header should survive on a range response');
+        if(res.getHeader('Content-Type') !== 'application/octet-stream') throw new Error('override should apply on a range response');
+        if(res.getBody().toString() !== '234') throw new Error(`wrong slice: ${res.getBody().toString()}`);
       });
       pass('headers merged on 206');
     } catch(e){ fail(e.message); }
@@ -73,8 +73,8 @@ export default {
         await serveStaticFile(`${dir}/clip.mp4`, req, res, cfg, log, {
           headers: {'Content-Range': 'bytes 0-0/1', 'Accept-Ranges': 'none'}
         });
-        if(res.getHeader('Content-Range') !== 'bytes 2-4/10') return fail('range metadata must win over caller headers');
-        if(res.getHeader('Accept-Ranges') !== 'bytes') return fail('Accept-Ranges must win over caller headers');
+        if(res.getHeader('Content-Range') !== 'bytes 2-4/10') throw new Error('range metadata must win over caller headers');
+        if(res.getHeader('Accept-Ranges') !== 'bytes') throw new Error('Accept-Ranges must win over caller headers');
       });
       pass('range metadata protected');
     } catch(e){ fail(e.message); }
@@ -85,8 +85,8 @@ export default {
         const file = await write(dir, 'model.weird', 'body');
         const res = createMockRes();
         await serveStaticFile(file, createMockReq(), res, {}, undefined, {contentType: 'text/plain'});
-        if(res.statusCode !== 200) return fail(`expected 200, got ${res.statusCode}`);
-        if(res.getHeader('Content-Type') !== 'text/plain') return fail('override should apply with no mime config');
+        if(res.statusCode !== 200) throw new Error(`expected 200, got ${res.statusCode}`);
+        if(res.getHeader('Content-Type') !== 'text/plain') throw new Error('override should apply with no mime config');
       });
       pass('no log or mimes needed');
     } catch(e){ fail(e.message); }
@@ -98,7 +98,7 @@ export default {
         const file = await write(dir, 'thing.unknownext', 'body');
         const res = createMockRes();
         await serveStaticFile(file, createMockReq(), res, cfg, log);
-        if(res.getHeader('Content-Type') !== 'application/octet-stream') return fail(`got ${res.getHeader('Content-Type')}`);
+        if(res.getHeader('Content-Type') !== 'application/octet-stream') throw new Error(`got ${res.getHeader('Content-Type')}`);
       });
       pass('default preserved');
     } catch(e){ fail(e.message); }

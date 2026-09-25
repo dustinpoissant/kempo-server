@@ -16,9 +16,9 @@ export default {
         const files = [path.join(dir, 'index.html')];
         const res = createMockRes();
         const ok = await serveFile(files, dir, '/index.html', 'GET', cfg, createMockReq(), res, log);
-        if(ok !== true) return fail('should serve');
-        if(res.statusCode !== 200) return fail('status');
-        if(res.getHeader('Content-Type') !== 'text/html; charset=utf-8') return fail('mime');
+        if(ok !== true) throw new Error('should serve');
+        if(res.statusCode !== 200) throw new Error('status');
+        if(res.getHeader('Content-Type') !== 'text/html; charset=utf-8') throw new Error('mime');
       });
       pass('static');
     } catch(e){ fail(e.message); }
@@ -32,9 +32,9 @@ export default {
         const req = createMockReq();
         req._bufferedBody = '';
         const ok = await serveFile(files, dir, '/api', 'GET', cfg, req, res, log);
-        if(ok !== true) return fail('served route');
-        if(res.statusCode !== 201) return fail('route status');
-        if(!res.getBody().toString().includes('ok')) return fail('body contains ok');
+        if(ok !== true) throw new Error('served route');
+        if(res.statusCode !== 201) throw new Error('route status');
+        if(!res.getBody().toString().includes('ok')) throw new Error('body contains ok');
       });
       pass('route exec');
     } catch(e){ fail(e.message); }
@@ -43,13 +43,15 @@ export default {
     try {
       await withTestDir(async (dir) => {
         const cfg = JSON.parse(JSON.stringify(defaultConfig));
-        const files = [path.join(dir, 'api/no-default.js')];
+        // Only a file named in routeFiles is executed, so the broken route must be a real one (GET.js)
+        const brokenRoute = await write(dir, 'broken/GET.js', 'export const x = 1;');
+        const files = [brokenRoute];
         const res = createMockRes();
         const req = createMockReq();
         req._bufferedBody = '';
-        const ok = await serveFile(files, dir, '/api', 'GET', cfg, req, res, log);
-        if(ok !== true) return fail('handled');
-        if(res.statusCode !== 500) return fail('500');
+        const ok = await serveFile(files, dir, '/broken', 'GET', cfg, req, res, log);
+        if(ok !== true) throw new Error('handled');
+        if(res.statusCode !== 500) throw new Error('500');
       });
       pass('route no default');
     } catch(e){ fail(e.message); }
@@ -62,9 +64,9 @@ export default {
         const res = createMockRes();
         const req = createMockReq({headers: {range: 'bytes=0-3'}});
         const ok = await serveFile(files, dir, '/index.html', 'GET', cfg, req, res, log);
-        if(ok !== true) return fail('should serve');
-        if(res.statusCode !== 200) return fail(`expected 200, got ${res.statusCode}`);
-        if(res.getHeader('Accept-Ranges')) return fail('text files should not advertise Accept-Ranges');
+        if(ok !== true) throw new Error('should serve');
+        if(res.statusCode !== 200) throw new Error(`expected 200, got ${res.statusCode}`);
+        if(res.getHeader('Accept-Ranges')) throw new Error('text files should not advertise Accept-Ranges');
       });
       pass('text ignores range');
     } catch(e){ fail(e.message); }
@@ -79,10 +81,10 @@ export default {
         const res = createMockRes();
         const req = createMockReq();
         const ok = await serveFile(files, dir, '/video.mp4', 'GET', cfg, req, res, log);
-        if(ok !== true) return fail('should serve');
-        if(res.statusCode !== 200) return fail(`expected 200, got ${res.statusCode}`);
-        if(res.getHeader('Accept-Ranges') !== 'bytes') return fail('binary files should advertise Accept-Ranges: bytes');
-        if(!res.getBody().equals(content)) return fail('full content should be served when no Range header is sent');
+        if(ok !== true) throw new Error('should serve');
+        if(res.statusCode !== 200) throw new Error(`expected 200, got ${res.statusCode}`);
+        if(res.getHeader('Accept-Ranges') !== 'bytes') throw new Error('binary files should advertise Accept-Ranges: bytes');
+        if(!res.getBody().equals(content)) throw new Error('full content should be served when no Range header is sent');
       });
       pass('binary full content');
     } catch(e){ fail(e.message); }
@@ -97,11 +99,11 @@ export default {
         const res = createMockRes();
         const req = createMockReq({headers: {range: 'bytes=2-4'}});
         const ok = await serveFile(files, dir, '/video.mp4', 'GET', cfg, req, res, log);
-        if(ok !== true) return fail('should serve');
-        if(res.statusCode !== 206) return fail(`expected 206, got ${res.statusCode}`);
-        if(res.getHeader('Content-Range') !== 'bytes 2-4/10') return fail(`unexpected Content-Range: ${res.getHeader('Content-Range')}`);
-        if(res.getHeader('Content-Length') !== 3) return fail(`unexpected Content-Length: ${res.getHeader('Content-Length')}`);
-        if(res.getBody().toString() !== '234') return fail(`unexpected body: ${res.getBody().toString()}`);
+        if(ok !== true) throw new Error('should serve');
+        if(res.statusCode !== 206) throw new Error(`expected 206, got ${res.statusCode}`);
+        if(res.getHeader('Content-Range') !== 'bytes 2-4/10') throw new Error(`unexpected Content-Range: ${res.getHeader('Content-Range')}`);
+        if(res.getHeader('Content-Length') !== 3) throw new Error(`unexpected Content-Length: ${res.getHeader('Content-Length')}`);
+        if(res.getBody().toString() !== '234') throw new Error(`unexpected body: ${res.getBody().toString()}`);
       });
       pass('binary partial content');
     } catch(e){ fail(e.message); }
@@ -116,10 +118,10 @@ export default {
         const res = createMockRes();
         const req = createMockReq({headers: {range: 'bytes=7-'}});
         const ok = await serveFile(files, dir, '/video.mp4', 'GET', cfg, req, res, log);
-        if(ok !== true) return fail('should serve');
-        if(res.statusCode !== 206) return fail(`expected 206, got ${res.statusCode}`);
-        if(res.getHeader('Content-Range') !== 'bytes 7-9/10') return fail(`unexpected Content-Range: ${res.getHeader('Content-Range')}`);
-        if(res.getBody().toString() !== '789') return fail(`unexpected body: ${res.getBody().toString()}`);
+        if(ok !== true) throw new Error('should serve');
+        if(res.statusCode !== 206) throw new Error(`expected 206, got ${res.statusCode}`);
+        if(res.getHeader('Content-Range') !== 'bytes 7-9/10') throw new Error(`unexpected Content-Range: ${res.getHeader('Content-Range')}`);
+        if(res.getBody().toString() !== '789') throw new Error(`unexpected body: ${res.getBody().toString()}`);
       });
       pass('binary open-ended range');
     } catch(e){ fail(e.message); }
@@ -134,10 +136,10 @@ export default {
         const res = createMockRes();
         const req = createMockReq({headers: {range: 'bytes=-3'}});
         const ok = await serveFile(files, dir, '/video.mp4', 'GET', cfg, req, res, log);
-        if(ok !== true) return fail('should serve');
-        if(res.statusCode !== 206) return fail(`expected 206, got ${res.statusCode}`);
-        if(res.getHeader('Content-Range') !== 'bytes 7-9/10') return fail(`unexpected Content-Range: ${res.getHeader('Content-Range')}`);
-        if(res.getBody().toString() !== '789') return fail(`unexpected body: ${res.getBody().toString()}`);
+        if(ok !== true) throw new Error('should serve');
+        if(res.statusCode !== 206) throw new Error(`expected 206, got ${res.statusCode}`);
+        if(res.getHeader('Content-Range') !== 'bytes 7-9/10') throw new Error(`unexpected Content-Range: ${res.getHeader('Content-Range')}`);
+        if(res.getBody().toString() !== '789') throw new Error(`unexpected body: ${res.getBody().toString()}`);
       });
       pass('binary suffix range');
     } catch(e){ fail(e.message); }
@@ -152,9 +154,9 @@ export default {
         const res = createMockRes();
         const req = createMockReq({headers: {range: 'bytes=50-60'}});
         const ok = await serveFile(files, dir, '/video.mp4', 'GET', cfg, req, res, log);
-        if(ok !== true) return fail('should be handled');
-        if(res.statusCode !== 416) return fail(`expected 416, got ${res.statusCode}`);
-        if(res.getHeader('Content-Range') !== 'bytes */10') return fail(`unexpected Content-Range: ${res.getHeader('Content-Range')}`);
+        if(ok !== true) throw new Error('should be handled');
+        if(res.statusCode !== 416) throw new Error(`expected 416, got ${res.statusCode}`);
+        if(res.getHeader('Content-Range') !== 'bytes */10') throw new Error(`unexpected Content-Range: ${res.getHeader('Content-Range')}`);
       });
       pass('binary unsatisfiable range');
     } catch(e){ fail(e.message); }

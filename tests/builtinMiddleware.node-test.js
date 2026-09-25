@@ -13,8 +13,8 @@ export default {
     const req = createMockReq({method: 'OPTIONS', headers: {origin: 'http://x'}});
     await mw(req, res, async () => {});
     
-    if(!res.isEnded()) return fail('preflight should end');
-    if(!(res.getHeader('Access-Control-Allow-Origin') === 'http://x' || res.getHeader('Access-Control-Allow-Origin') === '*')) return fail('origin header');
+    if(!res.isEnded()) throw new Error('preflight should end');
+    if(!(res.getHeader('Access-Control-Allow-Origin') === 'http://x' || res.getHeader('Access-Control-Allow-Origin') === '*')) throw new Error('origin header');
     
     pass('cors');
   },
@@ -33,9 +33,9 @@ export default {
     const gzLen = await gzipSize(original);
     // If gzipped is smaller, we expect gzip header. Otherwise, implementation may send uncompressed.
     if(gzLen < original.length){
-      if(res.getHeader('Content-Encoding') !== 'gzip') return fail('should gzip when beneficial');
+      if(res.getHeader('Content-Encoding') !== 'gzip') throw new Error('should gzip when beneficial');
     }
-    if(body.length <= 0) return fail('has body');
+    if(body.length <= 0) throw new Error('has body');
     
     pass('compression');
   },
@@ -50,7 +50,7 @@ export default {
     const res3 = createMockRes();
     await mw(req, res3, async () => {});
     
-    if(res3.statusCode !== 429) return fail('should rate limit');
+    if(res3.statusCode !== 429) throw new Error('should rate limit');
     
     pass('rateLimit');
   },
@@ -59,7 +59,7 @@ export default {
     const mw = securityMiddleware({headers: {'X-Test': '1'}});
     await mw(createMockReq(), res, async () => {});
     
-    if(res.getHeader('X-Test') !== '1') return fail('header set');
+    if(res.getHeader('X-Test') !== '1') throw new Error('header set');
     
     pass('security');
   },
@@ -70,7 +70,7 @@ export default {
     const res = createMockRes();
     await mw(createMockReq({headers: {'user-agent': 'UA'}}), res, async () => { res.end('x'); });
     
-    if(!(logs.length === 1 && logs[0].includes('GET /') && logs[0].includes('UA'))) return fail('logged');
+    if(!(logs.length === 1 && logs[0].includes('GET /') && logs[0].includes('UA'))) throw new Error('logged');
     
     pass('logging');
   }

@@ -9,8 +9,8 @@ export default {
     const files = [toAbs(root, 'a/b/GET.js')];
     const [file, params] = await findFile(files, root, '/a/b/GET.js', 'GET', () => {});
     
-    if(file !== files[0]) return fail('not exact');
-    if(Object.keys(params).length !== 0) return fail('params present');
+    if(file !== files[0]) throw new Error('not exact');
+    if(Object.keys(params).length !== 0) throw new Error('params present');
     
     pass('exact');
   },
@@ -19,7 +19,7 @@ export default {
     const files = ['a/index.html', 'a/GET.js', 'a/index.js'].map(p => toAbs(root, p));
     const [file] = await findFile(files, root, '/a', 'GET', () => {});
     
-    if(!file || path.basename(file) !== 'GET.js') return fail('priority not respected');
+    if(!file || path.basename(file) !== 'GET.js') throw new Error('priority not respected');
     
     pass('dir index');
   },
@@ -28,8 +28,8 @@ export default {
     const files = ['user/[id]/GET.js', 'user/[id]/index.html', 'user/[id]/index.js'].map(p => toAbs(root, p));
     const [file, params] = await findFile(files, root, '/user/42', 'GET', () => {});
     
-    if(!file || path.basename(file) !== 'GET.js') return fail('did not pick GET.js');
-    if(params.id !== '42') return fail('param missing');
+    if(!file || path.basename(file) !== 'GET.js') throw new Error('did not pick GET.js');
+    if(params.id !== '42') throw new Error('param missing');
     
     pass('dynamic');
   },
@@ -38,8 +38,8 @@ export default {
     const files = ['x/y/index.html'].map(p => toAbs(root, p));
     const [file, params] = await findFile(files, root, '/nope', 'GET', () => {});
     
-    if(file !== false) return fail('should be false');
-    if(Object.keys(params).length !== 0) return fail('params not empty');
+    if(file !== false) throw new Error('should be false');
+    if(Object.keys(params).length !== 0) throw new Error('params not empty');
     
     pass('no match');
   }

@@ -71,23 +71,23 @@ export default {
     cache.set('/test1.js', { default: () => 'test1' }, mockStats1, 1);
     if(cache.cache.size !== 1) {
       cache.destroy();
-      return fail('size should be 1');
+      throw new Error('size should be 1');
     }
 
     cache.set('/test2.js', { default: () => 'test2' }, mockStats2, 1);
     if(cache.cache.size !== 2) {
       cache.destroy();
-      return fail('size should be 2');
+      throw new Error('size should be 2');
     }
 
     cache.set('/test3.js', { default: () => 'test3' }, mockStats3, 1);
     if(cache.cache.size !== 2) {
       cache.destroy();
-      return fail('size should still be 2');
+      throw new Error('size should still be 2');
     }
     if(cache.get('/test1.js', mockStats1) !== null) {
       cache.destroy();
-      return fail('oldest should be evicted');
+      throw new Error('oldest should be evicted');
     }
 
     cache.destroy();
@@ -106,14 +106,14 @@ export default {
     
     if(cache.get('/test.js', mockStats) === null) {
       cache.destroy();
-      return fail('should be available immediately');
+      throw new Error('should be available immediately');
     }
     
     await new Promise(resolve => setTimeout(resolve, 100));
     
     if(cache.get('/test.js', mockStats) !== null) {
       cache.destroy();
-      return fail('should be expired');
+      throw new Error('should be expired');
     }
     
     cache.destroy();
@@ -134,12 +134,12 @@ export default {
     
     if(cache.get('/test.js', oldStats) === null) {
       cache.destroy();
-      return fail('should be available with old stats');
+      throw new Error('should be available with old stats');
     }
     
     if(cache.get('/test.js', newStats) !== null) {
       cache.destroy();
-      return fail('should be invalidated with newer stats');
+      throw new Error('should be invalidated with newer stats');
     }
     
     cache.destroy();
@@ -162,17 +162,17 @@ export default {
     
     if(cache.get('/test1.js', mockStats) !== null) {
       cache.destroy();
-      return fail('first entry should be evicted due to memory limit');
+      throw new Error('first entry should be evicted due to memory limit');
     }
     
     if(cache.get('/test2.js', mockStats) === null) {
       cache.destroy();
-      return fail('second entry should still be cached');
+      throw new Error('second entry should still be cached');
     }
     
     if(cache.get('/test3.js', mockStats) === null) {
       cache.destroy();
-      return fail('third entry should still be cached');
+      throw new Error('third entry should still be cached');
     }
     
     cache.destroy();
@@ -189,35 +189,35 @@ export default {
     
     if(cache.get('/test.js', mockStats) !== null) {
       cache.destroy();
-      return fail('should be cache miss');
+      throw new Error('should be cache miss');
     }
     
     if(cache.stats.misses !== 1) {
       cache.destroy();
-      return fail('miss count should be 1');
+      throw new Error('miss count should be 1');
     }
     
     cache.set('/test.js', { default: () => 'test' }, mockStats, 1);
     
     if(cache.get('/test.js', mockStats) === null) {
       cache.destroy();
-      return fail('should be cache hit');
+      throw new Error('should be cache hit');
     }
     
     if(cache.stats.hits !== 1) {
       cache.destroy();
-      return fail('hit count should be 1');
+      throw new Error('hit count should be 1');
     }
     
     if(cache.getHitRate() !== 50) {
       cache.destroy();
-      return fail('hit rate should be 50%');
+      throw new Error('hit rate should be 50%');
     }
     
     const stats = cache.getStats();
     if(!stats.cache || !stats.stats || !stats.memory) {
       cache.destroy();
-      return fail('stats structure invalid');
+      throw new Error('stats structure invalid');
     }
     
     cache.destroy();
@@ -247,7 +247,7 @@ export default {
     if(cache.get(testFilePath, initialStats) === null) {
       await unlink(testFilePath);
       cache.destroy();
-      return fail('should be in cache initially');
+      throw new Error('should be in cache initially');
     }
     
     await new Promise(resolve => setTimeout(resolve, 50));
@@ -258,13 +258,13 @@ export default {
     if(cache.get(testFilePath, initialStats) !== null) {
       await unlink(testFilePath);
       cache.destroy();
-      return fail('should be invalidated after file change');
+      throw new Error('should be invalidated after file change');
     }
     
     if(cache.stats.fileChanges === 0) {
       await unlink(testFilePath);
       cache.destroy();
-      return fail('file change should be tracked');
+      throw new Error('file change should be tracked');
     }
     
     // Clean up immediately

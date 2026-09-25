@@ -12,7 +12,7 @@ export default {
     const res = createMockRes();
     await mr.run(req, res, async () => { calls.push('final'); });
     
-    if(calls.join(',') !== 'a,b,final,b:after,a:after') return fail('order incorrect');
+    if(calls.join(',') !== 'a,b,final,b:after,a:after') throw new Error('order incorrect');
     
     pass('middleware order');
   }

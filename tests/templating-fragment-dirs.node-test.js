@@ -17,31 +17,31 @@ const TEMPLATE = '<html><body><fragment name="nav">fallback</fragment></body></h
 export default {
   'fragmentPriority reads the wrapper attribute': ({pass, fail}) => {
     const got = fragmentPriority('<fragment name="nav" priority="10"><nav>Hi</nav></fragment>');
-    if(got !== 10) return fail(`expected 10, got ${got}`);
+    if(got !== 10) throw new Error(`expected 10, got ${got}`);
     pass();
   },
 
   'fragmentPriority defaults to 0 for an unwrapped fragment': ({pass, fail}) => {
     const got = fragmentPriority('<nav>Hi</nav>');
-    if(got !== 0) return fail(`expected 0, got ${got}`);
+    if(got !== 0) throw new Error(`expected 0, got ${got}`);
     pass();
   },
 
   'fragmentPriority defaults to 0 for a wrapper with no priority': ({pass, fail}) => {
     const got = fragmentPriority('<fragment name="nav"><nav>Hi</nav></fragment>');
-    if(got !== 0) return fail(`expected 0, got ${got}`);
+    if(got !== 0) throw new Error(`expected 0, got ${got}`);
     pass();
   },
 
   'fragmentPriority falls back to 0 for a non-numeric priority': ({pass, fail}) => {
     const got = fragmentPriority('<fragment name="nav" priority="high"><nav>Hi</nav></fragment>');
-    if(got !== 0) return fail(`expected 0, got ${got}`);
+    if(got !== 0) throw new Error(`expected 0, got ${got}`);
     pass();
   },
 
   'fragmentPriority reads a negative priority': ({pass, fail}) => {
     const got = fragmentPriority('<fragment name="nav" priority="-5"><nav>Hi</nav></fragment>');
-    if(got !== -5) return fail(`expected -5, got ${got}`);
+    if(got !== -5) throw new Error(`expected -5, got ${got}`);
     pass();
   },
 
@@ -58,8 +58,8 @@ export default {
         const html = await renderExternalPage(
           path.join(rootDir, 'page.page.html'), rootDir, rootDir, {}, {}, 10, [], [pluginDir]
         );
-        if(!html.includes('From plugin')) return fail(`plugin fragment missing: ${html}`);
-        if(html.includes('fallback')) return fail(`fallback should not render: ${html}`);
+        if(!html.includes('From plugin')) throw new Error(`plugin fragment missing: ${html}`);
+        if(html.includes('fallback')) throw new Error(`fallback should not render: ${html}`);
         pass();
       });
     });
@@ -79,8 +79,8 @@ export default {
         const html = await renderExternalPage(
           path.join(rootDir, 'page.page.html'), rootDir, rootDir, {}, {}, 10, [], [pluginDir]
         );
-        if(!html.includes('From site')) return fail(`site fragment should win a tie: ${html}`);
-        if(html.includes('From plugin')) return fail(`plugin should not win a tie: ${html}`);
+        if(!html.includes('From site')) throw new Error(`site fragment should win a tie: ${html}`);
+        if(html.includes('From plugin')) throw new Error(`plugin should not win a tie: ${html}`);
         pass();
       });
     });
@@ -100,8 +100,8 @@ export default {
         const html = await renderExternalPage(
           path.join(rootDir, 'page.page.html'), rootDir, rootDir, {}, {}, 10, [], [pluginDir]
         );
-        if(!html.includes('From plugin')) return fail(`higher priority should win: ${html}`);
-        if(html.includes('From site')) return fail(`site fragment should be overridden: ${html}`);
+        if(!html.includes('From plugin')) throw new Error(`higher priority should win: ${html}`);
+        if(html.includes('From site')) throw new Error(`site fragment should be overridden: ${html}`);
         pass();
       });
     });
@@ -121,7 +121,7 @@ export default {
         const html = await renderExternalPage(
           path.join(rootDir, 'page.page.html'), rootDir, rootDir, {}, {}, 10, [], [pluginDir]
         );
-        if(!html.includes('From site')) return fail(`site should outrank the plugin: ${html}`);
+        if(!html.includes('From site')) throw new Error(`site should outrank the plugin: ${html}`);
         pass();
       });
     });
@@ -145,8 +145,8 @@ export default {
           const html = await renderExternalPage(
             path.join(rootDir, 'page.page.html'), rootDir, rootDir, {}, {}, 10, [], [lowDir, highDir]
           );
-          if(!html.includes('High')) return fail(`highest priority should win: ${html}`);
-          if(html.includes('Low')) return fail(`lower priority should lose: ${html}`);
+          if(!html.includes('High')) throw new Error(`highest priority should win: ${html}`);
+          if(html.includes('Low')) throw new Error(`lower priority should lose: ${html}`);
           pass();
         });
       });
@@ -170,7 +170,7 @@ export default {
           const html = await renderExternalPage(
             path.join(rootDir, 'page.page.html'), rootDir, rootDir, {}, {}, 10, [], [firstDir, secondDir]
           );
-          if(!html.includes('First')) return fail(`earliest dir should win a tie: ${html}`);
+          if(!html.includes('First')) throw new Error(`earliest dir should win a tie: ${html}`);
           pass();
         });
       });
@@ -190,7 +190,7 @@ export default {
         const html = await renderExternalPage(
           path.join(rootDir, 'page.page.html'), rootDir, rootDir, {}, {}, 10, [], [pluginDir]
         );
-        if(!html.includes('Nested')) return fail(`nested fragment not found: ${html}`);
+        if(!html.includes('Nested')) throw new Error(`nested fragment not found: ${html}`);
         pass();
       });
     });
@@ -210,7 +210,7 @@ export default {
         const html = await renderExternalPage(
           path.join(rootDir, 'page.page.html'), rootDir, rootDir, {}, {}, 10, [], [pluginDir]
         );
-        if(!html.includes('<b>Brand</b>')) return fail(`nested fragment include failed: ${html}`);
+        if(!html.includes('<b>Brand</b>')) throw new Error(`nested fragment include failed: ${html}`);
         pass();
       });
     });
@@ -229,7 +229,7 @@ export default {
         const html = await renderExternalPage(
           path.join(rootDir, 'page.page.html'), rootDir, rootDir, {}, {}, 10, [], [pluginDir]
         );
-        if(!html.includes('fallback')) return fail(`fallback missing: ${html}`);
+        if(!html.includes('fallback')) throw new Error(`fallback missing: ${html}`);
         pass();
       });
     });
@@ -246,7 +246,7 @@ export default {
         path.join(rootDir, 'page.page.html'), rootDir, rootDir, {}, {}, 10, [],
         [path.join(rootDir, 'does-not-exist')]
       );
-      if(!html.includes('From site')) return fail(`render broke on a missing extra dir: ${html}`);
+      if(!html.includes('From site')) throw new Error(`render broke on a missing extra dir: ${html}`);
       pass();
     });
   },
@@ -264,8 +264,8 @@ export default {
       });
       const rootHtml = await renderPage(path.join(rootDir, 'index.page.html'), rootDir);
       const sectionHtml = await renderPage(path.join(rootDir, 'section', 'index.page.html'), rootDir);
-      if(!rootHtml.includes('Root nav')) return fail(`root page lost its fragment: ${rootHtml}`);
-      if(!sectionHtml.includes('Section nav')) return fail(`nearest match no longer wins: ${sectionHtml}`);
+      if(!rootHtml.includes('Root nav')) throw new Error(`root page lost its fragment: ${rootHtml}`);
+      if(!sectionHtml.includes('Section nav')) throw new Error(`nearest match no longer wins: ${sectionHtml}`);
       pass();
     });
   },
@@ -289,7 +289,7 @@ export default {
           {}, {}, 10, [], [pluginDir]
         );
         // The nearest local match still wins, and a priority-0 plugin still loses to it
-        if(!html.includes('Section nav')) return fail(`walk-up result should still win: ${html}`);
+        if(!html.includes('Section nav')) throw new Error(`walk-up result should still win: ${html}`);
         pass();
       });
     });
@@ -303,9 +303,9 @@ export default {
         'page.page.html': '<page><content>Body <fragment name="sig">unsigned</fragment></content></page>'
       });
       const html = await renderPage(path.join(rootDir, 'page.page.html'), rootDir);
-      if(!html.includes('<p>Signed</p>')) return fail(`fragment in page content not resolved: ${html}`);
-      if(html.includes('unsigned')) return fail(`fallback rendered instead of the fragment: ${html}`);
-      if(html.includes('<fragment')) return fail(`raw fragment tag leaked into output: ${html}`);
+      if(!html.includes('<p>Signed</p>')) throw new Error(`fragment in page content not resolved: ${html}`);
+      if(html.includes('unsigned')) throw new Error(`fallback rendered instead of the fragment: ${html}`);
+      if(html.includes('<fragment')) throw new Error(`raw fragment tag leaked into output: ${html}`);
       pass();
     });
   },
@@ -317,8 +317,8 @@ export default {
         'page.page.html': '<page><content><fragment name="nope">no such fragment</fragment></content></page>'
       });
       const html = await renderPage(path.join(rootDir, 'page.page.html'), rootDir);
-      if(!html.includes('no such fragment')) return fail(`fallback missing: ${html}`);
-      if(html.includes('<fragment')) return fail(`raw fragment tag leaked into output: ${html}`);
+      if(!html.includes('no such fragment')) throw new Error(`fallback missing: ${html}`);
+      if(html.includes('<fragment')) throw new Error(`raw fragment tag leaked into output: ${html}`);
       pass();
     });
   },
@@ -336,7 +336,7 @@ export default {
         const html = await renderExternalPage(
           path.join(rootDir, 'page.page.html'), rootDir, rootDir, {}, {}, 10, [], [pluginDir]
         );
-        if(!html.includes('Plugin badge')) return fail(`extension fragment did not reach page content: ${html}`);
+        if(!html.includes('Plugin badge')) throw new Error(`extension fragment did not reach page content: ${html}`);
         pass();
       });
     });
@@ -351,7 +351,7 @@ export default {
         'page.page.html': '<page><content><fragment name="nav" /></content></page>'
       });
       const html = await renderPage(path.join(rootDir, 'page.page.html'), rootDir);
-      if(!html.includes('href="/about"')) return fail(`location inside a page-pulled fragment not filled: ${html}`);
+      if(!html.includes('href="/about"')) throw new Error(`location inside a page-pulled fragment not filled: ${html}`);
       pass();
     });
   },
@@ -370,8 +370,8 @@ export default {
         const html = await renderExternalPage(
           path.join(rootDir, 'page.page.html'), rootDir, rootDir, {}, {}, 10, [pluginDir], [pluginDir]
         );
-        if(!html.includes('<p>Pushed</p>')) return fail(`global content missing: ${html}`);
-        if(!html.includes('<span>Pulled</span>')) return fail(`fragment missing: ${html}`);
+        if(!html.includes('<p>Pushed</p>')) throw new Error(`global content missing: ${html}`);
+        if(!html.includes('<span>Pulled</span>')) throw new Error(`fragment missing: ${html}`);
         pass();
       });
     });

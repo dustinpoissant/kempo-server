@@ -30,7 +30,7 @@ export default {
       toAbs(root, 'docs/index.html')
     ];
     const [file] = await findFile(files, root, '/docs', 'GET', noop);
-    if(!file || path.basename(file) !== 'GET.page.html') return fail(`expected GET.page.html, got ${file ? path.basename(file) : 'none'}`);
+    if(!file || path.basename(file) !== 'GET.page.html') throw new Error(`expected GET.page.html, got ${file ? path.basename(file) : 'none'}`);
     pass();
   },
 
@@ -41,7 +41,7 @@ export default {
       toAbs(root, 'api/GET.page.html')
     ];
     const [file] = await findFile(files, root, '/api', 'GET', noop);
-    if(!file || path.basename(file) !== 'GET.js') return fail(`expected GET.js, got ${file ? path.basename(file) : 'none'}`);
+    if(!file || path.basename(file) !== 'GET.js') throw new Error(`expected GET.js, got ${file ? path.basename(file) : 'none'}`);
     pass();
   },
 
@@ -52,7 +52,7 @@ export default {
       toAbs(root, 'info/GET.page.html')
     ];
     const [file] = await findFile(files, root, '/info', 'GET', noop);
-    if(!file || path.basename(file) !== 'GET.html') return fail(`expected GET.html, got ${file ? path.basename(file) : 'none'}`);
+    if(!file || path.basename(file) !== 'GET.html') throw new Error(`expected GET.html, got ${file ? path.basename(file) : 'none'}`);
     pass();
   },
 
@@ -60,7 +60,7 @@ export default {
     const root = path.join(process.cwd(), 'tmp-root');
     const files = [toAbs(root, 'section/index.page.html')];
     const [file] = await findFile(files, root, '/section', 'GET', noop);
-    if(!file || path.basename(file) !== 'index.page.html') return fail(`expected index.page.html, got ${file ? path.basename(file) : 'none'}`);
+    if(!file || path.basename(file) !== 'index.page.html') throw new Error(`expected index.page.html, got ${file ? path.basename(file) : 'none'}`);
     pass();
   },
 
@@ -71,7 +71,7 @@ export default {
       toAbs(root, 'section/index.page.html')
     ];
     const [file] = await findFile(files, root, '/section', 'GET', noop);
-    if(!file || path.basename(file) !== 'index.js') return fail(`expected index.js, got ${file ? path.basename(file) : 'none'}`);
+    if(!file || path.basename(file) !== 'index.js') throw new Error(`expected index.js, got ${file ? path.basename(file) : 'none'}`);
     pass();
   },
 
@@ -79,8 +79,8 @@ export default {
     const root = path.join(process.cwd(), 'tmp-root');
     const files = [toAbs(root, 'users/[id]/GET.page.html')];
     const [file, params] = await findFile(files, root, '/users/42', 'GET', noop);
-    if(!file || path.basename(file) !== 'GET.page.html') return fail(`expected GET.page.html, got ${file ? path.basename(file) : 'none'}`);
-    if(params.id !== '42') return fail(`expected id=42, got ${params.id}`);
+    if(!file || path.basename(file) !== 'GET.page.html') throw new Error(`expected GET.page.html, got ${file ? path.basename(file) : 'none'}`);
+    if(params.id !== '42') throw new Error(`expected id=42, got ${params.id}`);
     pass();
   },
 

@@ -32,18 +32,18 @@ export default {
   'findById locates an element and where it ends': ({pass, fail}) => {
     const html = '<div><p id="x">hi</p></div>';
     const el = findById(html, 'x');
-    if(!el) return fail('element not found');
-    if(html.slice(el.innerStart, el.innerEnd) !== 'hi') return fail('inner offsets wrong');
-    if(html.slice(el.outerStart, el.outerEnd) !== '<p id="x">hi</p>') return fail('outer offsets wrong');
+    if(!el) throw new Error('element not found');
+    if(html.slice(el.innerStart, el.innerEnd) !== 'hi') throw new Error('inner offsets wrong');
+    if(html.slice(el.outerStart, el.outerEnd) !== '<p id="x">hi</p>') throw new Error('outer offsets wrong');
     pass();
   },
 
   'findById counts depth rather than stopping at the first closing tag': ({pass, fail}) => {
     const html = '<div id="a">one<div>two</div>three</div>tail';
     const el = findById(html, 'a');
-    if(!el) return fail('element not found');
+    if(!el) throw new Error('element not found');
     if(html.slice(el.innerStart, el.innerEnd) !== 'one<div>two</div>three'){
-      return fail(`nested element cut short: ${html.slice(el.innerStart, el.innerEnd)}`);
+      throw new Error(`nested element cut short: ${html.slice(el.innerStart, el.innerEnd)}`);
     }
     pass();
   },
@@ -51,42 +51,42 @@ export default {
   'findById handles a self-closed element': ({pass, fail}) => {
     const html = '<body><my-el id="x" /><p>after</p></body>';
     const el = findById(html, 'x');
-    if(!el) return fail('element not found');
-    if(el.innerStart !== el.innerEnd) return fail('a self-closed element encloses nothing');
-    if(html.slice(el.outerStart, el.outerEnd) !== '<my-el id="x" />') return fail('outer extent wrong');
+    if(!el) throw new Error('element not found');
+    if(el.innerStart !== el.innerEnd) throw new Error('a self-closed element encloses nothing');
+    if(html.slice(el.outerStart, el.outerEnd) !== '<my-el id="x" />') throw new Error('outer extent wrong');
     pass();
   },
 
   'findById ignores ids inside comments and scripts': ({pass, fail}) => {
     const commented = findById('<!-- <p id="x">ghost</p> --><p id="x">real</p>', 'x');
-    if(!commented) return fail('no element found at all');
-    if(commented.outerStart < 27) return fail('matched the commented-out element');
+    if(!commented) throw new Error('no element found at all');
+    if(commented.outerStart < 27) throw new Error('matched the commented-out element');
 
     const scripted = findById('<script>var s = \'<p id="y">ghost</p>\';</script><p id="y">real</p>', 'y');
-    if(!scripted) return fail('no element found for the script case');
-    if(scripted.outerStart < 46) return fail('matched inside the script body');
+    if(!scripted) throw new Error('no element found for the script case');
+    if(scripted.outerStart < 46) throw new Error('matched inside the script body');
     pass();
   },
 
   'findById is not confused by > inside an attribute': ({pass, fail}) => {
     const html = '<if condition="a > b"><p id="x">hi</p></if>';
     const el = findById(html, 'x');
-    if(!el) return fail('element not found past a > in an attribute value');
-    if(html.slice(el.innerStart, el.innerEnd) !== 'hi') return fail('offsets wrong');
+    if(!el) throw new Error('element not found past a > in an attribute value');
+    if(html.slice(el.innerStart, el.innerEnd) !== 'hi') throw new Error('offsets wrong');
     pass();
   },
 
   'findById returns null for an id that is not there': ({pass, fail}) => {
-    if(findById('<p id="a">x</p>', 'b') !== null) return fail('should not have matched');
+    if(findById('<p id="a">x</p>', 'b') !== null) throw new Error('should not have matched');
     pass();
   },
 
   'a patch replaces an element by id': async ({pass, fail}) => {
     await withTempDir(async dir => {
       const html = await render(dir, '<replace id="main"><article id="post"><location /></article></replace>');
-      if(!html.includes('<article id="post">BODY</article>')) return fail(`replacement missing: ${html}`);
-      if(html.includes('<main')) return fail(`original element still present: ${html}`);
-      if(!html.includes('NAV')) return fail(`unrelated markup was disturbed: ${html}`);
+      if(!html.includes('<article id="post">BODY</article>')) throw new Error(`replacement missing: ${html}`);
+      if(html.includes('<main')) throw new Error(`original element still present: ${html}`);
+      if(!html.includes('NAV')) throw new Error(`unrelated markup was disturbed: ${html}`);
       pass();
     });
   },
@@ -94,7 +94,7 @@ export default {
   'a location inside the replacement still receives the page body': async ({pass, fail}) => {
     await withTempDir(async dir => {
       const html = await render(dir, '<replace id="main"><article>[<location />]</article></replace>');
-      if(!html.includes('<article>[BODY]</article>')) return fail(`page body not placed: ${html}`);
+      if(!html.includes('<article>[BODY]</article>')) throw new Error(`page body not placed: ${html}`);
       pass();
     });
   },
@@ -107,7 +107,7 @@ export default {
         'plain.page.html': '<page title="Home"><content>BODY</content></page>'
       });
       const html = await renderPage(path.join(dir, 'plain.page.html'), dir);
-      if(!html.includes('NAV')) return fail(`patch leaked into an unrelated page: ${html}`);
+      if(!html.includes('NAV')) throw new Error(`patch leaked into an unrelated page: ${html}`);
       pass();
     });
   },
@@ -123,11 +123,11 @@ export default {
       };
       for(const [op, expected] of Object.entries(cases)){
         const html = await render(dir, op);
-        if(!html.includes(expected)) return fail(`${op} produced no "${expected}": ${html}`);
+        if(!html.includes(expected)) throw new Error(`${op} produced no "${expected}": ${html}`);
       }
       const removed = await render(dir, '<remove id="nav" />');
-      if(removed.includes('NAV')) return fail(`remove left the element: ${removed}`);
-      if(!removed.includes('BODY')) return fail(`remove took too much: ${removed}`);
+      if(removed.includes('NAV')) throw new Error(`remove left the element: ${removed}`);
+      if(!removed.includes('BODY')) throw new Error(`remove took too much: ${removed}`);
       pass();
     });
   },
@@ -136,9 +136,9 @@ export default {
     await withTempDir(async dir => {
       const html = await render(dir, '<attr id="main" add-class="has-article" data-kind="post" />');
       const main = html.match(/<main[^>]*>/)[0];
-      if(!/class="has-article"/.test(main)) return fail(`class not added: ${main}`);
-      if(!/data-kind="post"/.test(main)) return fail(`attribute not set: ${main}`);
-      if(!/id="main"/.test(main)) return fail(`id was lost: ${main}`);
+      if(!/class="has-article"/.test(main)) throw new Error(`class not added: ${main}`);
+      if(!/data-kind="post"/.test(main)) throw new Error(`attribute not set: ${main}`);
+      if(!/id="main"/.test(main)) throw new Error(`id was lost: ${main}`);
       pass();
     });
   },
@@ -151,7 +151,7 @@ export default {
         'post.page.html': '<page template="post"><content>BODY</content></page>'
       });
       const html = await renderPage(path.join(dir, 'post.page.html'), dir);
-      if(!/<my-el id="x" class="two" data-y="1" \/>/.test(html)) return fail(`self-closing element mangled: ${html}`);
+      if(!/<my-el id="x" class="two" data-y="1" \/>/.test(html)) throw new Error(`self-closing element mangled: ${html}`);
       pass();
     });
   },
@@ -162,7 +162,7 @@ export default {
         '<replace id="main"><article id="post"><location /></article></replace>' +
         '<attr id="post" add-class="mark" />'
       );
-      if(!/<article id="post" class="mark">/.test(html)) return fail(`later op could not target the earlier op's markup: ${html}`);
+      if(!/<article id="post" class="mark">/.test(html)) throw new Error(`later op could not target the earlier op's markup: ${html}`);
       pass();
     });
   },
@@ -175,9 +175,9 @@ export default {
         'post.page.html': '<page template="post"><content>BODY</content></page>'
       });
       const html = await renderPage(path.join(dir, 'post.page.html'), dir);
-      if(!html.includes('FROM PATCH')) return fail(`content block not applied: ${html}`);
-      if(html.includes('DEFAULT')) return fail(`default content not overridden: ${html}`);
-      if(!html.includes('<article>BODY</article>')) return fail(`patch op not applied: ${html}`);
+      if(!html.includes('FROM PATCH')) throw new Error(`content block not applied: ${html}`);
+      if(html.includes('DEFAULT')) throw new Error(`default content not overridden: ${html}`);
+      if(!html.includes('<article>BODY</article>')) throw new Error(`patch op not applied: ${html}`);
       pass();
     });
   },
@@ -191,8 +191,8 @@ export default {
         'post.page.html': '<page template="post"><content>BODY</content><content location="side">SIDE</content></page>'
       });
       const html = await renderPage(path.join(dir, 'post.page.html'), dir);
-      if(!html.includes('GLOBAL')) return fail(`global content lost: ${html}`);
-      if(!html.includes('SIDE')) return fail(`page's named content lost: ${html}`);
+      if(!html.includes('GLOBAL')) throw new Error(`global content lost: ${html}`);
+      if(!html.includes('SIDE')) throw new Error(`page's named content lost: ${html}`);
       pass();
     });
   },
@@ -206,7 +206,7 @@ export default {
         'post.page.html': '<page template="leaf"><content>BODY</content></page>'
       });
       const html = await renderPage(path.join(dir, 'post.page.html'), dir);
-      if(!/class="mid leaf"/.test(html)) return fail(`chain did not accumulate: ${html}`);
+      if(!/class="mid leaf"/.test(html)) throw new Error(`chain did not accumulate: ${html}`);
       pass();
     });
   },
@@ -218,9 +218,9 @@ export default {
         section an extension still targets must not take the page down with it.
       */
       const html = await render(dir, '<replace id="nope">GONE</replace>');
-      if(html.includes('GONE')) return fail(`a missing target should apply nothing: ${html}`);
-      if(!html.includes('BODY')) return fail(`the page should still render: ${html}`);
-      if(!html.includes('NAV')) return fail(`the template should be intact: ${html}`);
+      if(html.includes('GONE')) throw new Error(`a missing target should apply nothing: ${html}`);
+      if(!html.includes('BODY')) throw new Error(`the page should still render: ${html}`);
+      if(!html.includes('NAV')) throw new Error(`the template should be intact: ${html}`);
       pass();
     });
   },
@@ -231,8 +231,8 @@ export default {
         '<replace id="nope">GONE</replace>' +
         '<replace id="main"><article id="post"><location /></article></replace>'
       );
-      if(html.includes('GONE')) return fail(`skipped op leaked: ${html}`);
-      if(!html.includes('<article id="post">BODY</article>')) return fail(`the applicable op did not run: ${html}`);
+      if(html.includes('GONE')) throw new Error(`skipped op leaked: ${html}`);
+      if(!html.includes('<article id="post">BODY</article>')) throw new Error(`the applicable op did not run: ${html}`);
       pass();
     });
   },
@@ -250,7 +250,7 @@ export default {
       console.warn = original;
     }
     if(!seen.some(m => m.includes('absent-in-this-test'))){
-      return fail(`nothing was logged; a patch that stops applying must not do so invisibly: ${JSON.stringify(seen)}`);
+      throw new Error(`nothing was logged; a patch that stops applying must not do so invisibly: ${JSON.stringify(seen)}`);
     }
     pass();
   },
@@ -258,8 +258,8 @@ export default {
   'an operation with no id is skipped too': async ({pass, fail}) => {
     await withTempDir(async dir => {
       const html = await render(dir, '<replace>GONE</replace>');
-      if(html.includes('GONE')) return fail(`an op with no id should apply nothing: ${html}`);
-      if(!html.includes('BODY')) return fail(`the page should still render: ${html}`);
+      if(html.includes('GONE')) throw new Error(`an op with no id should apply nothing: ${html}`);
+      if(!html.includes('BODY')) throw new Error(`the page should still render: ${html}`);
       pass();
     });
   },
@@ -275,7 +275,7 @@ export default {
         await renderPage(path.join(dir, 'post.page.html'), dir);
         fail('should have thrown');
       } catch(e){
-        if(!/no "extends"/.test(e.message)) return fail(`wrong error: ${e.message}`);
+        if(!/no "extends"/.test(e.message)) throw new Error(`wrong error: ${e.message}`);
         pass();
       }
     });
@@ -292,7 +292,7 @@ export default {
         await renderPage(path.join(dir, 'post.page.html'), dir);
         fail('should have thrown');
       } catch(e){
-        if(!/Template not found: nope/.test(e.message)) return fail(`wrong error: ${e.message}`);
+        if(!/Template not found: nope/.test(e.message)) throw new Error(`wrong error: ${e.message}`);
         pass();
       }
     });
@@ -309,7 +309,7 @@ export default {
         await renderPage(path.join(dir, 'post.page.html'), dir);
         fail('should have thrown');
       } catch(e){
-        if(!/extends itself|depth exceeded/.test(e.message)) return fail(`wrong error: ${e.message}`);
+        if(!/extends itself|depth exceeded/.test(e.message)) throw new Error(`wrong error: ${e.message}`);
         pass();
       }
     });
@@ -327,7 +327,7 @@ export default {
         await renderPage(path.join(dir, 'post.page.html'), dir);
         fail('should have thrown');
       } catch(e){
-        if(!/depth exceeded/.test(e.message)) return fail(`wrong error: ${e.message}`);
+        if(!/depth exceeded/.test(e.message)) throw new Error(`wrong error: ${e.message}`);
         pass();
       }
     });
@@ -342,7 +342,7 @@ export default {
         'post.page.html': '<page template="post"><content>BODY</content></page>'
       });
       const html = await renderPage(path.join(dir, 'post.page.html'), dir);
-      if(!html.includes('REAL TEMPLATE')) return fail(`the template should take precedence: ${html}`);
+      if(!html.includes('REAL TEMPLATE')) throw new Error(`the template should take precedence: ${html}`);
       pass();
     });
   },
@@ -359,7 +359,7 @@ export default {
         const html = await renderExternalPage(
           path.join(dir, 'post.page.html'), dir, dir, {}, {}, 10, [], [pluginDir]
         );
-        if(!html.includes('BYLINE')) return fail(`fragment not resolved inside a patched template: ${html}`);
+        if(!html.includes('BYLINE')) throw new Error(`fragment not resolved inside a patched template: ${html}`);
         pass();
       });
     });
@@ -368,8 +368,8 @@ export default {
   'vars resolve across a patched template': async ({pass, fail}) => {
     await withTempDir(async dir => {
       const html = await render(dir, '<replace id="main"><article data-t="{{title}}"><location /></article></replace>', 'title="Hello"');
-      if(!html.includes('<title>Hello</title>')) return fail(`template var unresolved: ${html}`);
-      if(!html.includes('data-t="Hello"')) return fail(`patch var unresolved: ${html}`);
+      if(!html.includes('<title>Hello</title>')) throw new Error(`template var unresolved: ${html}`);
+      if(!html.includes('data-t="Hello"')) throw new Error(`patch var unresolved: ${html}`);
       pass();
     });
   },
@@ -382,9 +382,9 @@ export default {
         'post.page.html': '<page template="post"><content>BODY</content></page>'
       });
       const html = await renderPage(path.join(dir, 'post.page.html'), dir);
-      if(!html.includes('KEPT')) return fail(`conditional content lost: ${html}`);
-      if(html.includes('<if')) return fail(`if left unprocessed: ${html}`);
-      if(!html.includes('[X]')) return fail(`append missing: ${html}`);
+      if(!html.includes('KEPT')) throw new Error(`conditional content lost: ${html}`);
+      if(html.includes('<if')) throw new Error(`if left unprocessed: ${html}`);
+      if(!html.includes('[X]')) throw new Error(`append missing: ${html}`);
       pass();
     });
   }

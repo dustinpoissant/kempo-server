@@ -16,10 +16,10 @@ export default {
       const files = await getFiles(dir, cfg, log);
       const rel = files.map(f => path.relative(dir, f).replace(/\\/g, '/'));
       
-      if(!rel.includes('index.html')) return fail('includes html');
-      if(!rel.includes('sub/app.js')) return fail('includes js');
-      if(rel.includes('.env')) return fail('excludes disallowed');
-      if(rel.includes('notes.xyz')) return fail('excludes unknown ext');
+      if(!rel.includes('index.html')) throw new Error('includes html');
+      if(!rel.includes('sub/app.js')) throw new Error('includes js');
+      if(rel.includes('.env')) throw new Error('excludes disallowed');
+      if(rel.includes('notes.xyz')) throw new Error('excludes unknown ext');
     });
     
     pass('scan and filter');

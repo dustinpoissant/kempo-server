@@ -35,7 +35,7 @@ export default {
       if(one.r.statusCode !== 200) {
         server.close();
         process.chdir(prev);
-        return fail('first ok');
+        throw new Error('first ok');
       }
       
       const two = await new Promise((res)=>{
@@ -47,7 +47,7 @@ export default {
       if(two.r.statusCode !== 429) {
         server.close();
         process.chdir(prev);
-        return fail('rate limited');
+        throw new Error('rate limited');
       }
       
       server.close();

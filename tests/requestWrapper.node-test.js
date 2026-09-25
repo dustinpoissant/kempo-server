@@ -6,9 +6,9 @@ export default {
     const req = createMockReq({url: '/user/123?x=1&y=2', headers: {host: 'localhost'}});
     const wrapped = createRequestWrapper(req, {id: '123'});
     
-    if(wrapped.path !== '/user/123') return fail('path');
-    if(!(wrapped.query.x === '1' && wrapped.query.y === '2')) return fail('query');
-    if(wrapped.params.id !== '123') return fail('params');
+    if(wrapped.path !== '/user/123') throw new Error('path');
+    if(!(wrapped.query.x === '1' && wrapped.query.y === '2')) throw new Error('query');
+    if(wrapped.params.id !== '123') throw new Error('params');
     
     pass('parsed url');
   },
@@ -19,19 +19,19 @@ export default {
     const reqText = createMockReq({method: 'POST', url: '/', headers: {host: 'x', 'content-type': 'application/json'}, body: raw});
     const wText = createRequestWrapper(reqText);
     wText._rawBody = await readRawBody(reqText);
-    if((await wText.text()) !== raw) return fail('text');
+    if((await wText.text()) !== raw) throw new Error('text');
 
     const reqJson = createMockReq({method: 'POST', url: '/', headers: {host: 'x', 'content-type': 'application/json'}, body: raw});
     const wJson = createRequestWrapper(reqJson);
     wJson._rawBody = await readRawBody(reqJson);
     const obj = await wJson.json();
-    if(obj.a !== 1) return fail('json');
+    if(obj.a !== 1) throw new Error('json');
 
     const reqBuf = createMockReq({url: '/', headers: {host: 'x'}, body: 'abc'});
     const wBuf = createRequestWrapper(reqBuf);
     wBuf._rawBody = await readRawBody(reqBuf);
     const buf = await wBuf.buffer();
-    if(!(Buffer.isBuffer(buf) && buf.toString() === 'abc')) return fail('buffer');
+    if(!(Buffer.isBuffer(buf) && buf.toString() === 'abc')) throw new Error('buffer');
 
     pass('helpers');
   },
@@ -50,47 +50,47 @@ export default {
     const req = createMockReq({url: '/', headers: {'content-type': 'text/plain', host: 'x'}});
     const w = createRequestWrapper(req);
     
-    if(w.get('content-type') !== 'text/plain') return fail('get');
-    if(w.is('text/plain') !== true) return fail('is');
+    if(w.get('content-type') !== 'text/plain') throw new Error('get');
+    if(w.is('text/plain') !== true) throw new Error('is');
     
     pass('header helpers');
   },
   'body property is null by default': async ({pass, fail}) => {
     const req = createMockReq({url: '/', headers: {host: 'x'}});
     const w = createRequestWrapper(req);
-    if(w.body !== null) return fail('expected null');
+    if(w.body !== null) throw new Error('expected null');
     pass('body null');
   },
   'parseBody returns parsed JSON for application/json': async ({pass, fail}) => {
     const result = parseBody('{"a":1}', 'application/json');
-    if(result?.a !== 1) return fail('json parse');
+    if(result?.a !== 1) throw new Error('json parse');
     pass('json');
   },
   'parseBody returns null for invalid JSON': async ({pass, fail}) => {
     const result = parseBody('not json', 'application/json');
-    if(result !== null) return fail('expected null');
+    if(result !== null) throw new Error('expected null');
     pass('invalid json');
   },
   'parseBody returns object for urlencoded': async ({pass, fail}) => {
     const result = parseBody('a=1&b=2', 'application/x-www-form-urlencoded');
-    if(result?.a !== '1' || result?.b !== '2') return fail('urlencoded');
+    if(result?.a !== '1' || result?.b !== '2') throw new Error('urlencoded');
     pass('urlencoded');
   },
   'parseBody returns raw string for unknown content-type': async ({pass, fail}) => {
     const result = parseBody('hello', 'text/plain');
-    if(result !== 'hello') return fail('expected raw string');
+    if(result !== 'hello') throw new Error('expected raw string');
     pass('raw string');
   },
   'parseBody returns null for empty body': async ({pass, fail}) => {
     const result = parseBody('', 'application/json');
-    if(result !== null) return fail('expected null');
+    if(result !== null) throw new Error('expected null');
     pass('empty body');
   },
   'readRawBody uses _bufferedBody when present': async ({pass, fail}) => {
     const req = createMockReq({url: '/', headers: {host: 'x'}, body: 'stream data'});
     req._bufferedBody = 'cached data';
     const result = await readRawBody(req);
-    if(result !== 'cached data') return fail('expected cached data');
+    if(result !== 'cached data') throw new Error('expected cached data');
     pass('buffered');
   }
 };

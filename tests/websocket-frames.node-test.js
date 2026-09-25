@@ -56,16 +56,16 @@ const expectWsError = (fn, code) => {
 export default {
   'accept key matches the RFC 6455 example': async ({pass, fail}) => {
     const accept = computeAccept('dGhlIHNhbXBsZSBub25jZQ==');
-    if(accept !== 's3pPLMBiTxaQ9kYGzzhZRbK+xOo=') return fail(`got ${accept}`);
+    if(accept !== 's3pPLMBiTxaQ9kYGzzhZRbK+xOo=') throw new Error(`got ${accept}`);
     pass('accept key');
   },
 
   'a short payload round-trips through the parser': async ({pass, fail}) => {
     const parser = new FrameParser(1024);
     const frames = parser.push(mask(OPCODES.TEXT, 'hello'));
-    if(frames.length !== 1) return fail(`got ${frames.length} frames`);
-    if(frames[0].payload.toString() !== 'hello') return fail('payload mismatch');
-    if(frames[0].opcode !== OPCODES.TEXT) return fail('opcode mismatch');
+    if(frames.length !== 1) throw new Error(`got ${frames.length} frames`);
+    if(frames[0].payload.toString() !== 'hello') throw new Error('payload mismatch');
+    if(frames[0].opcode !== OPCODES.TEXT) throw new Error('opcode mismatch');
     pass('7-bit length');
   },
 
@@ -74,18 +74,18 @@ export default {
       const parser = new FrameParser(1000000);
       const payload = crypto.randomBytes(size);
       const frames = parser.push(mask(OPCODES.BINARY, payload));
-      if(frames.length !== 1) return fail(`size ${size}: got ${frames.length} frames`);
-      if(!frames[0].payload.equals(payload)) return fail(`size ${size}: payload mismatch`);
+      if(frames.length !== 1) throw new Error(`size ${size}: got ${frames.length} frames`);
+      if(!frames[0].payload.equals(payload)) throw new Error(`size ${size}: payload mismatch`);
     }
     pass('7-bit, 16-bit and 64-bit lengths');
   },
 
   'encoded frames use the smallest length form': async ({pass, fail}) => {
-    if(encodeFrame({opcode: OPCODES.TEXT, payload: Buffer.alloc(125)}).length !== 127) return fail('7-bit header');
-    if(encodeFrame({opcode: OPCODES.TEXT, payload: Buffer.alloc(126)}).length !== 130) return fail('16-bit header');
-    if(encodeFrame({opcode: OPCODES.TEXT, payload: Buffer.alloc(65536)}).length !== 65546) return fail('64-bit header');
+    if(encodeFrame({opcode: OPCODES.TEXT, payload: Buffer.alloc(125)}).length !== 127) throw new Error('7-bit header');
+    if(encodeFrame({opcode: OPCODES.TEXT, payload: Buffer.alloc(126)}).length !== 130) throw new Error('16-bit header');
+    if(encodeFrame({opcode: OPCODES.TEXT, payload: Buffer.alloc(65536)}).length !== 65546) throw new Error('64-bit header');
     // The mask bit must be clear on every server-to-client frame
-    if((encodeFrame({opcode: OPCODES.TEXT, payload: Buffer.from('x')})[1] & 0x80) !== 0) return fail('server frame must not be masked');
+    if((encodeFrame({opcode: OPCODES.TEXT, payload: Buffer.from('x')})[1] & 0x80) !== 0) throw new Error('server frame must not be masked');
     pass('length forms and mask bit');
   },
 
@@ -95,15 +95,15 @@ export default {
 
     for(const cut of [1, 2, 5, frame.length - 1]){
       const fresh = new FrameParser(1024);
-      if(fresh.push(frame.subarray(0, cut)).length !== 0) return fail(`cut at ${cut} produced a frame early`);
+      if(fresh.push(frame.subarray(0, cut)).length !== 0) throw new Error(`cut at ${cut} produced a frame early`);
       const frames = fresh.push(frame.subarray(cut));
-      if(frames.length !== 1) return fail(`cut at ${cut}: got ${frames.length}`);
-      if(frames[0].payload.toString() !== 'split across reads') return fail(`cut at ${cut}: payload`);
+      if(frames.length !== 1) throw new Error(`cut at ${cut}: got ${frames.length}`);
+      if(frames[0].payload.toString() !== 'split across reads') throw new Error(`cut at ${cut}: payload`);
     }
 
     // Several frames arriving in one read all come back
     const many = parser.push(Buffer.concat([mask(OPCODES.TEXT, 'a'), mask(OPCODES.TEXT, 'b'), mask(OPCODES.TEXT, 'c')]));
-    if(many.length !== 3) return fail(`expected 3 frames in one read, got ${many.length}`);
+    if(many.length !== 3) throw new Error(`expected 3 frames in one read, got ${many.length}`);
     pass('TCP boundaries are not frame boundaries');
   },
 
@@ -112,16 +112,16 @@ export default {
       () => new FrameParser(1024).push(mask(OPCODES.TEXT, 'nope', {masked: false})),
       CLOSE_CODES.PROTOCOL_ERROR
     );
-    if(problem) return fail(problem);
+    if(problem) throw new Error(problem);
     pass('unmasked frame closes with 1002');
   },
 
   'reserved bits and unknown opcodes are protocol errors': async ({pass, fail}) => {
     const rsv = expectWsError(() => new FrameParser(1024).push(mask(OPCODES.TEXT, 'x', {rsv: 1})), CLOSE_CODES.PROTOCOL_ERROR);
-    if(rsv) return fail(`reserved bits: ${rsv}`);
+    if(rsv) throw new Error(`reserved bits: ${rsv}`);
 
     const unknown = expectWsError(() => new FrameParser(1024).push(mask(0x3, 'x')), CLOSE_CODES.PROTOCOL_ERROR);
-    if(unknown) return fail(`unknown opcode: ${unknown}`);
+    if(unknown) throw new Error(`unknown opcode: ${unknown}`);
     pass('1002 for reserved bits and unknown opcodes');
   },
 
@@ -130,13 +130,13 @@ export default {
       () => new FrameParser(65536).push(mask(OPCODES.PING, crypto.randomBytes(126))),
       CLOSE_CODES.PROTOCOL_ERROR
     );
-    if(tooBig) return fail(`oversized control frame: ${tooBig}`);
+    if(tooBig) throw new Error(`oversized control frame: ${tooBig}`);
 
     const fragmented = expectWsError(
       () => new FrameParser(1024).push(mask(OPCODES.PING, 'x', {fin: false})),
       CLOSE_CODES.PROTOCOL_ERROR
     );
-    if(fragmented) return fail(`fragmented control frame: ${fragmented}`);
+    if(fragmented) throw new Error(`fragmented control frame: ${fragmented}`);
     pass('1002 for bad control frames');
   },
 
@@ -145,47 +145,47 @@ export default {
       () => new FrameParser(10).push(mask(OPCODES.TEXT, 'this is longer than ten bytes')),
       CLOSE_CODES.TOO_LARGE
     );
-    if(problem) return fail(problem);
+    if(problem) throw new Error(problem);
     pass('1009 on an oversized frame');
   },
 
   'invalid UTF-8 is a payload error': async ({pass, fail}) => {
     const problem = expectWsError(() => decodeUtf8(Buffer.from([0xff, 0xfe])), CLOSE_CODES.INVALID_PAYLOAD);
-    if(problem) return fail(problem);
-    if(decodeUtf8(Buffer.from('héllo', 'utf8')) !== 'héllo') return fail('valid UTF-8 should decode');
+    if(problem) throw new Error(problem);
+    if(decodeUtf8(Buffer.from('héllo', 'utf8')) !== 'héllo') throw new Error('valid UTF-8 should decode');
     pass('1007 on invalid UTF-8');
   },
 
   'close payloads encode and decode': async ({pass, fail}) => {
     const decoded = decodeClose(encodeClose(1000, 'bye').subarray(2));
-    if(decoded.code !== 1000 || decoded.reason !== 'bye') return fail(`got ${JSON.stringify(decoded)}`);
+    if(decoded.code !== 1000 || decoded.reason !== 'bye') throw new Error(`got ${JSON.stringify(decoded)}`);
 
     const empty = decodeClose(Buffer.alloc(0));
-    if(empty.code !== undefined) return fail('empty payload should have no code');
+    if(empty.code !== undefined) throw new Error('empty payload should have no code');
 
     const oneByte = expectWsError(() => decodeClose(Buffer.from([0x03])), CLOSE_CODES.PROTOCOL_ERROR);
-    if(oneByte) return fail(`single byte: ${oneByte}`);
+    if(oneByte) throw new Error(`single byte: ${oneByte}`);
 
     // 1005 is reserved and must never appear on the wire
     const reserved = expectWsError(() => decodeClose(Buffer.from([0x03, 0xed])), CLOSE_CODES.PROTOCOL_ERROR);
-    if(reserved) return fail(`reserved code: ${reserved}`);
+    if(reserved) throw new Error(`reserved code: ${reserved}`);
 
-    if(isValidCloseCode(1005) || isValidCloseCode(1006) || isValidCloseCode(999)) return fail('reserved codes accepted');
-    if(!isValidCloseCode(1000) || !isValidCloseCode(3000) || !isValidCloseCode(4999)) return fail('valid codes rejected');
+    if(isValidCloseCode(1005) || isValidCloseCode(1006) || isValidCloseCode(999)) throw new Error('reserved codes accepted');
+    if(!isValidCloseCode(1000) || !isValidCloseCode(3000) || !isValidCloseCode(4999)) throw new Error('valid codes rejected');
     pass('close code handling');
   },
 
   'origin defaults to same-origin and can be overridden': async ({pass, fail}) => {
-    if(!isOriginAllowed('http://site.test', 'site.test', {})) return fail('same origin should pass');
-    if(isOriginAllowed('http://evil.test', 'site.test', {})) return fail('cross origin should fail');
-    if(!isOriginAllowed('http://evil.test', 'site.test', {allowedOrigins: '*'})) return fail('wildcard should pass');
-    if(!isOriginAllowed('http://a.test', 'site.test', {allowedOrigins: ['http://a.test']})) return fail('allow-list should pass');
-    if(isOriginAllowed('http://b.test', 'site.test', {allowedOrigins: ['http://a.test']})) return fail('off allow-list should fail');
-    if(isOriginAllowed('not a url', 'site.test', {})) return fail('unparseable origin should fail');
+    if(!isOriginAllowed('http://site.test', 'site.test', {})) throw new Error('same origin should pass');
+    if(isOriginAllowed('http://evil.test', 'site.test', {})) throw new Error('cross origin should fail');
+    if(!isOriginAllowed('http://evil.test', 'site.test', {allowedOrigins: '*'})) throw new Error('wildcard should pass');
+    if(!isOriginAllowed('http://a.test', 'site.test', {allowedOrigins: ['http://a.test']})) throw new Error('allow-list should pass');
+    if(isOriginAllowed('http://b.test', 'site.test', {allowedOrigins: ['http://a.test']})) throw new Error('off allow-list should fail');
+    if(isOriginAllowed('not a url', 'site.test', {})) throw new Error('unparseable origin should fail');
 
     // A missing Origin means a non-browser client, allowed unless explicitly required
-    if(!isOriginAllowed(undefined, 'site.test', {})) return fail('absent origin should pass by default');
-    if(isOriginAllowed(undefined, 'site.test', {requireOrigin: true})) return fail('absent origin should fail when required');
+    if(!isOriginAllowed(undefined, 'site.test', {})) throw new Error('absent origin should pass by default');
+    if(isOriginAllowed(undefined, 'site.test', {requireOrigin: true})) throw new Error('absent origin should fail when required');
     pass('origin policy');
   },
 
@@ -201,20 +201,20 @@ export default {
     const copyA = await import(`${base}?copy=a`);
     const copyB = await import(`${base}?copy=b`);
 
-    if(copyA === copyB) return fail('the two imports were deduplicated, so this proves nothing');
+    if(copyA === copyB) throw new Error('the two imports were deduplicated, so this proves nothing');
 
     const fakeSocket = {path: '/shared', data: {}, send: () => true};
     copyA.register(fakeSocket);
 
     try {
       const seenByB = copyB.sockets({path: '/shared'});
-      if(seenByB.length !== 1) return fail(`copy B saw ${seenByB.length} sockets, expected 1`);
-      if(copyB.broadcast('x', {path: '/shared'}) !== 1) return fail('copy B could not broadcast to it');
+      if(seenByB.length !== 1) throw new Error(`copy B saw ${seenByB.length} sockets, expected 1`);
+      if(copyB.broadcast('x', {path: '/shared'}) !== 1) throw new Error('copy B could not broadcast to it');
     } finally {
       copyB.unregister(fakeSocket);
     }
 
-    if(copyA.sockets({path: '/shared'}).length !== 0) return fail('unregister through copy B did not reach copy A');
+    if(copyA.sockets({path: '/shared'}).length !== 0) throw new Error('unregister through copy B did not reach copy A');
     pass('registry is shared across module copies');
   },
 
@@ -230,7 +230,7 @@ export default {
       }
     };
 
-    if(!validateHandshake(base, {}).ok) return fail('a valid handshake should pass');
+    if(!validateHandshake(base, {}).ok) throw new Error('a valid handshake should pass');
 
     const cases = [
       [{...base, method: 'POST'}, 400, 'non-GET'],
@@ -243,17 +243,17 @@ export default {
 
     for(const [request, status, label] of cases){
       const result = validateHandshake(request, {});
-      if(result.ok) return fail(`${label} should have been rejected`);
-      if(result.status !== status) return fail(`${label}: got ${result.status}, expected ${status}`);
+      if(result.ok) throw new Error(`${label} should have been rejected`);
+      if(result.status !== status) throw new Error(`${label}: got ${result.status}, expected ${status}`);
     }
 
     // A 426 has to tell the client which version to speak
     const versionFail = validateHandshake({...base, headers: {...base.headers, 'sec-websocket-version': '8'}}, {});
-    if(versionFail.headers?.['Sec-WebSocket-Version'] !== '13') return fail('426 must advertise version 13');
+    if(versionFail.headers?.['Sec-WebSocket-Version'] !== '13') throw new Error('426 must advertise version 13');
 
     // Connection often carries more than one token
     if(!validateHandshake({...base, headers: {...base.headers, connection: 'keep-alive, Upgrade'}}, {}).ok){
-      return fail('a multi-token Connection header should pass');
+      throw new Error('a multi-token Connection header should pass');
     }
     pass('handshake validation');
   }

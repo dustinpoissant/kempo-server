@@ -19,9 +19,9 @@ export default {
         'index.page.html': '<page><content location="main"><h1>Hello</h1></content></page>'
       });
       const html = await renderPageToString(path.join(dir, 'index.page.html'));
-      if(typeof html !== 'string') return fail(`expected string, got ${typeof html}`);
-      if(!html.includes('<h1>Hello</h1>')) return fail(`missing content: ${html}`);
-      if(!html.includes('<html>')) return fail(`missing template: ${html}`);
+      if(typeof html !== 'string') throw new Error(`expected string, got ${typeof html}`);
+      if(!html.includes('<h1>Hello</h1>')) throw new Error(`missing content: ${html}`);
+      if(!html.includes('<html>')) throw new Error(`missing template: ${html}`);
       pass();
     });
   },
@@ -33,7 +33,7 @@ export default {
         'welcome.page.html': '<page><content location="main">Hello {{userName}}</content></page>'
       });
       const html = await renderPageToString(path.join(dir, 'welcome.page.html'), {userName: 'Alice'});
-      if(!html.includes('Hello Alice')) return fail(`var not interpolated: ${html}`);
+      if(!html.includes('Hello Alice')) throw new Error(`var not interpolated: ${html}`);
       pass();
     });
   },
@@ -45,8 +45,8 @@ export default {
         'welcome.page.html': '<page template="email"><content location="body">Welcome!</content></page>'
       });
       const html = await renderPageToString(path.join(dir, 'welcome.page.html'));
-      if(!html.includes('<email>')) return fail(`email template not used: ${html}`);
-      if(!html.includes('Welcome!')) return fail(`content missing: ${html}`);
+      if(!html.includes('<email>')) throw new Error(`email template not used: ${html}`);
+      if(!html.includes('Welcome!')) throw new Error(`content missing: ${html}`);
       pass();
     });
   },
@@ -59,8 +59,8 @@ export default {
         'welcome.page.html': '<page template="email"><content location="body">Hi there</content></page>'
       });
       const html = await renderPageToString(path.join(dir, 'welcome.page.html'));
-      if(!html.includes('Best regards, Acme Corp')) return fail(`fragment missing: ${html}`);
-      if(!html.includes('Hi there')) return fail(`body missing: ${html}`);
+      if(!html.includes('Best regards, Acme Corp')) throw new Error(`fragment missing: ${html}`);
+      if(!html.includes('Hi there')) throw new Error(`body missing: ${html}`);
       pass();
     });
   },
@@ -73,8 +73,8 @@ export default {
         'welcome.page.html': '<page template="email"><content location="body">Welcome</content></page>'
       });
       const html = await renderPageToString(path.join(dir, 'welcome.page.html'));
-      if(!html.includes('<b>Summer Sale!</b>')) return fail(`global promo missing: ${html}`);
-      if(!html.includes('Welcome')) return fail(`body missing: ${html}`);
+      if(!html.includes('<b>Summer Sale!</b>')) throw new Error(`global promo missing: ${html}`);
+      if(!html.includes('Welcome')) throw new Error(`body missing: ${html}`);
       pass();
     });
   },
@@ -86,9 +86,9 @@ export default {
         'reset.page.html': '<page><content location="main"><if condition="resetLink">Click {{resetLink}}</if></content></page>'
       });
       const withLink = await renderPageToString(path.join(dir, 'reset.page.html'), {resetLink: 'https://example.com/reset'});
-      if(!withLink.includes('Click https://example.com/reset')) return fail(`link not rendered: ${withLink}`);
+      if(!withLink.includes('Click https://example.com/reset')) throw new Error(`link not rendered: ${withLink}`);
       const withoutLink = await renderPageToString(path.join(dir, 'reset.page.html'), {});
-      if(withoutLink.includes('Click')) return fail(`should be hidden: ${withoutLink}`);
+      if(withoutLink.includes('Click')) throw new Error(`should be hidden: ${withoutLink}`);
       pass();
     });
   },
@@ -100,8 +100,8 @@ export default {
         'order.page.html': '<page><content location="main"><foreach in="items" as="item"><li>{{item}}</li></foreach></content></page>'
       });
       const html = await renderPageToString(path.join(dir, 'order.page.html'), {items: ['Widget', 'Gadget']});
-      if(!html.includes('<li>Widget</li>')) return fail(`Widget missing: ${html}`);
-      if(!html.includes('<li>Gadget</li>')) return fail(`Gadget missing: ${html}`);
+      if(!html.includes('<li>Widget</li>')) throw new Error(`Widget missing: ${html}`);
+      if(!html.includes('<li>Gadget</li>')) throw new Error(`Gadget missing: ${html}`);
       pass();
     });
   },
@@ -114,7 +114,7 @@ export default {
       });
       const pagePath = path.join(dir, 'emails', 'welcome.page.html');
       const html = await renderPageToString(pagePath, {}, dir);
-      if(!html.includes('Hi')) return fail(`content missing with explicit rootDir: ${html}`);
+      if(!html.includes('Hi')) throw new Error(`content missing with explicit rootDir: ${html}`);
       pass();
     });
   },
@@ -127,7 +127,7 @@ export default {
       });
       // page attributes take highest priority — they override vars with same key
       const html = await renderPageToString(path.join(dir, 'welcome.page.html'), {title: 'Var Title'});
-      if(!html.includes('<title>Page Title</title>')) return fail(`page attr should win: ${html}`);
+      if(!html.includes('<title>Page Title</title>')) throw new Error(`page attr should win: ${html}`);
       pass();
     });
   },
@@ -141,7 +141,7 @@ export default {
         await renderPageToString(path.join(dir, 'welcome.page.html'));
         fail('should have thrown');
       } catch(e){
-        if(!e.message.includes('Template not found')) return fail(`wrong error: ${e.message}`);
+        if(!e.message.includes('Template not found')) throw new Error(`wrong error: ${e.message}`);
         pass();
       }
     });
@@ -154,7 +154,7 @@ export default {
         'index.page.html': '<page><content location="main">x</content></page>'
       });
       const html = await renderPageToString(path.join(dir, 'index.page.html'));
-      if(!html.includes(String(new Date().getFullYear()))) return fail(`year missing: ${html}`);
+      if(!html.includes(String(new Date().getFullYear()))) throw new Error(`year missing: ${html}`);
       pass();
     });
   },
@@ -170,8 +170,8 @@ export default {
         renderPageToString(path.join(dir, 'welcome.page.html')),
         renderPageToString(path.join(dir, 'reset.page.html'))
       ]);
-      if(!welcome.includes('<html>') || !welcome.includes('Welcome email')) return fail(`welcome wrong: ${welcome}`);
-      if(!reset.includes('<html>') || !reset.includes('Reset email')) return fail(`reset wrong: ${reset}`);
+      if(!welcome.includes('<html>') || !welcome.includes('Welcome email')) throw new Error(`welcome wrong: ${welcome}`);
+      if(!reset.includes('<html>') || !reset.includes('Reset email')) throw new Error(`reset wrong: ${reset}`);
       pass();
     });
   }

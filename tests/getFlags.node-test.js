@@ -5,8 +5,8 @@ export default {
     const args = ['--port', '8080', '--verbose'];
     const flags = getFlags(args, {port: 3000, verbose: false});
     
-    if(flags.port !== '8080') return fail('port not parsed');
-    if(flags.verbose !== true) return fail('verbose boolean not parsed');
+    if(flags.port !== '8080') throw new Error('port not parsed');
+    if(flags.verbose !== true) throw new Error('verbose boolean not parsed');
     
     pass('parsed long flags');
   },
@@ -14,8 +14,8 @@ export default {
     const args = ['-p', '9090', '-v'];
     const flags = getFlags(args, {port: 3000, verbose: false}, {p: 'port', v: 'verbose'});
     
-    if(flags.port !== '9090') return fail('short mapped value failed');
-    if(flags.verbose !== true) return fail('short mapped boolean failed');
+    if(flags.port !== '9090') throw new Error('short mapped value failed');
+    if(flags.verbose !== true) throw new Error('short mapped boolean failed');
     
     pass('short flags parsed');
   },
@@ -23,7 +23,7 @@ export default {
     const args = ['-l', '-5', 'file'];
     const flags = getFlags(args, {l: 2});
     
-    if(flags.l !== true) return fail('should be boolean true');
+    if(flags.l !== true) throw new Error('should be boolean true');
     
     pass('dash after flag -> boolean');
   }
