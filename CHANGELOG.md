@@ -5,6 +5,48 @@ All notable changes to `kempo-server` are documented in this file.
 ## [Unreleased]
 
 ### Added
+- **WebSockets: a `WS.js` route file.** The server created its `http.Server` and registered no `upgrade` listener, so a `new WebSocket()` handshake was served as an ordinary GET and the browser got whatever page or route sat at that path. There was no supported way to add this from outside either: an extension ships routes, pages and hooks and is never handed the server, and reaching it through `req.socket.server` would bypass routing, middleware and config entirely.
+
+  A `WS.js` file now sits alongside `GET.js` and `POST.js` and accepts a connection at that path:
+
+  ```javascript
+  // chat/WS.js
+  export default async (request, socket) => {
+    if(!request.cookies.session_token) return socket.reject(401, 'Unauthorized');
+
+    socket.data.userId = session.userId;
+    socket.on('message', (data, isBinary) => socket.send(`echo: ${data}`));
+  };
+  ```
+
+  The route runs *before* the handshake completes, which is what lets it authenticate and refuse one with a real HTTP status rather than opening a socket and closing it a moment later. It receives the same enhanced request HTTP routes get, so `request.cookies`, `request.query` and `request.params` behave identically and session auth needs no socket-specific code.
+
+  Because an `upgrade` listener diverts every upgrade away from the router, route resolution, the request wrapper and the middleware chain are all driven explicitly on this path. The configured middleware runs for the handshake — CORS, rate limiting, security headers, logging and custom middleware — and a middleware that ends the response rejects the upgrade. Compression is skipped, since a 101 has no body and the middleware works by wrapping the response write path.
+
+  Only a file named exactly `WS.js` is ever run for an upgrade. Directory requests normally fall back to `index.js` and then `CATCH.js`; allowing that here would hand a socket to a handler written for HTTP, so a path with no `WS.js` gets a 404 even when it has a working `GET.js`. `[param]` segments resolve as usual, and so do custom and wildcard routes, in the order HTTP uses them: an exact custom route, then a wildcard, then the served tree. That matters because kempo serves its whole API through one wildcard mapping into `node_modules`, so a package can only ship a socket route if upgrades honour the same mappings. A path containing a `..` segment is refused, since a mapped directory can sit outside the root and `WS.js` is executed.
+
+  The implementation is RFC 6455 on Node built-ins — `crypto` for the accept key, the upgraded socket for framing — keeping the package dependency-free. Text and binary messages work in both directions, fragmented messages are reassembled, control frames and the close handshake follow the spec, and protocol violations close with the right code (1002 for a malformed frame, 1007 for invalid UTF-8, 1009 for an oversized message).
+
+- **Pushing to sockets from outside the route.** `kempo-server/websocket` exports `sockets({ path, filter })`, `broadcast(message, { path, filter })` and `closeAll(code, reason)`, so an HTTP route, a webhook handler or an extension can reach connected clients:
+
+  ```javascript
+  import { broadcast } from 'kempo-server/websocket';
+
+  broadcast({ type: 'order.paid' }, { path: '/account', filter: (socket) => socket.data.userId === userId });
+  ```
+
+  The registry hangs off a `Symbol.for` global rather than module scope, because kempo-server can legitimately appear twice in a resolved tree — it is symlinked during local development, and a consumer may hoist one copy while a nested dependency keeps another. In module scope, a route registering into one copy and a webhook reading from the other would each see an empty set and silently send nothing. It is single-process regardless: behind a load balancer a socket is only reachable from the process that accepted it, and the docs say so.
+
+- **`websocket` configuration.** `enabled`, `maxMessageSize`, `allowedOrigins`, `requireOrigin`, `heartbeatInterval` and `heartbeatTimeout`, documented in CONFIG.md next to `maxBodySize`.
+
+  The origin check matters more than it looks: cookies ride along on a handshake and browsers apply no same-origin policy to WebSockets — no preflight, nothing blocked client-side — so without a server-side check any page anywhere could open a socket authenticated as whoever is signed in. It defaults to same-origin, with an allow-list or `'*'` available. A handshake with no `Origin` at all is allowed by default, since browsers always send one and its absence means a non-browser client with no ambient cookies; `requireOrigin` turns those away too.
+
+  `maxMessageSize` defaults to 1MB, far below `maxBodySize`, and is checked against the length a frame *declares* before any payload is buffered, then again on the reassembled total so fragments cannot creep past it.
+
+- **Connection liveness and clean shutdown.** Idle connections are pinged and dropped if no pong arrives, which is what notices a client that vanished without closing — a closed laptop, a dropped network — that TCP alone can leave looking open indefinitely. Connections carrying traffic are not pinged. On shutdown, including SIGINT, open sockets are sent close 1001 so a browser can reconnect immediately instead of waiting on a dead connection.
+
+  An error in one connection never reaches another or the process: a throwing route handler closes its own socket with 1011 and is logged, including from `async` handlers, and sending on a closed socket returns `false` rather than throwing into route code.
+
 - **Template patches: `*.template-patch.html`.** A template was either a complete standalone document or nothing, so anything wanting a site's chrome plus its own wrapper had to *copy* that chrome. A copy is a snapshot: it stops matching the original the moment the original is edited, silently, with nothing to signal the drift — and regenerating on change does not close it, because the usual way a template is edited is somebody opening the file, which raises no event at all.
 
   A patch file is not a template. It names the template it applies to in its own frontmatter (`extends: default`) and describes changes to it, applied on every render:
@@ -27,6 +69,8 @@ All notable changes to `kempo-server` are documented in this file.
   Implemented with no new dependency and deliberately without an HTML parser: parsers perform tree construction — relocating elements, inserting implied tags, closing what they believe unclosed — and a template is not HTML but a partial document full of `<location />`, `<fragment />`, `<if>`, `<foreach>` and `{{vars}}` that such a parser is entitled to rearrange. Elements are instead *located*, and every edit is a splice of the original text, so anything not explicitly targeted survives byte for byte. Nesting is resolved by depth counting, so `<div id="main">` containing further divs ends where it actually ends.
 
 ### Fixed
+- **`maxRescanAttempts` allowed one rescan too many.** A path is meant to be blacklisted after `maxRescanAttempts` failed rescans, as the docs and the tests both say, but the comparison was strictly greater-than, so `maxRescanAttempts: 3` performed four rescans before giving up. It now stops at three.
+- **`rescan()` reported whichever router answered first, and routers never unregistered.** The rescan emitter is module-level and `router()` registered on it without ever removing itself, so every router built in a process kept answering rescans for the life of that process, scanning directories nobody served any more. `rescan()` then resolved with the first answer, which made the result depend on scan speed: a router whose root was already deleted reported 0 files instantly and beat a live one. A router now unregisters when its server closes (it learns its server from the first request or upgrade), `router()`'s handler exposes `dispose()` for embedders that never send one, and `rescan()` waits for every router and resolves with the largest count. With one router, which is every normal deployment, nothing changes. This also removes the `MaxListenersExceededWarning` printed once a process had built more than ten routers.
 - **`<fragment>` tags inside a page's `<content>` block are now resolved.** Fragments were only ever resolved in templates: `resolveFragmentTags` ran against the template, and page content was injected afterwards by `replaceLocations`, so a `<fragment name="…">` written in a page was never looked up. It did not error — the raw tag and its fallback content were emitted into the HTML, where the browser silently dropped the unknown element and rendered the fallback, which reads as "the fragment could not be found" rather than "pages cannot do this".
 
   This was an asymmetry rather than a deliberate limit: `<location>` tags inside page content were already being filled, on the line directly above. Page content blocks now get both passes, in the same order a template does — fragments resolved, then locations filled. A page can therefore ask for a fragment by name, which is the whole point of the pull model and something only templates could do before.

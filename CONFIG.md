@@ -49,6 +49,7 @@ export default {
 - [cache](#cache)
 - [middleware](#middleware)
 - [templating](#templating)
+- [websocket](#websocket)
 
 ## Cache
 
@@ -334,10 +335,13 @@ export default {
     'POST.js',
     'PUT.js',
     'DELETE.js',
+    'WS.js',
     'index.js'
   ]
 };
 ```
+
+`WS.js` handles WebSocket upgrades rather than HTTP requests; see [websocket](#websocket).
 
 ### noRescanPaths
 
@@ -533,6 +537,74 @@ These variables are available in all templates:
 ```
 
 Conditions support `===`, `!==`, `>`, `<`, `>=`, `<=`, `&&`, `||`, `!`, parentheses, string/number/boolean literals, and dot-path variable references.
+
+### websocket
+
+Options for WebSocket connections. A route file named `WS.js` accepts an upgrade at its path; see the [WebSockets documentation](./docs/websockets.html) for the routing rules and the socket API.
+
+```javascript
+export default {
+  websocket: {
+    enabled: true,
+    maxMessageSize: 1048576,
+    allowedOrigins: null,
+    requireOrigin: false,
+    heartbeatInterval: 30000,
+    heartbeatTimeout: 10000
+  }
+};
+```
+
+#### enabled
+
+Set to `false` to refuse every upgrade with a `404`, regardless of any `WS.js` files present. Defaults to `true`; a server with no `WS.js` behaves exactly as it did before WebSocket support existed, so there is rarely a reason to change this.
+
+#### maxMessageSize
+
+The largest message accepted from a client, in bytes. Defaults to `1048576` (1 MB). Exceeding it closes the connection with code `1009`.
+
+This is **deliberately far below [maxBodySize](#maxbodysize)**, and the two are unrelated: `maxBodySize` bounds a single HTTP request body, while this bounds a message on a long-lived connection. The limit is checked against the length a frame *declares*, before any payload is buffered, so an oversized claim is refused at no cost, and it is checked again against the reassembled total so a client cannot creep past it with many small fragments.
+
+Raise it only for a route that genuinely moves large blobs over a socket, and remember the ceiling is per connection: the worst case is roughly `maxMessageSize` × the number of open sockets.
+
+#### allowedOrigins
+
+Which origins may open a connection. Defaults to `null`, meaning same-origin only — the `Origin` header's host must match the `Host` the request arrived on.
+
+```javascript
+export default {
+  websocket: {
+    // Same-origin only (the default)
+    allowedOrigins: null,
+
+    // An explicit allow-list
+    allowedOrigins: ['https://app.example.com', 'https://admin.example.com'],
+
+    // Any origin
+    allowedOrigins: '*'
+  }
+};
+```
+
+**Do not set `'*'` on a server that authenticates with cookies.** Cookies are sent on a WebSocket handshake, and browsers apply no same-origin policy to WebSockets — there is no preflight, and nothing is blocked client-side. Without a server-side origin check, any page on any site can open a socket to your server that is fully authenticated as whoever is signed in. This is called cross-site WebSocket hijacking, and this setting is the only thing preventing it.
+
+#### requireOrigin
+
+Whether to reject a handshake that carries no `Origin` header at all. Defaults to `false`.
+
+Browsers always send `Origin` on a handshake, so its absence means a non-browser client — a CLI tool, a service, another server — which carries no ambient cookies and is not what the origin check defends against. Set this to `true` if your sockets are only ever meant to be opened by a browser.
+
+#### heartbeatInterval
+
+How often, in milliseconds, an idle connection is pinged. Defaults to `30000`. Set to `0` to disable the heartbeat entirely.
+
+Connections with traffic on them are not pinged; traffic is its own proof of life.
+
+#### heartbeatTimeout
+
+How long, in milliseconds, to wait for the answering pong before dropping the connection. Defaults to `10000`.
+
+The heartbeat is what notices a client that vanished without closing — a closed laptop, a dropped network — which TCP alone can leave looking open indefinitely.
 
 ## Configuration Examples
 

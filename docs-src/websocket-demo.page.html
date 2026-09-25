@@ -1,0 +1,101 @@
+<page pageName="WebSocket Demo" title="WebSocket Demo - Kempo Server">
+	<content>
+    <p>A live echo connection against <code>/echo</code>, with an HTTP endpoint at <code>/echo/push</code> that sends to it. See <a href="websockets.html">WebSockets</a> for how it works.</p>
+    <p class="small tc-muted">This page needs a running kempo-server. On static hosting the connection will simply fail &mdash; run <code>npm run dev</code> in the kempo-server repo and open this page from that server.</p>
+
+    <div class="d-f my" style="gap: var(--spacer_h); align-items: center">
+      <strong id="status">Connecting&hellip;</strong>
+      <div class="flex"></div>
+      <button id="reconnect" class="link"><k-icon name="redo"></k-icon> Reconnect</button>
+    </div>
+
+    <h2>Send a message</h2>
+    <div class="d-f mb" style="gap: var(--spacer_h)">
+      <input id="text" class="flex-1" placeholder="Type something" value="hello" />
+      <button id="send">Send text</button>
+      <button id="sendBinary">Send bytes</button>
+    </div>
+
+    <h2>Push over HTTP</h2>
+    <p>This does not use the socket at all &mdash; it posts to <code>/echo/push</code>, which finds this connection in the registry and sends to it.</p>
+    <div class="d-f mb" style="gap: var(--spacer_h)">
+      <input id="pushText" class="flex-1" placeholder="Message to push" value="pushed from an HTTP route" />
+      <button id="push">POST /echo/push</button>
+    </div>
+
+    <h2>Log</h2>
+    <pre id="log" class="full bg-alt p" style="min-height: 12rem; max-height: 24rem; overflow: auto"></pre>
+  </content>
+  <content location="scripts">
+    <script type="module" src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/src/components/Icon.js"></script>
+    <script type="module">
+      const log = document.getElementById('log');
+      const status = document.getElementById('status');
+      let socket = null;
+
+      const write = (direction, message) => {
+        const time = new Date().toLocaleTimeString();
+        log.textContent += `[${time}] ${direction} ${message}\n`;
+        log.scrollTop = log.scrollHeight;
+      };
+
+      const setStatus = (text, connected) => {
+        status.textContent = text;
+        status.className = connected ? 'tc-primary' : 'tc-muted';
+      };
+
+      const connect = () => {
+        if(socket && socket.readyState <= 1) socket.close();
+
+        setStatus('Connecting…', false);
+        socket = new WebSocket(`ws://${location.host}/echo?room=general`);
+        socket.binaryType = 'arraybuffer';
+
+        socket.addEventListener('open', () => {
+          setStatus(`Connected to /echo`, true);
+          write('--', 'socket open');
+        });
+
+        socket.addEventListener('message', (event) => {
+          write('<-', event.data);
+        });
+
+        socket.addEventListener('close', (event) => {
+          setStatus(`Closed (${event.code})`, false);
+          write('--', `socket closed with ${event.code}`);
+        });
+
+        socket.addEventListener('error', () => {
+          write('!!', 'socket error');
+        });
+      };
+
+      document.getElementById('send').addEventListener('click', () => {
+        const text = document.getElementById('text').value;
+        socket.send(text);
+        write('->', text);
+      });
+
+      document.getElementById('sendBinary').addEventListener('click', () => {
+        // 250 and 255 are not valid UTF-8, so they only survive a byte-preserving path
+        const bytes = new Uint8Array([0, 1, 2, 250, 255]);
+        socket.send(bytes);
+        write('->', `binary [${Array.from(bytes).join(', ')}]`);
+      });
+
+      document.getElementById('push').addEventListener('click', async () => {
+        const text = document.getElementById('pushText').value;
+        const response = await fetch('/echo/push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, room: 'general' })
+        });
+        write('->', `POST /echo/push ${JSON.stringify(await response.json())}`);
+      });
+
+      document.getElementById('reconnect').addEventListener('click', connect);
+
+      connect();
+    </script>
+  </content>
+</page>

@@ -23,13 +23,13 @@ export default {
     });
     
     if (flags.config !== '.config.js') {
-      return fail('default config should be .config.js');
+      throw new Error('default config should be .config.js');
     }
     if (flags.port !== '8080') {
-      return fail('other flags should still work');
+      throw new Error('other flags should still work');
     }
     if (flags.root !== 'public') {
-      return fail('root flag should work');
+      throw new Error('root flag should work');
     }
     
     pass('config flag has correct default');
@@ -50,10 +50,10 @@ export default {
     });
     
     if (flags.config !== 'dev.config.js') {
-      return fail('should parse custom config file');
+      throw new Error('should parse custom config file');
     }
     if (flags.root !== 'public') {
-      return fail('other flags should still work');
+      throw new Error('other flags should still work');
     }
     
     pass('long form config flag parsing');
@@ -74,10 +74,10 @@ export default {
     });
     
     if (flags.config !== 'production.config.js') {
-      return fail('should parse short form config flag');
+      throw new Error('should parse short form config flag');
     }
     if (flags.root !== 'public') {
-      return fail('other flags should still work');
+      throw new Error('other flags should still work');
     }
     
     pass('short form config flag parsing');
@@ -109,10 +109,10 @@ export default {
       try {
         const response = await httpGet(`http://localhost:${port}/test.custom`);
         if (response.res.statusCode !== 200) {
-          return fail('custom mime type should be served');
+          throw new Error('custom mime type should be served');
         }
         if (response.res.headers['content-type'] !== 'text/custom; charset=utf-8') {
-          return fail('should use custom mime type with charset');
+          throw new Error('should use custom mime type with charset');
         }
         pass('default config file usage');
       } finally {
@@ -148,10 +148,10 @@ export default {
       try {
         const response = await httpGet(`http://localhost:${port}/test.special`);
         if (response.res.statusCode !== 200) {
-          return fail('custom config should be loaded');
+          throw new Error('custom config should be loaded');
         }
         if (response.res.headers['content-type'] !== 'text/special; charset=utf-8') {
-          return fail('should use custom config mime type with charset');
+          throw new Error('should use custom config mime type with charset');
         }
         pass('relative path config file usage');
       } finally {
@@ -188,10 +188,10 @@ export default {
       try {
         const response = await httpGet(`http://localhost:${port}/test.absolute`);
         if (response.res.statusCode !== 200) {
-          return fail('absolute config path should work');
+          throw new Error('absolute config path should work');
         }
         if (response.res.headers['content-type'] !== 'text/absolute; charset=utf-8') {
-          return fail('should use absolute config mime type with charset');
+          throw new Error('should use absolute config mime type with charset');
         }
         pass('absolute path config file usage');
       } finally {
@@ -226,10 +226,10 @@ export default {
       try {
         const response = await httpGet(`http://localhost:${port}/test.jsononly`);
         if (response.res.statusCode !== 200) {
-          return fail('should fall back to .config.json and serve custom mime');
+          throw new Error('should fall back to .config.json and serve custom mime');
         }
         if (response.res.headers['content-type'] !== 'text/jsononly; charset=utf-8') {
-          return fail('should use config from JSON fallback');
+          throw new Error('should use config from JSON fallback');
         }
         pass('falls back to .config.json when .config.js missing');
       } finally {
@@ -257,10 +257,10 @@ export default {
       try {
         const response = await httpGet(`http://localhost:${port}/index.html`);
         if (response.res.statusCode !== 200) {
-          return fail('should fall back to default config and serve HTML');
+          throw new Error('should fall back to default config and serve HTML');
         }
         if (!response.body.toString().includes('<h1>Home</h1>')) {
-          return fail('should serve the file content');
+          throw new Error('should serve the file content');
         }
         pass('fallback to default config when file missing');
       } finally {
@@ -289,10 +289,10 @@ export default {
       try {
         const response = await httpGet(`http://localhost:${port}/index.html`);
         if (response.res.statusCode !== 200) {
-          return fail('should fall back to default config with malformed JSON');
+          throw new Error('should fall back to default config with malformed JSON');
         }
         if (!response.body.toString().includes('<h1>Home</h1>')) {
-          return fail('should serve the file content');
+          throw new Error('should serve the file content');
         }
         pass('graceful handling of malformed config');
       } finally {
@@ -330,19 +330,19 @@ export default {
         // Test that default config is still used for JS files
         const jsResponse = await httpGet(`http://localhost:${port}/test.js`);
         if (jsResponse.res.statusCode !== 200) {
-          return fail('JS files should still be served from default config');
+          throw new Error('JS files should still be served from default config');
         }
         if (jsResponse.res.headers['content-type'] !== 'application/javascript') {
-          return fail('should use default JS mime type');
+          throw new Error('should use default JS mime type');
         }
         
         // Test that custom config overrides work
         const customResponse = await httpGet(`http://localhost:${port}/test.custom`);
         if (customResponse.res.statusCode !== 200) {
-          return fail('custom mime type should work');
+          throw new Error('custom mime type should work');
         }
         if (customResponse.res.headers['content-type'] !== 'text/custom; charset=utf-8') {
-          return fail('should use custom mime type with charset');
+          throw new Error('should use custom mime type with charset');
         }
         pass('config merging with defaults');
       } finally {
@@ -388,12 +388,12 @@ export default {
         await router(flags, log);
         
         // If we reach here, the test failed
-        return fail('router should have thrown error for config file outside root');
+        throw new Error('router should have thrown error for config file outside root');
       } catch (error) {
         log('Error caught: ' + error.message);
         // Verify the error message contains expected text
         if (!error.message.includes('Config file must be within the server root directory')) {
-          return fail(`unexpected error message: ${error.message}`);
+          throw new Error(`unexpected error message: ${error.message}`);
         }
         
         pass('router correctly throws error for config file outside server root');

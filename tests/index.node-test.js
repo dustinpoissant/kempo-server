@@ -22,12 +22,12 @@ export default {
       
       if(res.statusCode !== 200) {
         child.kill();
-        return fail('server running');
+        throw new Error('server running');
       }
       
       if(body.toString() !== 'home') {
         child.kill();
-        return fail('served');
+        throw new Error('served');
       }
       
       child.kill();

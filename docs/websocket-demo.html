@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta
+		name="viewport"
+		content="width=device-width, initial-scale=1.0"
+	/>
+	<title>WebSocket Demo - Kempo Server</title>
+	<link rel="icon" type="image/svg+xml" href="./media/icon.svg" />
+	<link rel="icon" type="image/png" sizes="32x32" href="./media/icon32.png" />
+	<link rel="manifest" href="./manifest.json" />
+	<link
+		rel="stylesheet"
+		href="https://cdn.jsdelivr.net/npm/kempo-css@2/dist/kempo.min.css"
+	/>
+	<link rel="stylesheet" href="./theme.css" />
+	<script>
+		window.litDisableBundleWarning = true;
+		window.kempo = { pathsToIcons: ['https://cdn.jsdelivr.net/npm/kempo-ui@0.3/icons/'] };
+	</script>
+</head>
+<body>
+	
+  <k-nav
+    fixed
+    class="bg-primary"
+  >
+    <button
+      id="toggleNavSideMenu"
+      class="link"
+    >
+      <k-icon name="menu"></k-icon>
+    </button>
+    <a
+      href="./"
+      class="d-if ph"
+      style="align-items: center"
+    >
+      <img
+        src="./media/icon32.png"
+        alt="Kempo Server Icon"
+        class="pr"
+      />
+      Kempo Server
+    </a>
+    <div class="flex"></div>
+    <a
+      href="https://github.com/dustinpoissant/kempo-server?tab=License-1-ov-file#creative-commons-attribution-noncommercial-sharealike-20"
+      target="_blank"
+    ><k-icon name="license"></k-icon></a>
+    <a
+      href="https://www.npmjs.com/package/kempo-server"
+      target="_blank"
+    ><k-icon name="npm"></k-icon></a>
+    <a
+      href="https://github.com/dustinpoissant/kempo-server"
+      target="_blank"
+    ><k-icon name="github-mark"></k-icon></a>
+    <k-theme-switcher
+      class="mr"
+      style="
+        --padding: 0.5rem;
+        --c_active: var(--tc_on_primary);
+        --tc_active: var(--c_primary);
+        --c_inactive__hover: rgba(255, 255, 255, 0.1);
+      "
+    ></k-theme-switcher>
+  </k-nav>
+  <div style="width: 100%; height: 4rem;"></div>
+  <k-aside
+    id="navSideMenu"
+    state="offscreen"
+  >
+    <menu>
+      <a
+        href="./"
+        class="ta-center bb mb r0"
+      >
+        <h1 class="tc-primary">Kempo Server</h1>
+        <img
+          src="./media/icon128.png"
+          alt="Kempo UI Icon"
+        />
+      </a>
+      
+	<h3 class="mt mb0">Advanced Features</h3>
+	<a href="configuration.html" class="d-b pq pl">Configuration</a>
+	<a href="templating.html" class="d-b pq pl">Templating</a>
+	<a href="middleware.html" class="d-b pq pl">Middleware</a>
+	<a href="websockets.html" class="d-b pq pl">WebSockets</a>
+	<a href="caching.html" class="d-b pq pl">Module Caching</a>
+	<a href="cli-utils.html" class="d-b pq pl">CLI Utilities</a>
+	<a href="fs-utils.html" class="d-b pq pl">File System Utilities</a>
+	<a href="examples.html" class="d-b pq pl">Examples & Demos</a>
+
+	<h3 class="mt mb0">Getting Started</h3>
+	<a href="./" class="d-b pq pl">Quick Start</a>
+	<a href="./routing.html" class="d-b pq pl">Routing</a>
+	<a href="./request-response.html" class="d-b pq pl">Request & Response</a>
+	<br /><br />
+
+    </menu>
+    <k-aside-spacer></k-aside-spacer>
+    <k-theme-switcher
+      labels
+      style="--padding:var(--spacer_h);margin:var(--spacer_h) auto"
+    ></k-theme-switcher>
+  </k-aside>
+  <script
+    src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/src/components/Aside.js"
+    type="module"
+  ></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/src/components/Main.js"
+    type="module"
+  ></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/src/components/Nav.js"
+    type="module"
+  ></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/src/components/Icon.js"
+    type="module"
+  ></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/src/components/ThemeSwitcher.js"
+    type="module"
+  ></script>
+  <script>
+    document.getElementById('toggleNavSideMenu').addEventListener('click', async () => {
+      await window.customElements.whenDefined('k-aside');
+      document.getElementById('navSideMenu').toggle();
+    });
+    document.addEventListener('click', function (e) {
+      if (e.target.matches('a[href^="#"]')) {
+        e.preventDefault();
+        const targetId = e.target.getAttribute('href').replace('#', '');
+        const target = document.getElementById(targetId);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth' });
+          const url = window.location.pathname + window.location.search + '#' + targetId;
+          history.replaceState(null, '', url);
+        }
+      }
+    });
+  </script>
+
+	<main>
+		<h1 class="ta-center">WebSocket Demo</h1>
+		
+    <p>A live echo connection against <code>/echo</code>, with an HTTP endpoint at <code>/echo/push</code> that sends to it. See <a href="websockets.html">WebSockets</a> for how it works.</p>
+    <p class="small tc-muted">This page needs a running kempo-server. On static hosting the connection will simply fail &mdash; run <code>npm run dev</code> in the kempo-server repo and open this page from that server.</p>
+
+    <div class="d-f my" style="gap: var(--spacer_h); align-items: center">
+      <strong id="status">Connecting&hellip;</strong>
+      <div class="flex"></div>
+      <button id="reconnect" class="link"><k-icon name="redo"></k-icon> Reconnect</button>
+    </div>
+
+    <h2>Send a message</h2>
+    <div class="d-f mb" style="gap: var(--spacer_h)">
+      <input id="text" class="flex-1" placeholder="Type something" value="hello" />
+      <button id="send">Send text</button>
+      <button id="sendBinary">Send bytes</button>
+    </div>
+
+    <h2>Push over HTTP</h2>
+    <p>This does not use the socket at all &mdash; it posts to <code>/echo/push</code>, which finds this connection in the registry and sends to it.</p>
+    <div class="d-f mb" style="gap: var(--spacer_h)">
+      <input id="pushText" class="flex-1" placeholder="Message to push" value="pushed from an HTTP route" />
+      <button id="push">POST /echo/push</button>
+    </div>
+
+    <h2>Log</h2>
+    <pre id="log" class="full bg-alt p" style="min-height: 12rem; max-height: 24rem; overflow: auto"></pre>
+  
+	</main>
+	<div style="height:25vh"></div>
+	<script
+		type="module"
+		src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/dist/components/Import.js"
+	></script>
+	
+    <script type="module" src="https://cdn.jsdelivr.net/npm/kempo-ui@0.3/src/components/Icon.js"></script>
+    <script type="module">
+      const log = document.getElementById('log');
+      const status = document.getElementById('status');
+      let socket = null;
+
+      const write = (direction, message) => {
+        const time = new Date().toLocaleTimeString();
+        log.textContent += `[${time}] ${direction} ${message}\n`;
+        log.scrollTop = log.scrollHeight;
+      };
+
+      const setStatus = (text, connected) => {
+        status.textContent = text;
+        status.className = connected ? 'tc-primary' : 'tc-muted';
+      };
+
+      const connect = () => {
+        if(socket && socket.readyState <= 1) socket.close();
+
+        setStatus('Connecting…', false);
+        socket = new WebSocket(`ws://${location.host}/echo?room=general`);
+        socket.binaryType = 'arraybuffer';
+
+        socket.addEventListener('open', () => {
+          setStatus(`Connected to /echo`, true);
+          write('--', 'socket open');
+        });
+
+        socket.addEventListener('message', (event) => {
+          write('<-', event.data);
+        });
+
+        socket.addEventListener('close', (event) => {
+          setStatus(`Closed (${event.code})`, false);
+          write('--', `socket closed with ${event.code}`);
+        });
+
+        socket.addEventListener('error', () => {
+          write('!!', 'socket error');
+        });
+      };
+
+      document.getElementById('send').addEventListener('click', () => {
+        const text = document.getElementById('text').value;
+        socket.send(text);
+        write('->', text);
+      });
+
+      document.getElementById('sendBinary').addEventListener('click', () => {
+        // 250 and 255 are not valid UTF-8, so they only survive a byte-preserving path
+        const bytes = new Uint8Array([0, 1, 2, 250, 255]);
+        socket.send(bytes);
+        write('->', `binary [${Array.from(bytes).join(', ')}]`);
+      });
+
+      document.getElementById('push').addEventListener('click', async () => {
+        const text = document.getElementById('pushText').value;
+        const response = await fetch('/echo/push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, room: 'general' })
+        });
+        write('->', `POST /echo/push ${JSON.stringify(await response.json())}`);
+      });
+
+      document.getElementById('reconnect').addEventListener('click', connect);
+
+      connect();
+    </script>
+  
+</body>
+</html>

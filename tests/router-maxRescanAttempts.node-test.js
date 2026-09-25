@@ -27,7 +27,7 @@ export default {
       if(miss1.res.statusCode !== 404) {
         server.close();
         process.chdir(prev);
-        return fail('should 404 on first attempt');
+        throw new Error('should 404 on first attempt');
       }
       
       await write(dir, 'newfile.html', '<h1>New File</h1>');
@@ -36,13 +36,13 @@ export default {
       if(hit.res.statusCode !== 200) {
         server.close();
         process.chdir(prev);
-        return fail('should find file after creation on rescan');
+        throw new Error('should find file after creation on rescan');
       }
       
       if(!hit.body.toString().includes('New File')) {
         server.close();
         process.chdir(prev);
-        return fail('should serve correct content');
+        throw new Error('should serve correct content');
       }
       
       server.close();
@@ -72,7 +72,7 @@ export default {
       if(miss1.res.statusCode !== 404) {
         server.close();
         process.chdir(prev);
-        return fail('should 404 initially');
+        throw new Error('should 404 initially');
       }
       
       await write(dir, 'test.html', '<h1>Test</h1>');
@@ -81,7 +81,7 @@ export default {
       if(hit.res.statusCode !== 200) {
         server.close();
         process.chdir(prev);
-        return fail('should find file on second request');
+        throw new Error('should find file on second request');
       }
       
       await new Promise(r => setTimeout(r, 50));
@@ -90,7 +90,7 @@ export default {
       if(hit2.res.statusCode !== 200) {
         server.close();
         process.chdir(prev);
-        return fail('should continue serving found file');
+        throw new Error('should continue serving found file');
       }
       
       server.close();
@@ -121,7 +121,7 @@ export default {
         if(miss.res.statusCode !== 404) {
           server.close();
           process.chdir(prev);
-          return fail(`should 404 on attempt ${i}`);
+          throw new Error(`should 404 on attempt ${i}`);
         }
       }
       
@@ -131,7 +131,7 @@ export default {
       if(stillMiss.res.statusCode !== 404) {
         server.close();
         process.chdir(prev);
-        return fail('should still 404 after blacklisting');
+        throw new Error('should still 404 after blacklisting');
       }
       
       server.close();
@@ -161,21 +161,21 @@ export default {
       if(miss1a.res.statusCode !== 404) {
         server.close();
         process.chdir(prev);
-        return fail('file-a should 404 initially');
+        throw new Error('file-a should 404 initially');
       }
       
       const miss1b = await httpGet(`http://localhost:${port}/file-b.html`);
       if(miss1b.res.statusCode !== 404) {
         server.close();
         process.chdir(prev);
-        return fail('file-b should 404 initially');
+        throw new Error('file-b should 404 initially');
       }
       
       const miss2a = await httpGet(`http://localhost:${port}/file-a.html`);
       if(miss2a.res.statusCode !== 404) {
         server.close();
         process.chdir(prev);
-        return fail('file-a should 404 on attempt 2');
+        throw new Error('file-a should 404 on attempt 2');
       }
       
       await write(dir, 'file-b.html', '<h1>File B</h1>');
@@ -184,7 +184,7 @@ export default {
       if(hitB.res.statusCode !== 200) {
         server.close();
         process.chdir(prev);
-        return fail('file-b should be found after creation');
+        throw new Error('file-b should be found after creation');
       }
       
       await write(dir, 'file-a.html', '<h1>File A</h1>');
@@ -193,7 +193,7 @@ export default {
       if(missA.res.statusCode !== 404) {
         server.close();
         process.chdir(prev);
-        return fail('file-a should be blacklisted after 2 attempts');
+        throw new Error('file-a should be blacklisted after 2 attempts');
       }
       
       server.close();
@@ -224,7 +224,7 @@ export default {
       if(miss1.res.statusCode !== 404) {
         server.close();
         process.chdir(prev);
-        return fail('should 404 initially');
+        throw new Error('should 404 initially');
       }
       
       await write(dir, 'skip-this.html', '<h1>Skip</h1>');
@@ -233,7 +233,7 @@ export default {
       if(stillMiss.res.statusCode !== 404) {
         server.close();
         process.chdir(prev);
-        return fail('should not rescan paths matching noRescanPaths');
+        throw new Error('should not rescan paths matching noRescanPaths');
       }
       
       server.close();
@@ -263,7 +263,7 @@ export default {
       if(miss1.res.statusCode !== 404) {
         server.close();
         process.chdir(prev);
-        return fail('should 404 initially');
+        throw new Error('should 404 initially');
       }
       
       await write(dir, 'no-scan.html', '<h1>No Scan</h1>');
@@ -272,7 +272,7 @@ export default {
       if(stillMiss.res.statusCode !== 404) {
         server.close();
         process.chdir(prev);
-        return fail('should not rescan when maxRescanAttempts is 0');
+        throw new Error('should not rescan when maxRescanAttempts is 0');
       }
       
       server.close();

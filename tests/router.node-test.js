@@ -25,14 +25,14 @@ export default {
       if(ok.res.statusCode !== 200) {
         server.close();
         process.chdir(prev);
-        return fail('static 200');
+        throw new Error('static 200');
       }
       
       const miss = await httpGet(`http://localhost:${port}/nope`);
       if(miss.res.statusCode !== 404) {
         server.close();
         process.chdir(prev);
-        return fail('404');
+        throw new Error('404');
       }
       
       server.close();
@@ -51,19 +51,22 @@ export default {
       await new Promise(r => server.listen(port, r));
       await new Promise(r => setTimeout(r, 50));
       
-      const miss1 = await httpGet(`http://localhost:${port}/late.html`);
+      // Not in the fixture: late.html is, so it would never 404. A file that appears after startup is the point.
+      const miss1 = await httpGet(`http://localhost:${port}/created-after-start.html`);
       if(miss1.res.statusCode !== 404) {
         server.close();
         process.chdir(prev);
-        return fail('first 404');
+        throw new Error('first 404');
       }
       
-      // File already exists, should be found on rescan
-      const hit = await httpGet(`http://localhost:${port}/late.html`);
+      await write(dir, 'created-after-start.html', '<h1>Created after start</h1>');
+      
+      // The file now exists, so the rescan on this request should find it
+      const hit = await httpGet(`http://localhost:${port}/created-after-start.html`);
       if(hit.res.statusCode !== 200) {
         server.close();
         process.chdir(prev);
-        return fail('served after rescan');
+        throw new Error('served after rescan');
       }
       
       server.close();
@@ -90,17 +93,17 @@ export default {
       await new Promise(r => setTimeout(r, 50));
       
       const r1 = await httpGet(`http://localhost:${port}/a`);
-      if(r1.body.toString() !== 'A') {
+      if(r1.body.toString().trim() !== 'A') {
         server.close();
         process.chdir(prev);
-        return fail('custom route');
+        throw new Error('custom route');
       }
       
       const r2 = await httpGet(`http://localhost:${port}/b/1.txt`);
-      if(r2.body.toString() !== 'B1') {
+      if(r2.body.toString().trim() !== 'B1') {
         server.close();
         process.chdir(prev);
-        return fail('wildcard');
+        throw new Error('wildcard');
       }
       
       server.close();

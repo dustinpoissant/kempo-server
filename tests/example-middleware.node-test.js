@@ -13,18 +13,18 @@ export default {
     await setEnv({API_KEY: 'abc'}, async () => {
       const res1 = createMockRes();
       await authMiddleware(createMockReq({url:'/private'}), res1, async ()=>{});
-      if(res1.statusCode !== 401) return fail('should 401 without key');
+      if(res1.statusCode !== 401) throw new Error('should 401 without key');
 
       const res2 = createMockRes();
       const req2 = createMockReq({headers: {'x-api-key': 'abc'}, url:'/private'});
       let called = false;
       await authMiddleware(req2, res2, async ()=>{ called = true; });
-      if(!called) return fail('should call next');
-      if(!(req2.user && req2.user.authenticated)) return fail('user attached');
+      if(!called) throw new Error('should call next');
+      if(!(req2.user && req2.user.authenticated)) throw new Error('user attached');
 
       const res3 = createMockRes();
       await authMiddleware(createMockReq({url:'/public/file'}), res3, async ()=>{});
-      if(res3.isEnded() === true) return fail('public should not end');
+      if(res3.isEnded() === true) throw new Error('public should not end');
     });
     
     pass('auth middleware');

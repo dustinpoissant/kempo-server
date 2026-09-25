@@ -19,6 +19,7 @@ import {
 } from './builtinMiddleware.js';
 import { onRescan } from './rescan.js';
 import { renderDir, renderExternalPage } from './templating/index.js';
+import { createUpgradeHandler } from './websocket/index.js';
 
 export default async (flags, log) => {
   log('Initializing router', 3);
@@ -83,6 +84,10 @@ export default async (flags, log) => {
       templating: {
         ...defaultConfig.templating,
         ...(userConfig.templating || {})
+      },
+      websocket: {
+        ...defaultConfig.websocket,
+        ...(userConfig.websocket || {})
       }
     };
     log('User config loaded and merged with defaults', 3);
@@ -123,6 +128,10 @@ export default async (flags, log) => {
           templating: {
             ...defaultConfig.templating,
             ...(userConfig.templating || {})
+          },
+          websocket: {
+            ...defaultConfig.websocket,
+            ...(userConfig.websocket || {})
           }
         };
         log('User config loaded from JSON fallback', 3);
@@ -167,7 +176,7 @@ export default async (flags, log) => {
   let files = await getFiles(rootPath, config, log);
   log(`Initial scan found ${files.length} files`, 2);
 
-  onRescan(async done => {
+  const stopRescan = onRescan(async done => {
     try {
       files = await getFiles(rootPath, config, log);
       log(`Rescan found ${files.length} files`, 2);
@@ -180,30 +189,39 @@ export default async (flags, log) => {
 
   // Initialize middleware runner
   const middlewareRunner = new MiddlewareRunner();
+  /*
+    A WebSocket handshake runs the same chain, minus compression: a 101 carries no body to gzip, and the
+    compression middleware works by replacing res.write/res.end, which the upgrade path never calls.
+  */
+  const socketMiddlewareRunner = new MiddlewareRunner();
+  const useMiddleware = (middleware, { sockets = true } = {}) => {
+    middlewareRunner.use(middleware);
+    if(sockets) socketMiddlewareRunner.use(middleware);
+  };
   
   // Load built-in middleware based on config
   if (config.middleware?.cors?.enabled) {
-    middlewareRunner.use(corsMiddleware(config.middleware.cors));
+    useMiddleware(corsMiddleware(config.middleware.cors));
     log('CORS middleware enabled', 3);
   }
   
   if (config.middleware?.compression?.enabled) {
-    middlewareRunner.use(compressionMiddleware(config.middleware.compression));
+    useMiddleware(compressionMiddleware(config.middleware.compression), { sockets: false });
     log('Compression middleware enabled', 3);
   }
   
   if (config.middleware?.rateLimit?.enabled) {
-    middlewareRunner.use(rateLimitMiddleware(config.middleware.rateLimit));
+    useMiddleware(rateLimitMiddleware(config.middleware.rateLimit));
     log('Rate limit middleware enabled', 3);
   }
   
   if (config.middleware?.security?.enabled) {
-    middlewareRunner.use(securityMiddleware(config.middleware.security));
+    useMiddleware(securityMiddleware(config.middleware.security));
     log('Security middleware enabled', 3);
   }
   
   if (config.middleware?.logging?.enabled) {
-    middlewareRunner.use(loggingMiddleware(config.middleware.logging, log));
+    useMiddleware(loggingMiddleware(config.middleware.logging, log));
     log('Logging middleware enabled', 3);
   }
   
@@ -219,7 +237,7 @@ export default async (flags, log) => {
         const customMiddleware = middlewareModule.default;
         
         if (typeof customMiddleware === 'function') {
-          middlewareRunner.use(customMiddleware({ ...config.middleware, rootPath }));
+          useMiddleware(customMiddleware({ ...config.middleware, rootPath }));
           log(`Custom middleware loaded: ${middlewarePath}`, 3);
         } else {
           log(`Custom middleware error: ${middlewarePath} does not export a default function`, 1);
@@ -591,7 +609,7 @@ export default async (flags, log) => {
     const newAttempts = currentAttempts + 1;
     rescanAttempts.set(requestPath, newAttempts);
     
-    if (newAttempts > config.maxRescanAttempts) {
+    if (newAttempts >= config.maxRescanAttempts) {
       dynamicNoRescanPaths.add(requestPath);
       log(`Path ${requestPath} added to dynamic blacklist after ${newAttempts} failed attempts`, 1);
     }
@@ -600,7 +618,20 @@ export default async (flags, log) => {
     return newAttempts;
   };
   
+  /*
+    A router registers for rescans at construction but only learns its http.Server from the first request or
+    upgrade it sees. Tying the registration to that server's close is what stops a router from answering
+    rescans for a server that no longer exists.
+  */
+  const watchedServers = new WeakSet();
+  const watchServer = (server) => {
+    if(!server || watchedServers.has(server)) return;
+    watchedServers.add(server);
+    server.once('close', stopRescan);
+  };
+
   const requestHandler = async (req, res) => {
+    watchServer(req.socket?.server);
     // Buffer body once early so both middleware and route handlers can access it
     const contentLength = parseInt(req.headers['content-length'] || '0', 10);
     if(contentLength > config.maxBodySize) {
@@ -752,8 +783,139 @@ export default async (flags, log) => {
     });
   };
 
+  /*
+    WebSocket Upgrade
+  */
+
+  const loadRouteModule = async (filePath) => {
+    let module;
+    if(moduleCache && config.cache?.enabled){
+      const fileStats = await stat(filePath);
+      module = moduleCache.get(filePath, fileStats);
+      if(!module){
+        module = await import(pathToFileURL(filePath).href + `?t=${Date.now()}`);
+        moduleCache.set(filePath, module, fileStats, fileStats.size / 1024);
+      }
+    } else {
+      module = await import(pathToFileURL(filePath).href + `?t=${Date.now()}`);
+    }
+    return module.default;
+  };
+
+  /*
+    Finds the WS.js inside a directory a custom or wildcard route mapped the request onto, with the same
+    [param] traversal HTTP custom routes get. The file name is fixed here rather than searched for, so
+    no fallback to index.js or CATCH.js is possible.
+  */
+  const findSocketFileIn = async (resolvedPath) => {
+    const inDir = async (dir, params) => {
+      const filePath = path.join(dir, 'WS.js');
+      try {
+        if((await stat(filePath)).isFile()) return { filePath, params };
+      } catch { /* no WS.js in this directory */ }
+      return null;
+    };
+
+    let literal = null;
+    try {
+      literal = await stat(resolvedPath);
+    } catch(error) {
+      if(error.code !== 'ENOENT') throw error;
+    }
+    if(literal) return literal.isDirectory() ? inDir(resolvedPath, {}) : null;
+
+    // The path does not exist literally, so find the nearest existing ancestor and traverse forward with [param] support
+    let current = resolvedPath;
+    const remaining = [];
+    while(current !== path.dirname(current)){
+      remaining.unshift(path.basename(current));
+      current = path.dirname(current);
+      let ancestor;
+      try {
+        ancestor = await stat(current);
+      } catch(error) {
+        if(error.code === 'ENOENT') continue;
+        throw error;
+      }
+      if(!ancestor.isDirectory()) return null;
+      const walked = await walkDynamic(current, remaining);
+      if(!walked) return null;
+      const walkedStat = await stat(walked.filePath);
+      return walkedStat.isDirectory() ? inDir(walked.filePath, walked.params) : null;
+    }
+    return null;
+  };
+
+  /*
+    Resolves an upgrade to a file named exactly WS.js. Precedence matches HTTP: an exact custom route,
+    then a wildcard route, then the served tree, so a package mapped in through customRoutes (kempo
+    serves its whole API this way) can ship a WS.js just as the site itself can. findFile falls back to
+    index.js / CATCH.js for a directory request, which would hand an upgrade to a handler written for
+    HTTP, so the basename is verified rather than trusted.
+  */
+  const resolveSocketRoute = async (requestPath) => {
+    /*
+      WS.js is executed, and a mapped directory can sit outside rootPath, so a path that could climb out
+      of it is refused outright rather than resolved.
+    */
+    let decoded;
+    try {
+      decoded = decodeURIComponent(requestPath);
+    } catch {
+      return null;
+    }
+    if(decoded.split(/[\\/]/).includes('..')) return null;
+
+    const normalized = ('/' + decoded.replace(/^\/+/, '')).replace(/(.)\/+$/, '$1');
+    for(const [key, mappedPath] of customRoutes){
+      if(('/' + key.replace(/^\/+/, '')).replace(/(.)\/+$/, '$1') !== normalized) continue;
+      const route = await findSocketFileIn(mappedPath);
+      if(route) return route;
+      break;
+    }
+
+    const wildcardMatch = findWildcardRoute(requestPath);
+    if(wildcardMatch){
+      const route = await findSocketFileIn(resolveWildcardPath(wildcardMatch.filePath, wildcardMatch.matches));
+      if(route) return route;
+    }
+
+    const match = (searchFiles) => {
+      const [filePath, params] = findFile(searchFiles, rootPath, requestPath, 'WS', log);
+      if(!filePath || path.basename(filePath) !== 'WS.js') return null;
+      return { filePath, params };
+    };
+
+    let route = match(files);
+    if(!route && config.maxRescanAttempts > 0 && !shouldSkipRescan(requestPath)){
+      log('No WS.js found, rescanning directory...', 3);
+      files = await getFiles(rootPath, config, log);
+      route = match(files);
+
+      /*
+        Tracked exactly as the HTTP path tracks it. Without this, a client reconnecting in a loop against
+        a path that has no WS.js would trigger a full directory scan on every attempt.
+      */
+      if(route) rescanAttempts.delete(requestPath);
+      else trackRescanAttempt(requestPath);
+    }
+    return route;
+  };
+
   // Return handler with cache instance for external access
   const handler = requestHandler;
+  handler.dispose = stopRescan;
+  const handleUpgrade = createUpgradeHandler({
+    resolveRoute: resolveSocketRoute,
+    loadModule: loadRouteModule,
+    runMiddleware: (req, res, next) => socketMiddlewareRunner.run(req, res, next),
+    config,
+    log
+  });
+  handler.upgrade = (req, socket, head) => {
+    watchServer(socket.server);
+    return handleUpgrade(req, socket, head);
+  };
   handler.moduleCache = moduleCache;
   handler.getStats = () => moduleCache?.getStats() || null;
   handler.logCacheStats = () => moduleCache?.logStats(log);

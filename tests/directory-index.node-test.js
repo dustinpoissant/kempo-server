@@ -14,16 +14,16 @@ export default {
     const [file, params] = findFile(files, root, '/sub-dir/', 'GET', () => {});
     
     if (!file) {
-      return fail('No file found for /sub-dir/ request');
+      throw new Error('No file found for /sub-dir/ request');
     }
     
     if (path.basename(file) !== 'index.html') {
-      return fail(`Expected index.html, got ${path.basename(file)}`);
+      throw new Error(`Expected index.html, got ${path.basename(file)}`);
     }
     
     const relativePath = path.relative(root, file);
     if (relativePath !== path.join('sub-dir', 'index.html')) {
-      return fail(`Expected sub-dir/index.html, got ${relativePath}`);
+      throw new Error(`Expected sub-dir/index.html, got ${relativePath}`);
     }
     
     pass('Directory with trailing slash correctly resolves to index.html');
@@ -41,16 +41,16 @@ export default {
     const [file, params] = findFile(files, root, '/sub-dir', 'GET', () => {});
     
     if (!file) {
-      return fail('No file found for /sub-dir request');
+      throw new Error('No file found for /sub-dir request');
     }
     
     if (path.basename(file) !== 'index.html') {
-      return fail(`Expected index.html, got ${path.basename(file)}`);
+      throw new Error(`Expected index.html, got ${path.basename(file)}`);
     }
     
     const relativePath = path.relative(root, file);
     if (relativePath !== path.join('sub-dir', 'index.html')) {
-      return fail(`Expected sub-dir/index.html, got ${relativePath}`);
+      throw new Error(`Expected sub-dir/index.html, got ${relativePath}`);
     }
     
     pass('Directory without trailing slash correctly resolves to index.html');
@@ -68,11 +68,11 @@ export default {
     const [file, params] = findFile(files, root, '/sub-dir/', 'GET', () => {});
     
     if (!file) {
-      return fail('No file found for /sub-dir/ request');
+      throw new Error('No file found for /sub-dir/ request');
     }
     
     if (path.basename(file) !== 'GET.js') {
-      return fail(`Expected GET.js to take priority, got ${path.basename(file)}`);
+      throw new Error(`Expected GET.js to take priority, got ${path.basename(file)}`);
     }
     
     pass('GET.js correctly takes priority over index.html');
@@ -90,16 +90,16 @@ export default {
     const [file, params] = findFile(files, root, '/', 'GET', () => {});
     
     if (!file) {
-      return fail('No file found for / request');
+      throw new Error('No file found for / request');
     }
     
     if (path.basename(file) !== 'index.html') {
-      return fail(`Expected index.html, got ${path.basename(file)}`);
+      throw new Error(`Expected index.html, got ${path.basename(file)}`);
     }
     
     const relativePath = path.relative(root, file);
     if (relativePath !== 'index.html') {
-      return fail(`Expected root index.html, got ${relativePath}`);
+      throw new Error(`Expected root index.html, got ${relativePath}`);
     }
     
     pass('Root directory correctly resolves to index.html');
@@ -118,17 +118,17 @@ export default {
     const [file, params] = findFile(files, root, '/src/components/', 'GET', () => {});
     
     if (!file) {
-      return fail('No file found for /src/components/ request');
+      throw new Error('No file found for /src/components/ request');
     }
     
     if (path.basename(file) !== 'index.html') {
-      return fail(`Expected index.html, got ${path.basename(file)}`);
+      throw new Error(`Expected index.html, got ${path.basename(file)}`);
     }
     
     const relativePath = path.relative(root, file);
     const expected = path.join('src', 'components', 'index.html');
     if (relativePath !== expected) {
-      return fail(`Expected ${expected}, got ${relativePath}`);
+      throw new Error(`Expected ${expected}, got ${relativePath}`);
     }
     
     pass('Nested directory correctly resolves to index.html');
@@ -146,7 +146,7 @@ export default {
     const [file, params] = findFile(files, root, '/nonexistent/', 'GET', () => {});
     
     if (file !== false) {
-      return fail(`Expected false, got ${file}`);
+      throw new Error(`Expected false, got ${file}`);
     }
     
     pass('Directory with no index file correctly returns false');

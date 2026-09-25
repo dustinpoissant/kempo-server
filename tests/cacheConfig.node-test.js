@@ -38,15 +38,15 @@ export default {
   'default cache configuration includes all required fields': async ({pass, fail}) => {
     const cache = defaultConfig.cache;
     
-    if(!cache) return fail('cache config missing from defaults');
-    if(typeof cache.enabled !== 'boolean') return fail('enabled should be boolean');
-    if(typeof cache.maxSize !== 'number') return fail('maxSize should be number');
-    if(typeof cache.maxMemoryMB !== 'number') return fail('maxMemoryMB should be number');
-    if(typeof cache.ttlMs !== 'number') return fail('ttlMs should be number');
-    if(typeof cache.maxHeapUsagePercent !== 'number') return fail('maxHeapUsagePercent should be number');
-    if(typeof cache.memoryCheckInterval !== 'number') return fail('memoryCheckInterval should be number');
-    if(typeof cache.watchFiles !== 'boolean') return fail('watchFiles should be boolean');
-    if(typeof cache.enableMemoryMonitoring !== 'boolean') return fail('enableMemoryMonitoring should be boolean');
+    if(!cache) throw new Error('cache config missing from defaults');
+    if(typeof cache.enabled !== 'boolean') throw new Error('enabled should be boolean');
+    if(typeof cache.maxSize !== 'number') throw new Error('maxSize should be number');
+    if(typeof cache.maxMemoryMB !== 'number') throw new Error('maxMemoryMB should be number');
+    if(typeof cache.ttlMs !== 'number') throw new Error('ttlMs should be number');
+    if(typeof cache.maxHeapUsagePercent !== 'number') throw new Error('maxHeapUsagePercent should be number');
+    if(typeof cache.memoryCheckInterval !== 'number') throw new Error('memoryCheckInterval should be number');
+    if(typeof cache.watchFiles !== 'boolean') throw new Error('watchFiles should be boolean');
+    if(typeof cache.enableMemoryMonitoring !== 'boolean') throw new Error('enableMemoryMonitoring should be boolean');
     
     pass('Default cache configuration verified');
   },
@@ -64,7 +64,7 @@ export default {
     
     if(handler.moduleCache !== null) {
       await cleanupTempConfig(tempDir);
-      return fail('cache should be null when disabled');
+      throw new Error('cache should be null when disabled');
     }
     
     await cleanupTempConfig(tempDir);
@@ -88,26 +88,26 @@ export default {
     
     if(!handler.moduleCache) {
       await cleanupTempConfig(tempDir);
-      return fail('cache should be enabled');
+      throw new Error('cache should be enabled');
     }
     
     const stats = handler.getStats();
     if(stats.cache.maxSize !== 25) {
       handler.moduleCache.destroy();
       await cleanupTempConfig(tempDir);
-      return fail('maxSize not applied');
+      throw new Error('maxSize not applied');
     }
     
     if(stats.cache.maxMemoryMB !== 10) {
       handler.moduleCache.destroy();
       await cleanupTempConfig(tempDir);
-      return fail('maxMemoryMB not applied');
+      throw new Error('maxMemoryMB not applied');
     }
     
     if(stats.config.ttlMs !== 120000) {
       handler.moduleCache.destroy();
       await cleanupTempConfig(tempDir);
-      return fail('ttlMs not applied');
+      throw new Error('ttlMs not applied');
     }
     
     handler.moduleCache.destroy();

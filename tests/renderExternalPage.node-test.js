@@ -26,8 +26,8 @@ export default {
           rootDir,
           rootDir
         );
-        if(!html.includes('<h1>Admin</h1>')) return fail(`page content missing: ${html}`);
-        if(!html.includes('<html>')) return fail(`template not used: ${html}`);
+        if(!html.includes('<h1>Admin</h1>')) throw new Error(`page content missing: ${html}`);
+        if(!html.includes('<html>')) throw new Error(`template not used: ${html}`);
         pass();
       });
     });
@@ -48,8 +48,8 @@ export default {
           rootDir,
           path.join(rootDir, 'admin')
         );
-        if(!html.includes('<admin>')) return fail(`admin template not resolved: ${html}`);
-        if(!html.includes('content')) return fail(`body missing: ${html}`);
+        if(!html.includes('<admin>')) throw new Error(`admin template not resolved: ${html}`);
+        if(!html.includes('content')) throw new Error(`body missing: ${html}`);
         pass();
       });
     });
@@ -70,7 +70,7 @@ export default {
           rootDir,
           rootDir
         );
-        if(!html.includes('<p>Signature</p>')) return fail(`fragment missing: ${html}`);
+        if(!html.includes('<p>Signature</p>')) throw new Error(`fragment missing: ${html}`);
         pass();
       });
     });
@@ -93,7 +93,7 @@ export default {
           rootDir,
           path.join(rootDir, 'section')
         );
-        if(!html.includes('../')) return fail(`pathToRoot should reflect resolveDir depth: ${html}`);
+        if(!html.includes('../')) throw new Error(`pathToRoot should reflect resolveDir depth: ${html}`);
         // rootDir itself gives depth 0 — resolveDir one level deep gives '../'
         pass();
       });
@@ -115,7 +115,7 @@ export default {
           rootDir,
           rootDir
         );
-        if(!html.includes('<b>Global Banner</b>')) return fail(`global missing: ${html}`);
+        if(!html.includes('<b>Global Banner</b>')) throw new Error(`global missing: ${html}`);
         pass();
       });
     });
@@ -137,7 +137,7 @@ export default {
           {},
           {name: 'World'}
         );
-        if(!html.includes('Hello World')) return fail(`var not interpolated: ${html}`);
+        if(!html.includes('Hello World')) throw new Error(`var not interpolated: ${html}`);
         pass();
       });
     });
@@ -159,7 +159,7 @@ export default {
           {},
           {show: true}
         );
-        if(!shown.includes('visible')) return fail(`should show: ${shown}`);
+        if(!shown.includes('visible')) throw new Error(`should show: ${shown}`);
         const hidden = await renderExternalPage(
           path.join(externalDir, 'page.page.html'),
           rootDir,
@@ -167,7 +167,7 @@ export default {
           {},
           {show: false}
         );
-        if(hidden.includes('visible')) return fail(`should hide: ${hidden}`);
+        if(hidden.includes('visible')) throw new Error(`should hide: ${hidden}`);
         pass();
       });
     });
@@ -187,7 +187,7 @@ export default {
           );
           fail('should have thrown');
         } catch(e){
-          if(!e.message.includes('Template not found')) return fail(`wrong error: ${e.message}`);
+          if(!e.message.includes('Template not found')) throw new Error(`wrong error: ${e.message}`);
           pass();
         }
       });
@@ -211,7 +211,7 @@ export default {
           rootDir,
           rootDir
         );
-        if(result !== reference) return fail(`output differs:\nexpected: ${reference}\ngot: ${result}`);
+        if(result !== reference) throw new Error(`output differs:\nexpected: ${reference}\ngot: ${result}`);
         pass();
       });
     });
@@ -236,8 +236,8 @@ export default {
           10,
           [pluginDir]
         );
-        if(!html.includes('href="/plugin"')) return fail(`extra global dir content missing: ${html}`);
-        if(!html.includes('<h1>Page</h1>')) return fail(`page content missing: ${html}`);
+        if(!html.includes('href="/plugin"')) throw new Error(`extra global dir content missing: ${html}`);
+        if(!html.includes('<h1>Page</h1>')) throw new Error(`page content missing: ${html}`);
         pass();
       });
     });
@@ -263,8 +263,8 @@ export default {
           10,
           [pluginDir]
         );
-        if(!html.includes('href="/home"')) return fail(`rootDir global missing: ${html}`);
-        if(!html.includes('href="/plugin"')) return fail(`extra global dir content missing: ${html}`);
+        if(!html.includes('href="/home"')) throw new Error(`rootDir global missing: ${html}`);
+        if(!html.includes('href="/plugin"')) throw new Error(`extra global dir content missing: ${html}`);
         pass();
       });
     });
@@ -288,7 +288,7 @@ export default {
           10,
           [path.join(externalDir, 'does-not-exist')]
         );
-        if(!html.includes('<h1>Page</h1>')) return fail(`render failed on missing extra dir: ${html}`);
+        if(!html.includes('<h1>Page</h1>')) throw new Error(`render failed on missing extra dir: ${html}`);
         pass();
       });
     });

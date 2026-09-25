@@ -1,0 +1,101 @@
+<page pageName="WebSockets" title="WebSockets - Kempo Server">
+	<content>
+    <p>A route file can accept a WebSocket connection, exchange messages with the browser, and be pushed to from anywhere else in your server. WebSocket support is built on Node's own <code>crypto</code> and socket primitives, so it adds no dependencies.</p>
+    <p><strong>This is the transport layer.</strong> It gives you a connection and messages on it. Channels, topics, presence, rooms and mapping a socket to a signed-in user are all things you build on top &mdash; see <a href="#scope">What is not included</a>.</p>
+    <p>There is a <a href="websocket-demo.html">live demo</a> you can open while running <code>npm run dev</code> in this repo.</p>
+    <h2 id="quick-start">Your First Socket Route</h2>
+    <p>Create a <code>WS.js</code> file. It sits alongside <code>GET.js</code> and <code>POST.js</code>, and exports a default function like any other route file:</p>
+<pre><code class="hljs javascript">// chat/WS.js<br />export default async (request, socket) =&gt; {<br />  socket.on('message', (data, isBinary) =&gt; {<br />    socket.send(`echo: ${data}`);<br />  });<br />};</code></pre>
+    <p>The URL is the directory, exactly as it is for HTTP routes &mdash; this route answers a handshake at <code>/chat</code>. Connect to it with the browser's built-in <code>WebSocket</code>:</p>
+<pre><code class="hljs javascript">const socket = new WebSocket(`ws://${location.host}/chat`);<br /><br />socket.addEventListener('open', () =&gt; socket.send('hello'));<br />socket.addEventListener('message', (event) =&gt; console.log(event.data));</code></pre>
+    <p>The same URL can serve a page and a socket at once. A <code>GET.page.html</code> next to <code>WS.js</code> is served to a normal browser navigation, while a handshake at that path opens the socket, because the two arrive as different kinds of request.</p>
+    <h2 id="routing">How a Handshake Is Routed</h2>
+    <p>Upgrades use the same file-based rules as HTTP routes, with one deliberate restriction.</p>
+    <ul>
+      <li><strong>Only a file named exactly <code>WS.js</code> is ever run for an upgrade.</strong> Directory requests normally fall back to <code>index.js</code> and then <code>CATCH.js</code>; upgrades do not. A handshake at a path with no <code>WS.js</code> gets <code>404</code> and the connection closes, even if that path has a working <code>GET.js</code>.</li>
+      <li><strong>Dynamic segments work.</strong> <code>room/[id]/WS.js</code> answers <code>/room/abc</code> with <code>request.params.id</code> set to <code>"abc"</code>.</li>
+      <li><strong>A normal HTTP request never executes <code>WS.js</code>.</strong> It is a route file, so it is never served as source either.</li>
+      <li><strong>Custom and wildcard routes work.</strong> A <code>WS.js</code> in a directory mapped in through <code>customRoutes</code> answers an upgrade the way it would answer an HTTP request, in the same order: an exact custom route, then a wildcard route, then the served tree. This is how a package in <code>node_modules</code> can ship a socket route. A path containing a <code>..</code> segment is refused outright, since a mapped directory can sit outside the root.</li>
+    </ul>
+    <p>An open connection keeps the copy of <code>WS.js</code> it started with. Editing the file only affects connections opened afterwards, so reconnect (or restart) to pick up a change.</p>
+    <h2 id="socket">The Socket Object</h2>
+    <p>The second argument is the connection. The first is the same enhanced request object an HTTP route receives, so <code>request.headers</code>, <code>request.cookies</code>, <code>request.query</code>, <code>request.params</code> and <code>request.path</code> all behave identically. There is no body on an upgrade, so <code>request.body</code> is <code>null</code>.</p>
+    <h3>Properties</h3>
+    <ul>
+      <li><code>socket.path</code> &mdash; the URL path this connection was opened on</li>
+      <li><code>socket.params</code>, <code>socket.query</code>, <code>socket.headers</code>, <code>socket.cookies</code> &mdash; copies of the handshake values</li>
+      <li><code>socket.data</code> &mdash; an empty object for your own use. Whatever you put here is what you select on when pushing from outside the route.</li>
+      <li><code>socket.readyState</code> &mdash; <code>"connecting"</code>, <code>"open"</code>, <code>"closing"</code> or <code>"closed"</code></li>
+    </ul>
+    <h3>Methods</h3>
+    <ul>
+      <li><code>socket.send(data)</code> &mdash; sends a string as text, a <code>Buffer</code> or <code>Uint8Array</code> as binary, and anything else as JSON. Returns <code>false</code> if the connection can no longer accept data; it never throws.</li>
+      <li><code>socket.close(code, reason)</code> &mdash; starts a clean closing handshake. Defaults to <code>1000</code>.</li>
+      <li><code>socket.terminate()</code> &mdash; drops the connection immediately, with no closing handshake.</li>
+      <li><code>socket.ping(payload)</code> &mdash; sends a ping. The heartbeat does this for you.</li>
+      <li><code>socket.reject(status, message)</code> &mdash; refuses the upgrade. Only valid before the connection opens; see below.</li>
+      <li><code>socket.on(event, handler)</code> / <code>socket.off(event, handler)</code></li>
+    </ul>
+    <h3>Events</h3>
+    <ul>
+      <li><code>message</code> &mdash; <code>(data, isBinary)</code>. Text arrives as a string, binary as a <code>Buffer</code>. Fragmented messages are reassembled before this fires, so you always get whole messages.</li>
+      <li><code>close</code> &mdash; <code>(code, reason)</code>. The code is <code>1006</code> when the connection dropped without a close frame, for instance a closed tab or a lost network.</li>
+      <li><code>error</code> &mdash; <code>(error)</code></li>
+      <li><code>open</code> &mdash; fires once the handshake has completed</li>
+      <li><code>ping</code> / <code>pong</code> &mdash; <code>(payload)</code>. Pings are answered automatically; these are informational.</li>
+    </ul>
+    <p>A handler that throws closes <em>its own</em> connection with <code>1011</code> and logs the error. Other connections are unaffected and the process stays up. This covers <code>async</code> handlers too.</p>
+    <h2 id="auth">Authenticating a Connection</h2>
+    <p>Your route runs <em>before</em> the handshake completes, which is what lets it refuse one. Call <code>socket.reject(status)</code> and the client gets an ordinary HTTP error &mdash; no socket is ever established:</p>
+<pre><code class="hljs javascript">// account/WS.js<br />import getSession from '../../server/utils/auth/getSession.js';<br /><br />export default async (request, socket) =&gt; {<br />  const [error, session] = await getSession({ token: request.cookies.session_token });<br /><br />  if(error) return socket.reject(401, 'Unauthorized');<br /><br />  socket.data.userId = session.userId;<br /><br />  socket.on('message', (data) =&gt; {<br />    socket.send(`hello user ${socket.data.userId}`);<br />  });<br />};</code></pre>
+    <p>Because this is the same cookie parsing HTTP routes use, session auth needs no WebSocket-specific code. Sends made before the handshake finishes are queued and flushed as soon as it does, so you can <code>send()</code> straight away.</p>
+    <h2 id="pushing">Pushing From Outside the Route</h2>
+    <p>Any server code can reach connected sockets &mdash; an HTTP route, a webhook handler, a kempo (CMS) extension:</p>
+<pre><code class="hljs javascript">// notify/POST.js<br />import { sockets, broadcast } from 'kempo-server/websocket';<br /><br />export default async (request, response) =&gt; {<br />  // Every connection on one route path<br />  const listeners = sockets({ path: '/account' });<br /><br />  // Filtered by whatever the route attached to socket.data<br />  const sent = broadcast({ type: 'order.paid', id: request.body.orderId }, {<br />    path: '/account',<br />    filter: (socket) =&gt; socket.data.userId === request.body.userId<br />  });<br /><br />  response.json({ delivered: sent });<br />};</code></pre>
+    <ul>
+      <li><code>sockets({ path, filter })</code> &mdash; returns matching connections. Both options are optional; with neither, you get every open socket.</li>
+      <li><code>broadcast(message, { path, filter })</code> &mdash; sends to every match and returns how many received it.</li>
+      <li><code>closeAll(code, reason)</code> &mdash; closes every open socket.</li>
+    </ul>
+    <p><strong>This is single-process only.</strong> The registry lives in the process that accepted the connection. Behind a load balancer, or with more than one worker, a socket is only reachable from its own process &mdash; pushing from another one will silently match nothing. Anything that needs cross-process fan-out needs a shared bus (Redis, a message queue) above this layer.</p>
+    <h2 id="configuration">Configuration</h2>
+    <p>All WebSocket options live under <code>websocket</code> in your config file, and all of them have working defaults:</p>
+<pre><code class="hljs json">{<br />  "websocket": {<br />    "enabled": true,<br />    "maxMessageSize": 1048576,<br />    "allowedOrigins": null,<br />    "requireOrigin": false,<br />    "heartbeatInterval": 30000,<br />    "heartbeatTimeout": 10000<br />  }<br />}</code></pre>
+    <ul>
+      <li><code>enabled</code> &mdash; set <code>false</code> to refuse every upgrade with a <code>404</code>. Default <code>true</code>.</li>
+      <li><code>maxMessageSize</code> &mdash; largest message accepted, in bytes. Default 1MB.</li>
+      <li><code>allowedOrigins</code> &mdash; <code>null</code> for same-origin only, <code>"*"</code> for any origin, or an array of exact origins.</li>
+      <li><code>requireOrigin</code> &mdash; reject a handshake that sends no <code>Origin</code> header at all. Default <code>false</code>.</li>
+      <li><code>heartbeatInterval</code> &mdash; how often an idle connection is pinged, in milliseconds. <code>0</code> disables the heartbeat.</li>
+      <li><code>heartbeatTimeout</code> &mdash; how long to wait for the answering pong before dropping the connection.</li>
+    </ul>
+    <h2 id="origin">Origin Checking</h2>
+    <p>By default a handshake is only accepted from the origin the server was reached on. This matters more than it might look.</p>
+    <p>Cookies are sent on a WebSocket handshake, and <strong>browsers apply no same-origin policy to WebSockets</strong> &mdash; there is no preflight and nothing is blocked client-side. Without a server-side check, any page on any site could open a socket to your server that is fully authenticated as whoever is signed in. That attack is called cross-site WebSocket hijacking, and this check is the only thing standing in its way.</p>
+    <p>To allow specific other origins, list them exactly:</p>
+<pre><code class="hljs json">{<br />  "websocket": {<br />    "allowedOrigins": ["https://app.example.com", "https://admin.example.com"]<br />  }<br />}</code></pre>
+    <p>A handshake with <em>no</em> <code>Origin</code> header is allowed by default. Browsers always send one, so its absence means a non-browser client &mdash; a CLI tool, a service, another server &mdash; which carries no ambient cookies and is not what this check defends against. Set <code>requireOrigin: true</code> to turn those away as well.</p>
+    <h2 id="limits">Limits and Liveness</h2>
+    <p>A message larger than <code>maxMessageSize</code> closes the connection with <code>1009</code>. The limit is checked against the size a frame <em>declares</em>, before any of its payload is buffered, so an oversized claim costs nothing, and it is enforced again on the reassembled total so a peer cannot walk past it with many small fragments. Note that this is a separate setting from <code>maxBodySize</code>, which bounds HTTP request bodies and defaults far higher.</p>
+    <p>Idle connections are pinged every <code>heartbeatInterval</code> and dropped if no pong comes back within <code>heartbeatTimeout</code>. This is what notices a client that vanished without closing &mdash; a closed laptop, a dropped network &mdash; which TCP alone can leave looking open indefinitely. Connections with traffic on them are not pinged; traffic is its own proof of life.</p>
+    <p>When the server shuts down, including on Ctrl-C, open sockets are sent close <code>1001</code> so a browser can reconnect immediately rather than waiting on a dead connection.</p>
+    <h2 id="middleware">Middleware</h2>
+    <p>Your configured middleware chain runs for the handshake: CORS, rate limiting, security headers, request logging and any custom middleware. A middleware that ends the response rejects the upgrade, and its status and body reach the client. Headers it sets are carried onto the <code>101</code> response.</p>
+    <p>Middleware receives the same enhanced request and response an HTTP request would &mdash; <code>request.path</code>, <code>request.cookies</code>, <code>response.redirect()</code> and the rest &mdash; and the route receives that same request object, so anything a middleware attaches to it (a user, a session) is there for the route. A rejected handshake closes its connection after the response is written.</p>
+    <p>Compression middleware is skipped for upgrades. A <code>101</code> has no body to compress, and compression works by wrapping the response write path, which an upgrade never uses.</p>
+    <h2 id="scope">What Is Not Included</h2>
+    <p>This is deliberately a transport. It does not provide:</p>
+    <ul>
+      <li><strong>Channels, topics, rooms or presence.</strong> <code>socket.data</code> plus a <code>filter</code> is the primitive you build these from.</li>
+      <li><strong>Cross-process fan-out.</strong> The registry is per-process, as described above.</li>
+      <li><strong>Automatic reconnection.</strong> Browsers do not reconnect a closed <code>WebSocket</code>; add that in your client code.</li>
+      <li><strong><code>permessage-deflate</code></strong> or any other WebSocket protocol extension. Messages travel uncompressed.</li>
+      <li><strong>Subprotocol negotiation.</strong> <code>Sec-WebSocket-Protocol</code> is not negotiated.</li>
+    </ul>
+    <h2 id="example">Complete Example</h2>
+    <p>A route that tracks who is connected and lets an HTTP endpoint push to one of them.</p>
+<pre><code class="hljs javascript">// feed/WS.js<br />export default async (request, socket) =&gt; {<br />  const room = request.query.room;<br />  if(!room) return socket.reject(400, 'A room is required');<br /><br />  socket.data.room = room;<br />  socket.send({ type: 'joined', room });<br /><br />  socket.on('message', (data) =&gt; {<br />    socket.send({ type: 'ack', received: data });<br />  });<br /><br />  socket.on('close', (code) =&gt; {<br />    console.log(`left ${room} (${code})`);<br />  });<br />};</code></pre>
+<pre><code class="hljs javascript">// feed/announce/POST.js<br />import { broadcast } from 'kempo-server/websocket';<br /><br />export default async (request, response) =&gt; {<br />  const { room, text } = request.body;<br /><br />  const delivered = broadcast({ type: 'announcement', text }, {<br />    path: '/feed',<br />    filter: (socket) =&gt; socket.data.room === room<br />  });<br /><br />  response.json({ delivered });<br />};</code></pre>
+<pre><code class="hljs javascript">// The browser side<br />const socket = new WebSocket(`ws://${location.host}/feed?room=general`);<br /><br />socket.addEventListener('message', (event) =&gt; {<br />  const message = JSON.parse(event.data);<br />  console.log(message.type, message);<br />});<br /><br />socket.addEventListener('close', (event) =&gt; {<br />  // 1001 means the server is restarting, so reconnecting shortly is worthwhile<br />  if(event.code === 1001) setTimeout(connect, 1000);<br />});</code></pre>
+	</content>
+</page>

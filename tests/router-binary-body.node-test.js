@@ -165,9 +165,9 @@ export default {
         An empty Buffer is truthy where an empty string was not, so the "no body" check needs a
         length test. Without it every bodyless request would arrive with a body of `""`.
       */
-      if(parseBody(Buffer.alloc(0), 'application/json') !== null) return fail('empty Buffer should parse to null');
-      if(parseBody('', 'application/json') !== null) return fail('empty string should still parse to null');
-      if(parseBody(null, 'application/json') !== null) return fail('null should still parse to null');
+      if(parseBody(Buffer.alloc(0), 'application/json') !== null) throw new Error('empty Buffer should parse to null');
+      if(parseBody('', 'application/json') !== null) throw new Error('empty string should still parse to null');
+      if(parseBody(null, 'application/json') !== null) throw new Error('null should still parse to null');
 
       await withServer(async (port) => {
         const {body} = await post(port, '/api/echo', Buffer.alloc(0), {'Content-Type': 'application/json'});
@@ -187,7 +187,7 @@ export default {
       const oversized = Buffer.alloc(2048, 0x41);
       try {
         await readRawBody(streamOf([oversized]), 1024);
-        return fail('expected a Payload Too Large rejection');
+        throw new Error('expected a Payload Too Large rejection');
       } catch(e) {
         if(!/Payload Too Large/.test(e.message)) throw new Error(`rejected with the wrong error: ${e.message}`);
       }

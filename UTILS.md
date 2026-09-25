@@ -124,7 +124,7 @@ const fileCount = await rescan();
 console.log(`Server now serving ${fileCount} files`);
 ```
 
-The function returns a promise that resolves with the total number of files found in the new scan. It works from anywhere in the same Node process as the server — route handlers, middleware, scheduled tasks, file watchers, or any other code.
+The function returns a promise that resolves with the total number of files found in the new scan. With several servers in one process it rescans all of them and resolves with the largest count, and a server stops taking part once it is closed. It works from anywhere in the same Node process as the server — route handlers, middleware, scheduled tasks, file watchers, or any other code.
 
 ### Example: CMS Page Generation
 
