@@ -79,14 +79,15 @@ const build = async () => {
       await processJsFile(join(utilsDir, file), join(distDir, 'utils', file));
     }
     
-    // Process src/templating directory
-    const templatingDir = join(srcDir, 'templating');
-    await mkdir(join(distDir, 'templating'), { recursive: true });
-    const templatingFiles = await readdir(templatingDir);
-    const templatingJsFiles = templatingFiles.filter(file => file.endsWith('.js'));
-    
-    for (const file of templatingJsFiles) {
-      await processJsFile(join(templatingDir, file), join(distDir, 'templating', file));
+    // Process src subdirectories
+    for (const subdir of ['templating', 'websocket']) {
+      await mkdir(join(distDir, subdir), { recursive: true });
+      const subdirFiles = await readdir(join(srcDir, subdir));
+      const subdirJsFiles = subdirFiles.filter(file => file.endsWith('.js'));
+      
+      for (const file of subdirJsFiles) {
+        await processJsFile(join(srcDir, subdir, file), join(distDir, subdir, file));
+      }
     }
     
     // Process render CLI script

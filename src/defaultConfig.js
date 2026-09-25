@@ -74,6 +74,7 @@ export default {
   ],
   routeFiles: [
     'GET.js',
+    'WS.js',
     'POST.js',
     'PUT.js',
     'DELETE.js',
@@ -175,5 +176,24 @@ export default {
     globals: {},
     state: {},
     maxFragmentDepth: 10
+  },
+  websocket: {
+    enabled: true,
+    /*
+      1MB, deliberately far below maxBodySize. A frame declaring more than this is refused from its
+      header, before the payload is buffered, so the ceiling is per connection rather than per process.
+      Raise it only for a route that genuinely moves large blobs over a socket.
+    */
+    maxMessageSize: 1048576,
+    /*
+      null restricts handshakes to the origin the server was reached on; '*' allows any origin; an array
+      is an exact allow-list. Session cookies ride along on a handshake and browsers apply no
+      same-origin policy to WebSockets, so this is the only guard against cross-site hijacking.
+    */
+    allowedOrigins: null,
+    // Browsers always send Origin, so an absent header means a non-browser client. See CONFIG.md.
+    requireOrigin: false,
+    heartbeatInterval: 30000,
+    heartbeatTimeout: 10000
   }
 }
