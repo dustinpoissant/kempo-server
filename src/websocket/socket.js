@@ -26,6 +26,8 @@ export default class KempoSocket {
   #maxMessageSize;
   #heartbeatInterval;
   #heartbeatTimeout;
+  #highWaterMark;
+  #maxBufferedAmount;
   #heartbeatTimer = null;
   #pongTimer = null;
   #closeTimer = null;
@@ -46,9 +48,10 @@ export default class KempoSocket {
   */
   data = {};
 
-  constructor({ socket, server = null, path, params = {}, query = {}, headers = {}, cookies = {}, config = {}, log = () => {} }){
+  constructor({ socket, server = null, remoteAddress = null, path, params = {}, query = {}, headers = {}, cookies = {}, config = {}, log = () => {} }){
     this.#socket = socket;
     this.server = server;
+    this.remoteAddress = remoteAddress;
     this.path = path;
     this.params = params;
     this.query = query;
@@ -58,6 +61,8 @@ export default class KempoSocket {
     this.#maxMessageSize = config.maxMessageSize ?? 1048576;
     this.#heartbeatInterval = config.heartbeatInterval ?? 30000;
     this.#heartbeatTimeout = config.heartbeatTimeout ?? 10000;
+    this.#highWaterMark = config.highWaterMark ?? 65536;
+    this.#maxBufferedAmount = config.maxBufferedAmount ?? 4194304;
     this.#parser = new FrameParser(this.#maxMessageSize);
   }
 
@@ -155,8 +160,21 @@ export default class KempoSocket {
     Messaging
   */
 
-  // Returns false when the socket cannot accept data, rather than throwing into route code.
-  send(data){
+  /*
+    Bytes accepted by send() that the peer has not yet taken. A slow or stalled client makes this grow,
+    since Node queues writes in memory rather than blocking.
+  */
+  get bufferedAmount(){
+    return this.#socket.writableLength;
+  }
+
+  /*
+    Returns false when the message was not sent: the socket is closed, or `dropIfBackedUp` was set and
+    the connection already has more than `highWaterMark` bytes queued. Dropping is for data where only
+    the newest value matters (a position, a cursor): queueing it behind stale ones would deliver it late.
+    Never throws into route code.
+  */
+  send(data, { dropIfBackedUp = false } = {}){
     if(this.readyState === 'closed' || this.readyState === 'closing') return false;
 
     const isBinary = Buffer.isBuffer(data) || data instanceof Uint8Array || data instanceof ArrayBuffer;
@@ -173,6 +191,7 @@ export default class KempoSocket {
       this.#sendQueue.push(frame);
       return true;
     }
+    if(dropIfBackedUp && this.bufferedAmount > this.#highWaterMark) return false;
     return this.#write(frame);
   }
 
@@ -221,6 +240,20 @@ export default class KempoSocket {
 
   #write(frame){
     if(this.#socket.destroyed || this.#socket.writableEnded) return false;
+
+    /*
+      The hard ceiling. A client that stops reading would otherwise let queued frames grow until the
+      process runs out of memory, and every one of them is late by the time it arrives. A peer this far
+      behind cannot be sent a close frame it will read, so the connection is dropped outright. It judges
+      what is already queued, not the frame being added, so one large message is never refused on an
+      empty queue.
+    */
+    if(this.#maxBufferedAmount > 0 && this.#socket.writableLength > this.#maxBufferedAmount){
+      this.#log(`WebSocket ${this.path} dropped: ${this.#socket.writableLength} bytes queued, the limit is ${this.#maxBufferedAmount}`, 1);
+      this.#destroy(CLOSE_CODES.TRY_AGAIN_LATER, 'Send buffer overflow');
+      return false;
+    }
+
     try {
       this.#socket.write(frame);
       return true;

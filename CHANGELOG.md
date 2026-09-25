@@ -2,6 +2,17 @@
 
 All notable changes to `kempo-server` are documented in this file.
 
+## [Unreleased]
+
+### Added
+- **WebSocket backpressure.** A client that reads slowly does not slow the server, since Node queues what it cannot send yet, in memory, and that queue grew without limit while every frame in it arrived later and later. Nothing let route code see it or do anything about it.
+
+  `socket.bufferedAmount` now reports the queued bytes. `socket.send(data, { dropIfBackedUp: true })` skips the message and returns `false` when the client already has more than `highWaterMark` queued (default 64 KB), which is what data where only the newest value matters (a position, a cursor) wants: queueing it behind stale ones only delivers old news late. `broadcast(message, { dropIfBackedUp })` takes the same option and does not count skipped clients.
+
+  Independently of that, `maxBufferedAmount` (default 4 MB, `0` to disable) is a hard ceiling. A client past it is disconnected with close code `1013` (try again later), since it cannot be sent a close frame it will read, and the route's `close` event fires with that code. The ceiling judges what is already queued rather than the frame being added, so a single large message on an empty queue is never refused.
+- **Connection caps.** `maxConnections` (refused with `503`) and `maxConnectionsPerIp` (refused with `429`), both `0` (unlimited) by default. A slot is taken before the middleware and the route run and given back when the connection closes or the handshake fails, so a burst of handshakes still in flight counts against the limit and a refused handshake does not leak its slot. Behind a reverse proxy every connection comes from the proxy's address, so `trustProxy: true` keys the per-address cap, and the new `socket.remoteAddress`, on `X-Forwarded-For` instead; it is off by default because the header is spoofable unless a proxy you control is always in front.
+- Close code `1013` is accepted from a peer as well as sent, along with the other registered codes `1012` and `1014`.
+
 ## [3.4.0] - 2026-09-25
 
 > Ships two things together: the template work that had been sitting unpublished (`<template extends>`, template patches, `extraFragmentDirs`) and WebSocket support. kempo (CMS core) already peers on `kempo-server >= 3.4.0`, so this is the release that satisfies it.

@@ -16,7 +16,12 @@ export const defaultWebsocketConfig = {
   allowedOrigins: null,
   requireOrigin: false,
   heartbeatInterval: 30000,
-  heartbeatTimeout: 10000
+  heartbeatTimeout: 10000,
+  highWaterMark: 65536,
+  maxBufferedAmount: 4194304,
+  maxConnections: 0,
+  maxConnectionsPerIp: 0,
+  trustProxy: false
 };
 
 /*
@@ -80,6 +85,41 @@ export const createUpgradeHandler = ({ resolveRoute, loadModule, runMiddleware, 
   const websocketConfig = { ...defaultWebsocketConfig, ...(config.websocket || {}) };
   const hookedServers = new WeakSet();
 
+  /*
+    Connection caps. A slot is taken before the middleware and the route run and given back when the
+    connection ends or the handshake fails, so a burst of handshakes still in flight counts against the
+    limit and a rejected one does not leak a slot.
+  */
+  const connections = new Map();
+  let connectionTotal = 0;
+
+  const admit = (address) => {
+    const { maxConnections, maxConnectionsPerIp } = websocketConfig;
+    if(maxConnections > 0 && connectionTotal >= maxConnections){
+      return { status: 503, message: 'Too many connections' };
+    }
+    if(maxConnectionsPerIp > 0 && (connections.get(address) || 0) >= maxConnectionsPerIp){
+      return { status: 429, message: 'Too many connections from this address' };
+    }
+
+    connections.set(address, (connections.get(address) || 0) + 1);
+    connectionTotal++;
+
+    let released = false;
+    const admission = {
+      held: false,
+      release: () => {
+        if(released) return;
+        released = true;
+        const remaining = connections.get(address) - 1;
+        if(remaining > 0) connections.set(address, remaining);
+        else connections.delete(address);
+        connectionTotal--;
+      }
+    };
+    return admission;
+  };
+
   return async (request, socket, head) => {
     /*
       Hooked from the first upgrade rather than at construction, because the router builds this handler
@@ -133,106 +173,129 @@ export const createUpgradeHandler = ({ resolveRoute, loadModule, runMiddleware, 
       return writeHttpResponse(socket, 404, 'Not Found');
     }
 
-    /*
-      Middleware gets the same enhanced request and response an HTTP request would, built once and up front.
-      Custom middleware relies on it: kempo's own reads `request.path` and `request.cookies` and calls
-      `response.redirect()`, none of which exist on a raw IncomingMessage / ServerResponse, so handing it
-      the raw objects made it throw and killed every handshake. The route then receives this same request
-      object rather than a fresh one, because middleware attaching data to the request (a user, a session)
-      is the documented convention and would otherwise be silently discarded.
+    const remote = request.socket.remoteAddress;
+    const address = websocketConfig.trustProxy
+      ? (String(request.headers['x-forwarded-for'] || '').split(',')[0].trim() || remote)
+      : remote;
 
-      The response is a real ServerResponse bound to the socket, so a middleware that ends it rejects the
-      upgrade with a correct HTTP response. It is detached before the 101 is written, so the handshake
-      bytes are ours alone.
-    */
-    const enhancedRequest = createRequestWrapper(request, route.params);
-    const rawResponse = new http.ServerResponse(request);
-    rawResponse.assignSocket(socket);
-    /*
-      A rejected upgrade must not leave the connection open waiting for a next request. `shouldKeepAlive`
-      only decides the Connection header; closing the socket is normally done by the HTTP server's own
-      response plumbing, which a hand-made ServerResponse does not get, so it is ended here once the
-      response has been fully written. A handshake that succeeds never ends this response (the 101 is
-      written straight to the socket), so this only ever fires for a rejection.
-    */
-    rawResponse.shouldKeepAlive = false;
-    rawResponse.once('finish', () => socket.end());
-    const enhancedResponse = createResponseWrapper(rawResponse);
+    const admission = admit(address);
+    if(admission.status){
+      log(`WebSocket refused (${admission.status}) for ${address}: ${admission.message}`, 1);
+      return writeHttpResponse(socket, admission.status, admission.message);
+    }
 
-    let reached = false;
-    try {
-      await runMiddleware(enhancedRequest, enhancedResponse, async () => { reached = true; });
-    } catch(error) {
-      log(`WebSocket middleware threw for ${requestPath}: ${error.message}`, 0);
-      if(!rawResponse.headersSent){
-        rawResponse.statusCode = 500;
-        rawResponse.setHeader('Content-Type', 'text/plain');
+    // Held for the life of the connection; released here only when it never got as far as opening
+    const establish = async () => {
+      /*
+        Middleware gets the same enhanced request and response an HTTP request would, built once and up front.
+        Custom middleware relies on it: kempo's own reads `request.path` and `request.cookies` and calls
+        `response.redirect()`, none of which exist on a raw IncomingMessage / ServerResponse, so handing it
+        the raw objects made it throw and killed every handshake. The route then receives this same request
+        object rather than a fresh one, because middleware attaching data to the request (a user, a session)
+        is the documented convention and would otherwise be silently discarded.
+
+        The response is a real ServerResponse bound to the socket, so a middleware that ends it rejects the
+        upgrade with a correct HTTP response. It is detached before the 101 is written, so the handshake
+        bytes are ours alone.
+      */
+      const enhancedRequest = createRequestWrapper(request, route.params);
+      const rawResponse = new http.ServerResponse(request);
+      rawResponse.assignSocket(socket);
+      /*
+        A rejected upgrade must not leave the connection open waiting for a next request. `shouldKeepAlive`
+        only decides the Connection header; closing the socket is normally done by the HTTP server's own
+        response plumbing, which a hand-made ServerResponse does not get, so it is ended here once the
+        response has been fully written. A handshake that succeeds never ends this response (the 101 is
+        written straight to the socket), so this only ever fires for a rejection.
+      */
+      rawResponse.shouldKeepAlive = false;
+      rawResponse.once('finish', () => socket.end());
+      const enhancedResponse = createResponseWrapper(rawResponse);
+
+      let reached = false;
+      try {
+        await runMiddleware(enhancedRequest, enhancedResponse, async () => { reached = true; });
+      } catch(error) {
+        log(`WebSocket middleware threw for ${requestPath}: ${error.message}`, 0);
+        if(!rawResponse.headersSent){
+          rawResponse.statusCode = 500;
+          rawResponse.setHeader('Content-Type', 'text/plain');
+        }
+        if(!rawResponse.writableEnded) rawResponse.end('Internal Server Error');
+        return;
       }
-      if(!rawResponse.writableEnded) rawResponse.end('Internal Server Error');
-      return;
-    }
 
-    if(!reached){
-      log(`WebSocket upgrade rejected by middleware: ${requestPath}`, 2);
-      if(!rawResponse.writableEnded) rawResponse.end();
-      return;
-    }
+      if(!reached){
+        log(`WebSocket upgrade rejected by middleware: ${requestPath}`, 2);
+        if(!rawResponse.writableEnded) rawResponse.end();
+        return;
+      }
 
-    const collectedHeaders = rawResponse.getHeaders();
-    rawResponse.detachSocket(socket);
+      const collectedHeaders = rawResponse.getHeaders();
+      rawResponse.detachSocket(socket);
 
-    let handler;
+      let handler;
+      try {
+        handler = await loadModule(route.filePath);
+      } catch(error) {
+        log(`Failed to load WebSocket route ${route.filePath}: ${error.message}`, 0);
+        return writeHttpResponse(socket, 500, 'Internal Server Error');
+      }
+
+      if(typeof handler !== 'function'){
+        log(`WebSocket route does not export a function: ${route.filePath}`, 0);
+        return writeHttpResponse(socket, 500, 'Route file does not export a function');
+      }
+
+      // `body` stays null: an upgrade has no body
+      const kempoSocket = new KempoSocket({
+        socket,
+        server,
+        remoteAddress: address,
+        path: requestPath,
+        params: route.params,
+        query: enhancedRequest.query,
+        headers: request.headers,
+        cookies: enhancedRequest.cookies,
+        config: websocketConfig,
+        log
+      });
+
+      /*
+        The route runs before the 101 so it can authenticate and refuse. A throw here has no socket to
+        close yet, so it becomes a 500 rather than a 1011 — once the connection is open, a throw inside an
+        event handler is what closes it with 1011.
+      */
+      try {
+        await handler(enhancedRequest, kempoSocket);
+      } catch(error) {
+        log(`WebSocket route threw for ${requestPath}: ${error.message}`, 0);
+        return writeHttpResponse(socket, 500, 'Internal Server Error');
+      }
+
+      const rejection = kempoSocket.rejection;
+      if(rejection){
+        log(`WebSocket upgrade refused by route (${rejection.status}): ${requestPath}`, 2);
+        return writeHttpResponse(socket, rejection.status, rejection.message);
+      }
+
+      if(socket.destroyed){
+        log(`WebSocket client disconnected before the handshake completed: ${requestPath}`, 3);
+        return;
+      }
+
+      kempoSocket.on('close', admission.release);
+      writeUpgradeResponse(socket, handshake.accept, collectedHeaders);
+      kempoSocket.accept(head);
+      admission.held = true;
+      log(`WebSocket connected: ${requestPath}`, 2);
+    };
+
     try {
-      handler = await loadModule(route.filePath);
-    } catch(error) {
-      log(`Failed to load WebSocket route ${route.filePath}: ${error.message}`, 0);
-      return writeHttpResponse(socket, 500, 'Internal Server Error');
+      await establish();
+    } finally {
+      if(!admission.held) admission.release();
     }
-
-    if(typeof handler !== 'function'){
-      log(`WebSocket route does not export a function: ${route.filePath}`, 0);
-      return writeHttpResponse(socket, 500, 'Route file does not export a function');
-    }
-
-    // `body` stays null: an upgrade has no body
-    const kempoSocket = new KempoSocket({
-      socket,
-      server,
-      path: requestPath,
-      params: route.params,
-      query: enhancedRequest.query,
-      headers: request.headers,
-      cookies: enhancedRequest.cookies,
-      config: websocketConfig,
-      log
-    });
-
-    /*
-      The route runs before the 101 so it can authenticate and refuse. A throw here has no socket to
-      close yet, so it becomes a 500 rather than a 1011 — once the connection is open, a throw inside an
-      event handler is what closes it with 1011.
-    */
-    try {
-      await handler(enhancedRequest, kempoSocket);
-    } catch(error) {
-      log(`WebSocket route threw for ${requestPath}: ${error.message}`, 0);
-      return writeHttpResponse(socket, 500, 'Internal Server Error');
-    }
-
-    const rejection = kempoSocket.rejection;
-    if(rejection){
-      log(`WebSocket upgrade refused by route (${rejection.status}): ${requestPath}`, 2);
-      return writeHttpResponse(socket, rejection.status, rejection.message);
-    }
-
-    if(socket.destroyed){
-      log(`WebSocket client disconnected before the handshake completed: ${requestPath}`, 3);
-      return;
-    }
-
-    writeUpgradeResponse(socket, handshake.accept, collectedHeaders);
-    kempoSocket.accept(head);
-    log(`WebSocket connected: ${requestPath}`, 2);
   };
 };
 
