@@ -240,7 +240,7 @@ Single process only: a socket is reachable only from the process that accepted i
 
 ```js
 import rescan from 'kempo-server/rescan';
-// rescan() → Promise<number> — triggers a file rescan on the running server, returns new file count
+// rescan() → Promise<number> — triggers a file rescan on the running server, returns new file count (largest across routers if several; a closed server drops out)
 
 import { renderPage, renderDir } from 'kempo-server/templating';
 // renderPage(pageFilePath, rootDir, globals?, state?, maxDepth?) → Promise<string>

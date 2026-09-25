@@ -230,6 +230,7 @@
     <p>When the server shuts down, including on Ctrl-C, open sockets are sent close <code>1001</code> so a browser can reconnect immediately rather than waiting on a dead connection.</p>
     <h2 id="middleware">Middleware</h2>
     <p>Your configured middleware chain runs for the handshake: CORS, rate limiting, security headers, request logging and any custom middleware. A middleware that ends the response rejects the upgrade, and its status and body reach the client. Headers it sets are carried onto the <code>101</code> response.</p>
+    <p>Middleware receives the same enhanced request and response an HTTP request would &mdash; <code>request.path</code>, <code>request.cookies</code>, <code>response.redirect()</code> and the rest &mdash; and the route receives that same request object, so anything a middleware attaches to it (a user, a session) is there for the route. A rejected handshake closes its connection after the response is written.</p>
     <p>Compression middleware is skipped for upgrades. A <code>101</code> has no body to compress, and compression works by wrapping the response write path, which an upgrade never uses.</p>
     <h2 id="scope">What Is Not Included</h2>
     <p>This is deliberately a transport. It does not provide:</p>
