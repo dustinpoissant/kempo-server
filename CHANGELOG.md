@@ -2,7 +2,9 @@
 
 All notable changes to `kempo-server` are documented in this file.
 
-## [Unreleased]
+## [3.4.0] - 2026-09-25
+
+> Ships two things together: the template work that had been sitting unpublished (`<template extends>`, template patches, `extraFragmentDirs`) and WebSocket support. kempo (CMS core) already peers on `kempo-server >= 3.4.0`, so this is the release that satisfies it.
 
 ### Added
 - **WebSockets: a `WS.js` route file.** The server created its `http.Server` and registered no `upgrade` listener, so a `new WebSocket()` handshake was served as an ordinary GET and the browser got whatever page or route sat at that path. There was no supported way to add this from outside either: an extension ships routes, pages and hooks and is never handed the server, and reaching it through `req.socket.server` would bypass routing, middleware and config entirely.
