@@ -194,6 +194,23 @@ export default {
     // Browsers always send Origin, so an absent header means a non-browser client. See CONFIG.md.
     requireOrigin: false,
     heartbeatInterval: 30000,
-    heartbeatTimeout: 10000
+    heartbeatTimeout: 10000,
+    /*
+      Outbound backpressure. A client that reads slowly makes queued frames pile up in server memory, and
+      every one of them arrives late. `highWaterMark` is the queued size above which a send made with
+      `dropIfBackedUp` is skipped. `maxBufferedAmount` is the hard ceiling: past it the connection is
+      dropped (close code 1013). 0 turns the ceiling off.
+    */
+    highWaterMark: 65536,
+    maxBufferedAmount: 4194304,
+    /*
+      Connection caps, 0 meaning unlimited. Both count connections that are still being set up as well as
+      open ones, so a burst of handshakes cannot slip past. Behind a reverse proxy every connection comes
+      from the proxy's address, so set `trustProxy` to key the per-address cap on X-Forwarded-For instead;
+      only do that when a proxy you control is always in front, since the header is otherwise spoofable.
+    */
+    maxConnections: 0,
+    maxConnectionsPerIp: 0,
+    trustProxy: false
   }
 }

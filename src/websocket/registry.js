@@ -36,11 +36,14 @@ export const sockets = ({ path, filter } = {}) => {
   return found;
 };
 
-// Returns the number of sockets the message was handed to.
-export const broadcast = (message, options = {}) => {
+/*
+  Returns the number of sockets the message was handed to. With `dropIfBackedUp`, a socket that is already
+  behind is skipped rather than queued onto, and is not counted.
+*/
+export const broadcast = (message, { dropIfBackedUp = false, ...selection } = {}) => {
   let sent = 0;
-  for(const socket of sockets(options)){
-    if(socket.send(message)) sent++;
+  for(const socket of sockets(selection)){
+    if(socket.send(message, { dropIfBackedUp })) sent++;
   }
   return sent;
 };

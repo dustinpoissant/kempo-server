@@ -31,7 +31,8 @@ export const CLOSE_CODES = {
   INVALID_PAYLOAD: 1007,
   POLICY_VIOLATION: 1008,
   TOO_LARGE: 1009,
-  INTERNAL_ERROR: 1011
+  INTERNAL_ERROR: 1011,
+  TRY_AGAIN_LATER: 1013
 };
 
 /*
@@ -52,7 +53,7 @@ export class WsError extends Error {
 */
 export const isValidCloseCode = (code) =>
   (code >= 1000 && code <= 1003) ||
-  (code >= 1007 && code <= 1011) ||
+  (code >= 1007 && code <= 1014) ||
   (code >= 3000 && code <= 4999);
 
 const utf8 = new TextDecoder('utf-8', { fatal: true });

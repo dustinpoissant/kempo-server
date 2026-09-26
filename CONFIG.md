@@ -550,7 +550,12 @@ export default {
     allowedOrigins: null,
     requireOrigin: false,
     heartbeatInterval: 30000,
-    heartbeatTimeout: 10000
+    heartbeatTimeout: 10000,
+    highWaterMark: 65536,
+    maxBufferedAmount: 4194304,
+    maxConnections: 0,
+    maxConnectionsPerIp: 0,
+    trustProxy: false
   }
 };
 ```
@@ -605,6 +610,28 @@ Connections with traffic on them are not pinged; traffic is its own proof of lif
 How long, in milliseconds, to wait for the answering pong before dropping the connection. Defaults to `10000`.
 
 The heartbeat is what notices a client that vanished without closing — a closed laptop, a dropped network — which TCP alone can leave looking open indefinitely.
+
+#### highWaterMark
+
+The number of queued outbound bytes above which `socket.send(data, { dropIfBackedUp: true })` is skipped instead of queued. Defaults to `65536` (64 KB). Only affects sends that opt in; see [WebSockets](./docs/websockets.html).
+
+#### maxBufferedAmount
+
+The hard ceiling on queued outbound bytes for one connection. Defaults to `4194304` (4 MB). A client that stops reading makes queued frames pile up in server memory, and every one of them arrives late; past this ceiling the connection is dropped with close code `1013` (try again later) and the route's `close` event fires with it. It judges what is already queued, so one large message on an empty queue is never refused. `0` turns the ceiling off.
+
+#### maxConnections
+
+The most WebSocket connections the server will hold at once. Defaults to `0`, meaning unlimited. Over the limit, a handshake gets `503`. Connections still being set up count, so a burst of handshakes cannot slip past.
+
+#### maxConnectionsPerIp
+
+The most connections one address may hold. Defaults to `0`, meaning unlimited. Over the limit, a handshake gets `429`. A refused or failed handshake gives its slot back.
+
+Behind a reverse proxy every connection arrives from the proxy's address, so this cap would count everyone as one client. Set [trustProxy](#trustproxy) to key it on the real client instead.
+
+#### trustProxy
+
+When `true`, the per-address cap and `socket.remoteAddress` use the first address in `X-Forwarded-For` instead of the connection's own. Defaults to `false`. **Only enable this when a proxy you control is always in front of the server**: otherwise any client can send a made-up header and dodge the cap.
 
 ## Configuration Examples
 

@@ -106,7 +106,12 @@ export default {
     allowedOrigins: null,      // null = same-origin only, '*' = any, or an array of exact origins
     requireOrigin: false,      // reject a handshake that sends no Origin header
     heartbeatInterval: 30000,  // ms between pings on an idle connection; 0 disables
-    heartbeatTimeout: 10000    // ms to wait for the pong before dropping
+    heartbeatTimeout: 10000,   // ms to wait for the pong before dropping
+    highWaterMark: 65536,      // queued bytes above which send(..., { dropIfBackedUp }) is skipped
+    maxBufferedAmount: 4194304,// hard ceiling on queued bytes; past it the client is dropped (1013). 0 = off
+    maxConnections: 0,         // 0 = unlimited; over it a handshake gets 503
+    maxConnectionsPerIp: 0,    // 0 = unlimited; over it a handshake gets 429
+    trustProxy: false          // key the per-address cap on X-Forwarded-For (only behind a proxy you control)
   }
 };
 ```
@@ -218,7 +223,7 @@ export default async (request, socket) => {
 };
 ```
 
-Socket API: `send(data)` (string → text, Buffer/Uint8Array → binary, else JSON; returns false when closed, never throws), `close(code, reason)`, `terminate()`, `ping(payload)`, `reject(status, message)`, `on/off(event, handler)`. Properties: `path`, `params`, `query`, `headers`, `cookies`, `data`, `readyState`. Events: `message(data, isBinary)`, `open`, `close(code, reason)`, `error`, `ping`, `pong`.
+Socket API: `send(data, { dropIfBackedUp })` (string → text, Buffer/Uint8Array → binary, else JSON; returns false when closed, never throws), `close(code, reason)`, `terminate()`, `ping(payload)`, `reject(status, message)`, `on/off(event, handler)`. Properties: `path`, `params`, `query`, `headers`, `cookies`, `data`, `readyState`, `bufferedAmount` (queued bytes the client has not taken), `remoteAddress`. Events: `message(data, isBinary)`, `open`, `close(code, reason)`, `error`, `ping`, `pong`.
 
 Routing: only a file named exactly `WS.js` runs for an upgrade — no `index.js`/`CATCH.js` fallback, so a path without one gets 404. `[param]` segments work. Custom and wildcard routes resolve too, in HTTP order (exact custom route, then wildcard, then the served tree), so a package mapped from `node_modules` can ship a `WS.js`; a path containing `..` is refused. A normal HTTP request never executes `WS.js`.
 
@@ -230,7 +235,7 @@ Pushing from outside the route:
 import { sockets, broadcast, closeAll } from 'kempo-server/websocket';
 
 sockets({ path: '/chat', filter: s => s.data.userId === id });  // → array of sockets
-broadcast(message, { path, filter });                           // → number delivered
+broadcast(message, { path, filter, dropIfBackedUp });          // → number delivered; skips clients that are behind when dropIfBackedUp
 closeAll(code, reason);
 ```
 

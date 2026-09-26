@@ -175,10 +175,12 @@
       <li><code>socket.params</code>, <code>socket.query</code>, <code>socket.headers</code>, <code>socket.cookies</code> &mdash; copies of the handshake values</li>
       <li><code>socket.data</code> &mdash; an empty object for your own use. Whatever you put here is what you select on when pushing from outside the route.</li>
       <li><code>socket.readyState</code> &mdash; <code>"connecting"</code>, <code>"open"</code>, <code>"closing"</code> or <code>"closed"</code></li>
+      <li><code>socket.bufferedAmount</code> &mdash; bytes queued for this client that it has not yet taken. Grows when the client reads slowly.</li>
+      <li><code>socket.remoteAddress</code> &mdash; the client's address (from <code>X-Forwarded-For</code> when <code>trustProxy</code> is on).</li>
     </ul>
     <h3>Methods</h3>
     <ul>
-      <li><code>socket.send(data)</code> &mdash; sends a string as text, a <code>Buffer</code> or <code>Uint8Array</code> as binary, and anything else as JSON. Returns <code>false</code> if the connection can no longer accept data; it never throws.</li>
+      <li><code>socket.send(data, { dropIfBackedUp })</code> &mdash; sends a string as text, a <code>Buffer</code> or <code>Uint8Array</code> as binary, and anything else as JSON. Returns <code>false</code> if the connection can no longer accept data; it never throws. With <code>dropIfBackedUp: true</code> it is skipped, and returns <code>false</code>, when the client already has more than <code>highWaterMark</code> bytes queued.</li>
       <li><code>socket.close(code, reason)</code> &mdash; starts a clean closing handshake. Defaults to <code>1000</code>.</li>
       <li><code>socket.terminate()</code> &mdash; drops the connection immediately, with no closing handshake.</li>
       <li><code>socket.ping(payload)</code> &mdash; sends a ping. The heartbeat does this for you.</li>
@@ -203,13 +205,13 @@
 <pre><code class="hljs javascript">// notify/POST.js<br />import { sockets, broadcast } from 'kempo-server/websocket';<br /><br />export default async (request, response) =&gt; {<br />  // Every connection on one route path<br />  const listeners = sockets({ path: '/account' });<br /><br />  // Filtered by whatever the route attached to socket.data<br />  const sent = broadcast({ type: 'order.paid', id: request.body.orderId }, {<br />    path: '/account',<br />    filter: (socket) =&gt; socket.data.userId === request.body.userId<br />  });<br /><br />  response.json({ delivered: sent });<br />};</code></pre>
     <ul>
       <li><code>sockets({ path, filter })</code> &mdash; returns matching connections. Both options are optional; with neither, you get every open socket.</li>
-      <li><code>broadcast(message, { path, filter })</code> &mdash; sends to every match and returns how many received it.</li>
+      <li><code>broadcast(message, { path, filter, dropIfBackedUp })</code> &mdash; sends to every match and returns how many received it. With <code>dropIfBackedUp</code>, clients that are behind are skipped and not counted.</li>
       <li><code>closeAll(code, reason)</code> &mdash; closes every open socket.</li>
     </ul>
     <p><strong>This is single-process only.</strong> The registry lives in the process that accepted the connection. Behind a load balancer, or with more than one worker, a socket is only reachable from its own process &mdash; pushing from another one will silently match nothing. Anything that needs cross-process fan-out needs a shared bus (Redis, a message queue) above this layer.</p>
     <h2 id="configuration">Configuration</h2>
     <p>All WebSocket options live under <code>websocket</code> in your config file, and all of them have working defaults:</p>
-<pre><code class="hljs json">{<br />  "websocket": {<br />    "enabled": true,<br />    "maxMessageSize": 1048576,<br />    "allowedOrigins": null,<br />    "requireOrigin": false,<br />    "heartbeatInterval": 30000,<br />    "heartbeatTimeout": 10000<br />  }<br />}</code></pre>
+<pre><code class="hljs json">{<br />  "websocket": {<br />    "enabled": true,<br />    "maxMessageSize": 1048576,<br />    "allowedOrigins": null,<br />    "requireOrigin": false,<br />    "heartbeatInterval": 30000,<br />    "heartbeatTimeout": 10000,<br />    "highWaterMark": 65536,<br />    "maxBufferedAmount": 4194304,<br />    "maxConnections": 0,<br />    "maxConnectionsPerIp": 0,<br />    "trustProxy": false<br />  }<br />}</code></pre>
     <ul>
       <li><code>enabled</code> &mdash; set <code>false</code> to refuse every upgrade with a <code>404</code>. Default <code>true</code>.</li>
       <li><code>maxMessageSize</code> &mdash; largest message accepted, in bytes. Default 1MB.</li>
@@ -217,6 +219,9 @@
       <li><code>requireOrigin</code> &mdash; reject a handshake that sends no <code>Origin</code> header at all. Default <code>false</code>.</li>
       <li><code>heartbeatInterval</code> &mdash; how often an idle connection is pinged, in milliseconds. <code>0</code> disables the heartbeat.</li>
       <li><code>heartbeatTimeout</code> &mdash; how long to wait for the answering pong before dropping the connection.</li>
+      <li><code>highWaterMark</code> and <code>maxBufferedAmount</code> &mdash; outbound backpressure; see <a href="#backpressure">Slow Clients</a>.</li>
+      <li><code>maxConnections</code> and <code>maxConnectionsPerIp</code> &mdash; caps on how many sockets are accepted, <code>0</code> for unlimited. Over the limit a handshake gets <code>503</code> or <code>429</code>.</li>
+      <li><code>trustProxy</code> &mdash; key the per-address cap and <code>socket.remoteAddress</code> on <code>X-Forwarded-For</code>. Only enable it behind a proxy you control.</li>
     </ul>
     <h2 id="origin">Origin Checking</h2>
     <p>By default a handshake is only accepted from the origin the server was reached on. This matters more than it might look.</p>
@@ -228,6 +233,21 @@
     <p>A message larger than <code>maxMessageSize</code> closes the connection with <code>1009</code>. The limit is checked against the size a frame <em>declares</em>, before any of its payload is buffered, so an oversized claim costs nothing, and it is enforced again on the reassembled total so a peer cannot walk past it with many small fragments. Note that this is a separate setting from <code>maxBodySize</code>, which bounds HTTP request bodies and defaults far higher.</p>
     <p>Idle connections are pinged every <code>heartbeatInterval</code> and dropped if no pong comes back within <code>heartbeatTimeout</code>. This is what notices a client that vanished without closing &mdash; a closed laptop, a dropped network &mdash; which TCP alone can leave looking open indefinitely. Connections with traffic on them are not pinged; traffic is its own proof of life.</p>
     <p>When the server shuts down, including on Ctrl-C, open sockets are sent close <code>1001</code> so a browser can reconnect immediately rather than waiting on a dead connection.</p>
+    <h2 id="backpressure">Slow Clients</h2>
+    <p>A client that reads slowly does not slow the server down: Node queues what it cannot send yet, in memory. Left alone, that queue grows for as long as the client stays slow, and everything in it arrives late. Two settings deal with it.</p>
+    <ul>
+      <li><strong>Drop what is stale, for data where only the newest matters.</strong> A player's position or a cursor is out of date the moment the next one exists, so queueing it behind older ones only delivers old news later. Send it with <code>dropIfBackedUp: true</code> and a backed-up client simply misses that update and gets the next.</li>
+      <li><strong>A hard ceiling for everything else.</strong> A client that has more than <code>maxBufferedAmount</code> bytes queued is disconnected with close code <code>1013</code>. It cannot be sent a close frame it will read, so the connection is dropped, and your route's <code>close</code> event fires with <code>1013</code>.</li>
+    </ul>
+    <pre><code class="hljs javascript">// Latest wins: a client that is behind misses this tick and gets the next
+broadcast(JSON.stringify(positions), { path: '/world', dropIfBackedUp: true });
+
+// Read the queue yourself
+if(socket.bufferedAmount &gt; 1000000){
+  // decide what to do about a client this far behind
+}</code></pre>
+    <p>The connection caps are a separate protection: <code>maxConnections</code> and <code>maxConnectionsPerIp</code> stop one address, or a flood of handshakes, from using up the server.</p>
+
     <h2 id="middleware">Middleware</h2>
     <p>Your configured middleware chain runs for the handshake: CORS, rate limiting, security headers, request logging and any custom middleware. A middleware that ends the response rejects the upgrade, and its status and body reach the client. Headers it sets are carried onto the <code>101</code> response.</p>
     <p>Middleware receives the same enhanced request and response an HTTP request would &mdash; <code>request.path</code>, <code>request.cookies</code>, <code>response.redirect()</code> and the rest &mdash; and the route receives that same request object, so anything a middleware attaches to it (a user, a session) is there for the route. A rejected handshake closes its connection after the response is written.</p>
