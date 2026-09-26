@@ -2,7 +2,7 @@
 
 All notable changes to `kempo-server` are documented in this file.
 
-## [Unreleased]
+## [3.5.0] - 2026-09-25
 
 ### Added
 - **WebSocket backpressure.** A client that reads slowly does not slow the server, since Node queues what it cannot send yet, in memory, and that queue grew without limit while every frame in it arrived later and later. Nothing let route code see it or do anything about it.
