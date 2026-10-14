@@ -630,7 +630,28 @@ export default async (flags, log) => {
     server.once('close', stopRescan);
   };
 
+  /*
+    Node hands this to `http.createServer`, which does not wait on the promise it returns. An error
+    thrown anywhere below — a route module whose own import fails, middleware that throws — would
+    therefore be an unhandled rejection, and Node ends the whole process on one: every site on the
+    server goes down because one route is broken. It answers that one request with a 500 instead,
+    and says what went wrong.
+  */
   const requestHandler = async (req, res) => {
+    try {
+      await handleRequest(req, res);
+    } catch(error) {
+      log(`500 - ${req.method} ${req.url}: ${error?.stack || error}`, 0);
+      if(!res.headersSent){
+        res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end('Internal Server Error');
+      } else if(!res.writableEnded){
+        res.end();
+      }
+    }
+  };
+
+  const handleRequest = async (req, res) => {
     watchServer(req.socket?.server);
     // Buffer body once early so both middleware and route handlers can access it
     const contentLength = parseInt(req.headers['content-length'] || '0', 10);

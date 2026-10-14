@@ -2,6 +2,19 @@
 
 All notable changes to `kempo-server` are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- **One broken route no longer takes the whole server down.** The request handler is an async
+  function given to `http.createServer`, which never waits on it, so any error that escaped it was
+  an unhandled rejection — and Node ends the process on one. Two ways in were found: a route module
+  imported by custom middleware (how kempo serves an extension's routes) whose own import fails, and
+  a route that throws after it has started its response, where the built-in error path then throws
+  `ERR_HTTP_HEADERS_SENT` itself. Found on a kempo site where one extension's `node_modules` had been
+  emptied: the first visit to the admin dashboard, which loads that extension's widget, killed every
+  site on the server. An error now answers that one request with a 500 (or ends a response already
+  under way) and is logged, and the server carries on.
+
 ## [3.5.0] - 2026-09-25
 
 ### Added

@@ -148,6 +148,10 @@ export default async function(request, response) {
 }
 ```
 
+An error a route — or a middleware — throws is answered with a `500` for that request and logged;
+the server keeps serving every other request. That includes a route module that cannot be imported
+at all, such as one whose dependency is missing.
+
 ### POST Request Example
 
 ```javascript
