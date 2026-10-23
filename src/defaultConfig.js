@@ -159,6 +159,11 @@ export default {
     accept large uploads; see CONFIG.md.
   */
   maxBodySize: DEFAULT_MAX_BODY_SIZE,
+  dev: {
+    reload: false,                   // Load a changed server file again on the next request, with no restart (see CONFIG.md)
+    ignorePackages: ['kempo', 'kempo-server', 'kempo-ui', 'kempo-css'], // Packages that keep their one copy because they hold state
+    watch: []                        // More folders to watch, besides the project and the packages linked into node_modules
+  },
   cache: {
     enabled: false,                  // Disabled by default - opt-in for performance  
     maxSize: 100,                    // Maximum number of cached modules

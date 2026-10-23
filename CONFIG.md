@@ -51,6 +51,33 @@ export default {
 - [templating](#templating)
 - [websocket](#websocket)
 
+## Dev reload
+
+A route file is always loaded fresh, but what it imports (utilities, a schema, an extension's code) is loaded once and kept for the life of the process, because Node has no way to forget a module. In development that means a restart after every server-side change. `dev.reload` removes the restart: a changed server file is loaded again on the next request.
+
+```json
+{
+  "extends": ".config.json",
+  "dev": { "reload": true }
+}
+```
+
+Save that as `dev.config.json` next to your normal config and start the server with `kempo-server --config dev.config.json`; `extends` keeps the rest of the settings from `.config.json` (see below), so nothing is copied.
+
+| Option | Default | Meaning |
+|---|---|---|
+| `dev.reload` | `false` | Load a changed server file again on the next request. Turns the cache off |
+| `dev.ignorePackages` | `["kempo", "kempo-server", "kempo-ui", "kempo-css"]` | Packages that keep their one copy, because they hold state that must not start over (kempo's database connection and hook registry). A change inside one of these still needs a restart |
+| `dev.watch` | `[]` | More folders to watch, besides the project and the packages linked into `node_modules` |
+
+What is watched: the project folder and every package linked into `node_modules` (`npm link`, a `file:` dependency). Packages installed from the registry, `node_modules` and `.git` are left alone. Only `.js`, `.mjs` and `.json` changes count.
+
+Good to know: a reloaded module starts fresh, so state kept in a module (a counter, a cache, a timer started when it is imported) starts over after each change. That is what you want while developing and not what you want in production, so leave it off there. Changes to the database, such as a new column, are not files the server can reload; run the extension's install or update for those.
+
+### Extending a config file
+
+A config file can start from another with `"extends": "<path from this file>"`. Objects are merged key by key, anything else (a list, a string, a number) replaces the base, files can be chained, and a loop is refused.
+
 ## Cache
 
 Kempo Server includes an intelligent module caching system that dramatically improves performance by caching JavaScript route modules in memory. The cache combines multiple strategies:

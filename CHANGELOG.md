@@ -4,6 +4,10 @@ All notable changes to `kempo-server` are documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **Dev reload (`dev.reload`).** With `"dev": { "reload": true }` in the config, a changed server file takes effect on the next request, with no restart. A route file was always loaded fresh, but what it imports was loaded once per process, so every change to a utility, a schema or a linked extension needed a restart. A loader gives each imported file a version in its URL and a file watcher raises it when a `.js`, `.mjs` or `.json` file changes in the project or in a package linked into `node_modules`. `dev.ignorePackages` (default `kempo`, `kempo-server`, `kempo-ui`, `kempo-css`) keeps those packages' one copy, because they hold the database connection and the hook registry; `dev.watch` adds folders. See CONFIG.md. The count of changes is also published as `globalThis.kempoDevGeneration`, which code that remembers what it loaded can read to know it is out of date (kempo's hook handlers do).
+- **`"extends"` in a config file.** `"extends": ".config.json"` starts from another config and changes only what the file says: objects merge key by key, anything else replaces, files can be chained, and a loop is refused. It is how a `dev.config.json` turns dev reload on without copying the normal config.
+
 ### Fixed
 - **One broken route no longer takes the whole server down.** The request handler is an async
   function given to `http.createServer`, which never waits on it, so any error that escaped it was

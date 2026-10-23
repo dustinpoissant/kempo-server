@@ -20,6 +20,8 @@ import {
 import { onRescan } from './rescan.js';
 import { renderDir, renderExternalPage } from './templating/index.js';
 import { createUpgradeHandler } from './websocket/index.js';
+import startDevReload from './devReload.js';
+import extendConfig from './extendConfig.js';
 
 export default async (flags, log) => {
   log('Initializing router', 3);
@@ -62,6 +64,7 @@ export default async (flags, log) => {
       userConfig = JSON.parse(configContent);
     }
     if(!userConfig) throw new Error('Config file is empty or has no default export');
+    userConfig = await extendConfig(userConfig, configPath);
     config = {
       ...defaultConfig,
       ...userConfig,
@@ -143,6 +146,14 @@ export default async (flags, log) => {
     }
   }
   
+  /*
+    Dev reload: a server file that changed is loaded again on the next request, so nothing may be cached
+  */
+  if(config.dev?.reload){
+    config = { ...config, cache: { ...config.cache, enabled: false } };
+    await startDevReload({ config, log });
+  }
+
   /*
     Inject mandatory disallowed patterns
   */
