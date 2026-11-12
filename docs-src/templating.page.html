@@ -1,3 +1,7 @@
+<!--
+  description: How pages, templates, fragments and global content fit together
+  updated: 2026-11-12
+-->
 <page pageName="Templating" title="Templating - Kempo Server">
 	<content>
 		<p>Kempo Server includes a built-in XML-based templating system for building static sites with shared layouts, reusable fragments, and dynamic content. Pages can be pre-rendered at build time or server-side rendered on each request.</p>
@@ -87,7 +91,7 @@
   date: 2026-04-10
   description: Overview of the routing system
 --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">page</span> <span class="hljs-attr">title</span>=<span class="hljs-string">"Routing"</span>&gt;</span><br />  ...<br /><span class="hljs-tag">&lt;/<span class="hljs-name">page</span>&gt;</span></code></pre>
-		<p>The comment is purely for the author &mdash; nothing before <code>&lt;page&gt;</code> is parsed or rendered.</p>
+		<p>The comment is left out of the response by default, so it stays with the file for the author and the site's own tooling. That covers a page rendered on request, a pre-rendered file, a page's source sent by <code>serveStaticFile</code>, and a <code>.page.html</code> URL that custom middleware (a CMS, say) answers itself: the comment is removed from what the middleware writes. To debug a page's metadata, set <code>keepFrontmatter: true</code> under <code>templating</code> in a dev config, and the comment is written back at the top of every response that page produces. The page you are reading has a frontmatter block, so the setting shows it on this page.</p>
 
 		<h2 id="fragments">Fragments</h2>
 		<p>Fragments are reusable HTML partials. Include them in templates or other fragments using the <code>&lt;fragment&gt;</code> tag.</p>

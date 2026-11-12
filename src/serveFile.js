@@ -4,7 +4,7 @@ import { pathToFileURL } from 'url';
 import findFile from './findFile.js';
 import createRequestWrapper, { readRawBody, parseBody } from './requestWrapper.js';
 import createResponseWrapper from './responseWrapper.js';
-import { renderPage } from './templating/index.js';
+import { renderPage, withFrontmatter } from './templating/index.js';
 import serveStaticFile from './serveStaticFile.js';
 
 const trySSR = async (rootPath, requestPath, config, res, log) => {
@@ -12,8 +12,8 @@ const trySSR = async (rootPath, requestPath, config, res, log) => {
   const pagePath = path.join(rootPath, htmlPath.replace(/\.html$/, '') + '.page.html');
   try {
     await stat(pagePath);
-    const {globals, state, maxFragmentDepth} = config.templating;
-    const html = await renderPage(pagePath, rootPath, globals, state, maxFragmentDepth);
+    const {globals, state, maxFragmentDepth, keepFrontmatter} = config.templating;
+    const html = await withFrontmatter(pagePath, await renderPage(pagePath, rootPath, globals, state, maxFragmentDepth), keepFrontmatter);
     res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
     res.end(html);
     log(`SSR rendered: ${pagePath}`, 2);
@@ -48,8 +48,8 @@ export default async (files, rootPath, requestPath, method, config, req, res, lo
   if(fileName.endsWith('.page.html')) {
     log(`Rendering page template: ${fileName}`, 2);
     try {
-      const {globals, state, maxFragmentDepth} = config.templating;
-      const html = await renderPage(file, rootPath, globals, state, maxFragmentDepth);
+      const {globals, state, maxFragmentDepth, keepFrontmatter} = config.templating;
+      const html = await withFrontmatter(file, await renderPage(file, rootPath, globals, state, maxFragmentDepth), keepFrontmatter);
       res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
       res.end(html);
       return true;

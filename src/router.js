@@ -7,6 +7,7 @@ import findFile from './findFile.js';
 import serveFile from './serveFile.js';
 import serveStaticFile from './serveStaticFile.js';
 import MiddlewareRunner from './middlewareRunner.js';
+import frontmatterGuard from './frontmatterGuard.js';
 import ModuleCache from './moduleCache.js';
 import createRequestWrapper, { readRawBody, parseBody } from './requestWrapper.js';
 import createResponseWrapper from './responseWrapper.js';
@@ -18,7 +19,7 @@ import {
   loggingMiddleware 
 } from './builtinMiddleware.js';
 import { onRescan } from './rescan.js';
-import { renderDir, renderExternalPage } from './templating/index.js';
+import { renderDir, renderExternalPage, withFrontmatter } from './templating/index.js';
 import { createUpgradeHandler } from './websocket/index.js';
 import startDevReload from './devReload.js';
 import extendConfig from './extendConfig.js';
@@ -167,7 +168,7 @@ export default async (flags, log) => {
   
   if(config.templating.preRender){
     const {globals, state, maxFragmentDepth} = config.templating;
-    const count = await renderDir(rootPath, rootPath, globals, state, maxFragmentDepth);
+    const count = await renderDir(rootPath, rootPath, globals, state, maxFragmentDepth, config.templating.keepFrontmatter);
     log(`Pre-rendered ${count} page(s)`, 2);
 
     for(const [urlPattern, dirPath] of Object.entries(config.customRoutes || {})) {
@@ -248,7 +249,8 @@ export default async (flags, log) => {
         const customMiddleware = middlewareModule.default;
         
         if (typeof customMiddleware === 'function') {
-          useMiddleware(customMiddleware({ ...config.middleware, rootPath }));
+          const loaded = customMiddleware({ ...config.middleware, rootPath });
+          useMiddleware(config.templating.keepFrontmatter ? loaded : frontmatterGuard(loaded));
           log(`Custom middleware loaded: ${middlewarePath}`, 3);
         } else {
           log(`Custom middleware error: ${middlewarePath} does not export a default function`, 1);
@@ -446,7 +448,7 @@ export default async (flags, log) => {
           log(`Rendering page template: ${candidatePath}`, 2);
           const {globals, state, maxFragmentDepth} = config.templating;
           const resolveDir = getResolveDir(candidatePath, req.url);
-          const html = await renderExternalPage(candidatePath, rootPath, resolveDir, globals, state, maxFragmentDepth);
+          const html = await withFrontmatter(candidatePath, await renderExternalPage(candidatePath, rootPath, resolveDir, globals, state, maxFragmentDepth), config.templating.keepFrontmatter);
           res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
           res.end(html);
           return true;
@@ -468,7 +470,7 @@ export default async (flags, log) => {
       log(`Rendering page template: ${filePath}`, 2);
       const {globals, state, maxFragmentDepth} = config.templating;
       const resolveDir = getResolveDir(filePath, req.url);
-      const html = await renderExternalPage(filePath, rootPath, resolveDir, globals, state, maxFragmentDepth);
+      const html = await withFrontmatter(filePath, await renderExternalPage(filePath, rootPath, resolveDir, globals, state, maxFragmentDepth), config.templating.keepFrontmatter);
       res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
       res.end(html);
       return true;
@@ -526,7 +528,7 @@ export default async (flags, log) => {
         try {
           await stat(pageFile);
           const resolveDir = getResolveDir(pageFile, req.url);
-          const html = await renderExternalPage(pageFile, rootPath, resolveDir, globals, state, maxFragmentDepth);
+          const html = await withFrontmatter(pageFile, await renderExternalPage(pageFile, rootPath, resolveDir, globals, state, maxFragmentDepth), config.templating.keepFrontmatter);
           res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
           res.end(html);
           log(`SSR rendered custom route: ${pageFile}`, 2);
@@ -563,7 +565,7 @@ export default async (flags, log) => {
           const urlParts = req.url.split('?')[0].replace(/\/+$/, '').split('/').filter(Boolean);
           let resolveDir = rootPath;
           for(const part of urlParts) resolveDir = path.join(resolveDir, part);
-          const html = await renderExternalPage(candidatePath, rootPath, resolveDir, globals, state, maxFragmentDepth);
+          const html = await withFrontmatter(candidatePath, await renderExternalPage(candidatePath, rootPath, resolveDir, globals, state, maxFragmentDepth), config.templating.keepFrontmatter);
           res.writeHead(404, {'Content-Type': 'text/html; charset=utf-8'});
           res.end(html);
           return true;

@@ -652,6 +652,8 @@ await serveStaticFile(filePath, request, response, {}, undefined, {
 
 `contentType` replaces the MIME type that would otherwise be derived from the file extension, and `headers` are merged into the `200`, `206` and `416` responses. Range metadata (`Content-Range`, `Accept-Ranges`, `Content-Length`) is applied *after* that merge, so a caller cannot accidentally corrupt a partial response. When `contentType` is supplied the `allowedMimes` config is never consulted, so passing `{}` as the config is fine.
 
+A `.page.html` file is sent without its frontmatter (the comment above `<page>`), which is for the author and the site's own tooling and not for the browser. Pass a config with `templating: { keepFrontmatter: true }` to send the file as it is. The same applies to a `.page.html` URL that your own middleware answers: the server removes the frontmatter from what the middleware writes, unless `keepFrontmatter` is set. See [CONFIG.md](CONFIG.md#frontmatter).
+
 ## Command Line Options
 
 Kempo Server supports several command line options to customize its behavior:

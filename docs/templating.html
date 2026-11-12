@@ -236,7 +236,7 @@
   date: 2026-04-10
   description: Overview of the routing system
 --&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">page</span> <span class="hljs-attr">title</span>=<span class="hljs-string">"Routing"</span>&gt;</span><br />  ...<br /><span class="hljs-tag">&lt;/<span class="hljs-name">page</span>&gt;</span></code></pre>
-		<p>The comment is purely for the author &mdash; nothing before <code>&lt;page&gt;</code> is parsed or rendered.</p>
+		<p>The comment is left out of the response by default, so it stays with the file for the author and the site's own tooling. That covers a page rendered on request, a pre-rendered file, a page's source sent by <code>serveStaticFile</code>, and a <code>.page.html</code> URL that custom middleware (a CMS, say) answers itself: the comment is removed from what the middleware writes. To debug a page's metadata, set <code>keepFrontmatter: true</code> under <code>templating</code> in a dev config, and the comment is written back at the top of every response that page produces. The page you are reading has a frontmatter block, so the setting shows it on this page.</p>
 
 		<h2 id="fragments">Fragments</h2>
 		<p>Fragments are reusable HTML partials. Include them in templates or other fragments using the <code>&lt;fragment&gt;</code> tag.</p>
@@ -436,7 +436,7 @@
 		</div>
 		<p>A common use case is sending templated emails. Create a dedicated email directory with a shared template, per-email pages, reusable fragments, and optional global content:</p>
 		<pre><code class="hljs javascript"><span class="hljs-keyword">import</span> { renderPageToString } <span class="hljs-keyword">from</span> <span class="hljs-string">'kempo-server/templating'</span>;<br /><span class="hljs-keyword">import</span> path <span class="hljs-keyword">from</span> <span class="hljs-string">'path'</span>;<br /><br /><span class="hljs-keyword">const</span> emailsDir = path.resolve(<span class="hljs-string">'./emails'</span>);<br /><span class="hljs-keyword">const</span> html = <span class="hljs-keyword">await</span> renderPageToString(<br />  path.join(emailsDir, <span class="hljs-string">'welcome.page.html'</span>),<br />  { userName: <span class="hljs-string">'Alice'</span>, orderId: <span class="hljs-string">'1234'</span> }<br />);</code></pre>
-		<p>Built-in vars (<code>2026</code>, <code>2026-10-22</code>, <code>2026-10-22T19:29:31.137Z</code>, <code>1792697371137</code>) are always available. Note that <code>&lt;page&gt;</code> tag attributes take highest priority and override <code>vars</code> with the same key.</p>
+		<p>Built-in vars (<code>2026</code>, <code>2026-11-12</code>, <code>2026-11-12T18:44:37.268Z</code>, <code>1794509077268</code>) are always available. Note that <code>&lt;page&gt;</code> tag attributes take highest priority and override <code>vars</code> with the same key.</p>
 
 		<h3 id="render-external-page">renderExternalPage</h3>
 		<p>Identical pipeline to <code>renderPage</code>, but decouples the page file's physical location from where templates and fragments are resolved. Use this when a page file lives outside <code>rootDir</code> — for example, in a plugin or extension package — but should be rendered using the host project's templates, fragments, and globals.</p>

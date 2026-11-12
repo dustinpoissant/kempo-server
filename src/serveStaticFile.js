@@ -1,6 +1,7 @@
 import path from 'path';
 import { readFile, stat } from 'fs/promises';
 import { createReadStream } from 'fs';
+import { stripFrontmatter } from './templating/frontmatter.js';
 
 // Parses a `Range: bytes=...` header value against a known file size.
 // Supports `start-end`, open-ended `start-`, and suffix `-N` (last N bytes)
@@ -56,7 +57,10 @@ export default async (filePath, req, res, config, log = () => {}, overrides = {}
   // browsers can seek without downloading the whole file first. Text
   // files are small enough to keep serving in full.
   const rangeHeader = req?.headers?.range;
-  if(encoding === undefined && rangeHeader){
+
+  // A page's source is sent without its frontmatter, so it is read whole: a byte range of the file would include it
+  const dropFrontmatter = filePath.toLowerCase().endsWith('.page.html') && !config?.templating?.keepFrontmatter;
+  if(encoding === undefined && rangeHeader && !dropFrontmatter){
     const { size } = await stat(filePath);
     const range = parseRange(rangeHeader, size);
     if(!range){
@@ -83,10 +87,11 @@ export default async (filePath, req, res, config, log = () => {}, overrides = {}
     return;
   }
 
-  const fileContent = await readFile(filePath, encoding);
+  const source = await readFile(filePath, encoding);
+  const fileContent = dropFrontmatter ? stripFrontmatter(source.toString('utf8')) : source;
   log(`Serving ${filePath} as ${mimeType} (${fileContent.length} bytes)`, 2);
   const headers = { ...extraHeaders, 'Content-Type': contentType };
-  if(encoding === undefined) headers['Accept-Ranges'] = 'bytes';
+  if(encoding === undefined && !dropFrontmatter) headers['Accept-Ranges'] = 'bytes';
   res.writeHead(200, headers);
   res.end(fileContent);
 };

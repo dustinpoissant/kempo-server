@@ -96,6 +96,7 @@ export default {
   templating: {
     preRender: false,
     ssr: false,
+    keepFrontmatter: false,    // a page's frontmatter comment is never sent to the browser; true sends it, for debugging
     globals: {},
     state: {},
     maxFragmentDepth: 10

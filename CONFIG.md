@@ -477,6 +477,7 @@ export default {
   templating: {
     preRender: false,
     ssr: false,
+    keepFrontmatter: false,
     globals: {},
     state: {},
     maxFragmentDepth: 10
@@ -486,6 +487,7 @@ export default {
 
 - `preRender` (boolean) - Render all `.page.html` files to `.html` on server start (default: `false`)
 - `ssr` (boolean) - Render `.page.html` files on-the-fly when the corresponding `.html` file is not found (default: `false`)
+- `keepFrontmatter` (boolean) - Let a page's frontmatter (the `<!-- ... -->` comment above `<page>`) reach the browser. Off by default: see [Frontmatter](#frontmatter) below (default: `false`)
 - `globals` (object) - Variables available in all templates. Values can be functions (called with no args at render time).
 - `state` (object) - Additional variables, typically CMS data. Merged after globals so state overrides globals.
 - `maxFragmentDepth` (number) - Maximum nesting depth for fragment includes (default: `10`)
@@ -522,6 +524,23 @@ export default {
     }
   }
 };
+```
+
+#### Frontmatter
+
+The comment above a page's `<page>` tag is for the author and for the site's own tooling (a CMS reads and writes it as page metadata), so kempo-server does not send it to the browser. That holds however the page reaches the browser:
+
+- A page rendered on request (a route file, a directory index, SSR, a custom route, a `CATCH.page.html` 404) does not contain it, and neither does a file written by `preRender`.
+- A page's source sent by `serveStaticFile` has it removed.
+- A request for a URL ending in `.page.html` that custom middleware answers itself, such as a CMS serving a page's source for editing, has it removed from what the middleware writes. Only the leading comment is removed, only while the middleware is writing, and the rest of the response is untouched. Once the middleware calls `next()` the request is kempo-server's own again.
+
+To see it while debugging, set `keepFrontmatter` in a dev config. Rendered pages and pre-rendered files then start with the page's frontmatter comment, and page sources are sent as they are on disk:
+
+```json
+{
+  "extends": ".config.json",
+  "templating": { "keepFrontmatter": true }
+}
 ```
 
 #### CLI Rendering

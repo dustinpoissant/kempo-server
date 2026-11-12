@@ -178,6 +178,7 @@ export default {
     preRender: false,
     ssr: false,
     ssrPriority: false,
+    keepFrontmatter: false,
     globals: {},
     state: {},
     maxFragmentDepth: 10

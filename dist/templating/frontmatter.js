@@ -1,0 +1,1 @@
+export const FRONTMATTER=/^\s*<!--([\s\S]*?)-->/;export const stripFrontmatter=text=>text.replace(FRONTMATTER,"").replace(/^\r?\n/,"");

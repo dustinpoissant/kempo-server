@@ -12,6 +12,7 @@ import {
   fragmentPriority
 } from './parse.js';
 import { extractPatchOps, applyPatchOps } from './patch.js';
+import { FRONTMATTER } from './frontmatter.js';
 import { readFileSync, statSync } from 'fs';
 
 /*
@@ -155,8 +156,6 @@ const loadExtraFragments = async (extraFragmentDirs = []) => {
     composed  <body><nav/><article><location /></article></body>
     page      <body><nav/><article>…page body…</article></body>
 */
-const FRONTMATTER = /^\s*<!--([\s\S]*?)-->/;
-
 const parseFrontmatter = raw => {
   const match = raw.match(FRONTMATTER);
   if(!match) return { meta: {}, body: raw };
@@ -307,6 +306,18 @@ const renderExternalPage = (pageFilePath, rootDir, resolveDir, globals = {}, sta
   renderPageCore(pageFilePath, rootDir, resolveDir, globals, state, maxDepth, null, extraGlobalDirs, extraFragmentDirs);
 
 /*
+  Frontmatter in a Response
+
+  Frontmatter is left out of the response unless `templating.keepFrontmatter` is set, which writes the
+  page's leading comment back at the top of what is served. The file is read again only when it is kept.
+*/
+const withFrontmatter = async (pageFilePath, html, keepFrontmatter) => {
+  if(!keepFrontmatter) return html;
+  const match = (await readFile(pageFilePath, 'utf8')).match(FRONTMATTER);
+  return match ? `${match[0].trimStart()}\n${html}` : html;
+};
+
+/*
   Recursively Walk Directory for *.page.html
 */
 const walkPages = async dir => {
@@ -326,7 +337,7 @@ const walkPages = async dir => {
 /*
   Render All Pages in a Directory
 */
-const renderDir = async (inputDir, outputDir, globals = {}, state = {}, maxDepth = 10) => {
+const renderDir = async (inputDir, outputDir, globals = {}, state = {}, maxDepth = 10, keepFrontmatter = false) => {
   const [pages, globalContent] = await Promise.all([walkPages(inputDir), loadGlobalContent(inputDir)]);
   let count = 0;
   for(const page of pages){
@@ -334,7 +345,7 @@ const renderDir = async (inputDir, outputDir, globals = {}, state = {}, maxDepth
     const outRel = rel.replace(/\.page\.html$/, '.html');
     const outPath = path.join(outputDir, outRel);
     await mkdir(path.dirname(outPath), {recursive: true});
-    const html = await renderPage(page, inputDir, globals, state, maxDepth, globalContent);
+    const html = await withFrontmatter(page, await renderPage(page, inputDir, globals, state, maxDepth, globalContent), keepFrontmatter);
     await writeFile(outPath, html, 'utf8');
     count++;
   }
@@ -344,4 +355,4 @@ const renderDir = async (inputDir, outputDir, globals = {}, state = {}, maxDepth
 const renderPageToString = (pagePath, vars = {}, rootDir = path.dirname(pagePath)) =>
   renderPage(pagePath, rootDir, {}, vars);
 
-export { renderPage, renderDir, renderPageToString, renderExternalPage };
+export { renderPage, renderDir, renderPageToString, renderExternalPage, withFrontmatter };
