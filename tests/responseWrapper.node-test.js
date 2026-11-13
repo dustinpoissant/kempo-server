@@ -3,6 +3,23 @@ import {parseCookies} from './utils/cookie.js';
 import createResponseWrapper from '../src/responseWrapper.js';
 
 export default {
+  'clearCookie sends Max-Age=0 so the browser expires the cookie (a maxAge of 0 is not dropped)': async ({pass, fail}) => {
+    const res = createMockRes();
+    createResponseWrapper(res).clearCookie('kempo_guest', {path: '/'});
+    const set = [].concat(res.getHeader('Set-Cookie') || [])[0] || '';
+    if(!/^kempo_guest=;/.test(set) || !/Max-Age=0/.test(set)) return fail(`expected an expired empty cookie, got "${set}"`);
+    pass('clearCookie expires');
+  },
+  'a negative maxAge expires a cookie, and no maxAge leaves a session cookie': async ({pass, fail}) => {
+    const res = createMockRes();
+    const w = createResponseWrapper(res);
+    w.cookie('a', 'b', {maxAge: -1});
+    w.cookie('c', 'd', {path: '/'});
+    const [expired, session] = [].concat(res.getHeader('Set-Cookie') || []);
+    if(!/Max-Age=-1/.test(expired)) return fail(`negative maxAge: ${expired}`);
+    if(/Max-Age/.test(session)) return fail(`no maxAge should write none: ${session}`);
+    pass('maxAge handling');
+  },
   'status and set/get headers and type': async ({pass, fail}) => {
     const res = createMockRes();
     const w = createResponseWrapper(res);

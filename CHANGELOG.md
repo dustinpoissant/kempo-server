@@ -2,6 +2,11 @@
 
 All notable changes to `kempo-server` are documented in this file.
 
+## [3.6.1] - 2026-11-13
+
+### Fixed
+- **`response.clearCookie` now expires the cookie.** It passed `maxAge: 0`, and `cookie()` wrote `Max-Age` only when the value was truthy, so `0` was dropped and the browser kept the cookie as a session cookie with an empty value. `cookie()` now writes `Max-Age` for any finite number, so `0` expires a cookie now (as in Express). A `maxAge` of `0` passed to `cookie()` directly now also expires it, where before it meant no `Max-Age` at all; a negative value does the same.
+
 ## [3.6.0] - 2026-11-12
 
 ### Added

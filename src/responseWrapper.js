@@ -185,7 +185,7 @@ export function createResponseWrapper(response) {
       
       let cookieString = `${name}=${encodeURIComponent(value)}`;
       
-      if (options.maxAge) {
+      if (typeof options.maxAge === 'number' && Number.isFinite(options.maxAge)) {
         cookieString += `; Max-Age=${options.maxAge}`;
       }
       if (options.domain) {
